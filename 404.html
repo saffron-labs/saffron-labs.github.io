@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Page not found — Saffron Labs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700&family=Anek+Latin:wght@400&display=swap">
+<style>
+  :root {
+    --surface-000: #ffffff;
+    --ink-900: #121211;
+    --ink-500: #6b665e;
+    --saffron-600: #b85c0d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --surface-000: #0e0e0d; --ink-900: #f6f5f3; --ink-500: #a8a29a; --saffron-600: #e0821f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --surface-000: #0e0e0d; --ink-900: #f6f5f3; --ink-500: #a8a29a; --saffron-600: #e0821f;
+  }
+  html { color-scheme: light dark; }
+  body {
+    margin: 0; min-height: 100vh;
+    background: var(--surface-000); color: var(--ink-900);
+    font-family: "Anek Latin", system-ui, sans-serif; font-size: 16px; line-height: 26px;
+    display: grid; align-content: center; gap: 16px;
+    padding: 40px 16px;
+  }
+  .in { width: 100%; max-width: 520px; margin: 0 auto; display: grid; gap: 16px; }
+  h1 { font-family: Archivo, Helvetica, Arial, sans-serif; font-weight: 700; font-size: 48px; line-height: 1.02; letter-spacing: -0.02em; margin: 0; }
+  p { margin: 0; color: var(--ink-500); }
+  a { color: var(--saffron-600); text-underline-offset: 3px; }
+  .bands { display: grid; grid-template-columns: 3fr 1.1fr 0.5fr; gap: 8px; height: 64px; }
+  .bands i:nth-child(1) { background: var(--ink-900); }
+  .bands i:nth-child(2) { background: var(--saffron-600); }
+  .bands i:nth-child(3) { background: #e89b3c; height: 62%; }
+</style>
+</head>
+<body>
+  <div class="in">
+    <div class="bands" aria-hidden="true"><i></i><i></i><i></i></div>
+    <h1>Nothing here.</h1>
+    <p>That page does not exist. <a href="/">Go back to the front page</a>, or email <a href="mailto:hello@saffronlabs.in">hello@saffronlabs.in</a>.</p>
+  </div>
+</body>
+</html>
