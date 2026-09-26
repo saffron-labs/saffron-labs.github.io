@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Saffron Labs makes video and poster ads for local businesses in Phagwara and Jalandhar. Seven videos and four posters in a week.">
+<meta name="description" content="Saffron Labs makes video and poster ads for local businesses in Phagwara and Jalandhar, and builds the software that runs their operations: order tracking, staff scheduling and dashboards.">
 <meta name="theme-color" content="#ffffff">
 <meta property="og:title" content="Saffron Labs">
 <meta property="og:description" content="Ads that look like you paid a lot more.">
@@ -161,7 +161,7 @@
   .slot span { font-family: var(--font-mono); font-size: 12px; color: var(--ink-500); }
   .piece h3 { font-size: 16px; line-height: 22px; }
 
-  .pill {
+  .pill { justify-self: start;
     display: inline-block; border-radius: 999px; padding: 3px 10px;
     background: var(--surface-100); color: var(--ink-500);
     font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 500;
@@ -185,6 +185,32 @@
   .note { font-size: 14px; line-height: 22px; color: var(--ink-500); }
   .stack { display: grid; gap: var(--s4); }
   .stack-sm { display: grid; gap: var(--s2); }
+  /* showcase */
+  .group { display: grid; gap: var(--s3); min-width: 0; }
+  .stack > *, .split > * { min-width: 0; }
+  .work { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (min-width: 720px) { .work { grid-template-columns: repeat(3, minmax(0, 1fr)); } .work.posters { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .piece { margin: 0; }
+  .piece figcaption { display: grid; gap: 2px; }
+  .meta { font-family: var(--font-mono); font-size: 12px; line-height: 18px; color: var(--saffron-600); }
+  .slot-wide { aspect-ratio: 16 / 9; }
+  .slot-poster { aspect-ratio: 4 / 5; }
+  .feature { display: grid; gap: var(--s3); grid-template-columns: minmax(0, 1fr); }
+  .group > *, .feature > * { min-width: 0; }
+  @media (min-width: 900px) { .feature { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: end; gap: var(--s4); } }
+  .feature-cap { display: grid; gap: var(--s2); }
+  .piece video, .piece img, .feature video, .feature img { width: 100%; display: block; object-fit: cover; background: var(--surface-100); }
+
+  /* software */
+  .offers { display: grid; gap: var(--s4); grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .offers { grid-template-columns: 1fr 1fr; gap: var(--s5) var(--s5); } }
+  .offer { display: grid; gap: var(--s2); padding-top: var(--s3); border-top: 1px solid var(--line-200); align-content: start; }
+  .offer .num { font-family: var(--font-mono); font-size: 13px; color: var(--ink-500); }
+  .samples { display: grid; gap: var(--s4); grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .samples { grid-template-columns: 1fr 1fr; } }
+  .sample { display: grid; gap: var(--s2); align-content: start; color: inherit; text-decoration: none; }
+  .sample img { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: contain; background: #fff; border: 1px solid var(--line-200); }
+  .sample:hover h3 { text-decoration: underline; text-underline-offset: 3px; }
 </style>
 </head>
 <body>
@@ -192,7 +218,8 @@
   <div class="wrap bar">
     <a class="mark" href="#top"><i></i>Saffron Labs</a>
     <nav class="site">
-      <a href="#work">Work</a>
+      <a href="#work">Ads</a>
+      <a href="#software">Software</a>
       <a href="#how">How it works</a>
       <a href="#pricing">Pricing</a>
       <a href="#contact">Contact</a>
@@ -205,12 +232,13 @@
   <section class="pad">
     <div class="wrap hero-grid">
       <div class="hero-stack">
-        <p class="label">Ad creative studio · Phagwara &amp; Jalandhar</p>
+        <p class="label">Ads &amp; software studio · Phagwara &amp; Jalandhar</p>
         <h1>Ads that look like you paid a lot more.</h1>
         <p class="lede muted">We make video and poster ads for local businesses — seven videos and four posters in a week, for the price of a single photoshoot. No crew, no shoot day, no waiting a month.</p>
+        <p class="lede muted">And when the problem is not marketing, we build the software: order tracking your customers can follow, staff scheduling that checks who turned up, and one dashboard for the owner.</p>
         <div class="cta-row">
           <a class="btn btn-primary" href="#contact">Get a free sample ad</a>
-          <a class="btn btn-ghost" href="#pricing">See pricing</a>
+          <a class="btn btn-ghost" href="#software">Software for your operations</a>
         </div>
       </div>
       <div class="bands" aria-hidden="true"><div></div><div></div><div></div></div>
@@ -250,48 +278,158 @@
     <div class="wrap stack">
       <div class="split">
         <div class="stack-sm">
-          <p class="label">Selected concepts</p>
+          <p class="label">Ads · Selected concepts</p>
           <h2>Work we made to show what is possible.</h2>
         </div>
         <p class="measure muted">These are concept pieces, made for real local businesses that have not commissioned us. They are not client campaigns and are not presented as such. If your shop is one of them and you would rather we took it down, message us and it is gone the same day.</p>
       </div>
 
-      <div class="work">
-        <div class="piece">
-          <div class="slot"><span>9:16 · 15 sec<br>replace with hero cut</span></div>
-          <h3>Café &amp; restaurant</h3>
-          <p class="note">Evening menu, one dish, three hooks.</p>
+      <div class="group">
+        <p class="label">Hero film</p>
+        <figure class="piece feature">
+          <div class="slot slot-wide"><span>16:9 · 20–30 sec<br>replace with hero film</span></div>
+          <figcaption class="feature-cap">
+            <h3>Café &amp; restaurant — evening menu</h3>
+            <p class="meta">Hero · 30 sec · Hindi + English</p>
+            <p class="note">One dish, three hooks. The long cut for YouTube and the feed; the reels below are cut from the same generation.</p>
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="group">
+        <p class="label">Reels</p>
+        <div class="work">
+          <figure class="piece">
+            <div class="slot"><span>9:16 · 15 sec<br>replace with reel</span></div>
+            <figcaption><h3>Café &amp; restaurant</h3><p class="meta">Reel · 15 sec · Hindi</p><p class="note">Evening menu, one dish, three hooks.</p></figcaption>
+          </figure>
+          <figure class="piece">
+            <div class="slot"><span>9:16 · 15 sec<br>replace with reel</span></div>
+            <figcaption><h3>Gym &amp; fitness studio</h3><p class="meta">Reel · 15 sec · Punjabi</p><p class="note">Joining offer, two audiences, same footage.</p></figcaption>
+          </figure>
+          <figure class="piece">
+            <div class="slot"><span>9:16 · 15 sec<br>replace with reel</span></div>
+            <figcaption><h3>Salon</h3><p class="meta">Reel · 12 sec · English</p><p class="note">Before-and-after, no claims about results.</p></figcaption>
+          </figure>
+          <figure class="piece">
+            <div class="slot"><span>9:16 · 15 sec<br>replace with reel</span></div>
+            <figcaption><h3>Coaching institute</h3><p class="meta">Reel · 15 sec · Hindi + English</p><p class="note">Admissions window, bilingual cut.</p></figcaption>
+          </figure>
+          <figure class="piece">
+            <div class="slot"><span>9:16 · 15 sec<br>replace with reel</span></div>
+            <figcaption><h3>Clothing boutique</h3><p class="meta">Reel · 10 sec · Punjabi</p><p class="note">New arrivals, festival timing.</p></figcaption>
+          </figure>
+          <figure class="piece">
+            <div class="slot"><span>9:16 · 15 sec<br>replace with reel</span></div>
+            <figcaption><h3>Local real estate</h3><p class="meta">Reel · 15 sec · English</p><p class="note">One property, walk-through and stills.</p></figcaption>
+          </figure>
         </div>
-        <div class="piece">
-          <div class="slot"><span>9:16 · 15 sec<br>replace with hero cut</span></div>
-          <h3>Gym &amp; fitness studio</h3>
-          <p class="note">Joining offer, two audiences, same footage.</p>
-        </div>
-        <div class="piece">
-          <div class="slot"><span>9:16 · 15 sec<br>replace with hero cut</span></div>
-          <h3>Salon</h3>
-          <p class="note">Before-and-after, no claims about results.</p>
-        </div>
-        <div class="piece">
-          <div class="slot"><span>9:16 · 15 sec<br>replace with hero cut</span></div>
-          <h3>Coaching institute</h3>
-          <p class="note">Admissions window, bilingual cut.</p>
-        </div>
-        <div class="piece">
-          <div class="slot"><span>9:16 · 15 sec<br>replace with hero cut</span></div>
-          <h3>Clothing boutique</h3>
-          <p class="note">New arrivals, festival timing.</p>
-        </div>
-        <div class="piece">
-          <div class="slot"><span>9:16 · 15 sec<br>replace with hero cut</span></div>
-          <h3>Local real estate</h3>
-          <p class="note">One property, walk-through and stills.</p>
+      </div>
+
+      <div class="group">
+        <p class="label">Posters</p>
+        <div class="work posters">
+          <figure class="piece">
+            <div class="slot slot-poster"><span>4:5 poster<br>replace with image</span></div>
+            <figcaption><h3>Café — weekend offer</h3><p class="meta">Feed · 4:5</p></figcaption>
+          </figure>
+          <figure class="piece">
+            <div class="slot slot-poster"><span>4:5 poster<br>replace with image</span></div>
+            <figcaption><h3>Gym — joining offer</h3><p class="meta">Story · 9:16 crop</p></figcaption>
+          </figure>
+          <figure class="piece">
+            <div class="slot slot-poster"><span>4:5 poster<br>replace with image</span></div>
+            <figcaption><h3>Boutique — festival drop</h3><p class="meta">Feed · 4:5</p></figcaption>
+          </figure>
+          <figure class="piece">
+            <div class="slot slot-poster"><span>4:5 poster<br>replace with image</span></div>
+            <figcaption><h3>Coaching — admissions open</h3><p class="meta">Feed · 4:5</p></figcaption>
+          </figure>
         </div>
       </div>
 
       <div class="stack-sm">
         <span class="pill">Clients</span>
         <p class="measure muted">We opened this month. No client campaigns to show yet — when the first one ships, it goes here with the numbers attached. We would rather leave this empty than pad it.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="pad" id="software">
+    <div class="wrap stack">
+      <div class="split">
+        <div class="stack-sm">
+          <p class="label">Software</p>
+          <h2>The app your operations are missing.</h2>
+        </div>
+        <p class="measure muted">Some businesses we meet do not need another ad first. They need customers to stop calling to ask where their order is, and staff rosters to move out of WhatsApp groups. We build small, focused systems for that, and run them with you after launch.</p>
+      </div>
+
+      <div class="offers">
+        <div class="offer">
+          <p class="num">A · Track</p>
+          <h3>Order &amp; status tracking</h3>
+          <p class="note">Customers scan a QR at drop-off and follow each stage — received, in progress, ready — on WhatsApp or a web app. Nothing to install from an app store.</p>
+        </div>
+        <div class="offer">
+          <p class="num">B · Staff</p>
+          <h3>Shifts &amp; attendance</h3>
+          <p class="note">People book shifts around their own availability. Check-in is verified on site, no-shows are covered from a standby pool, and pay follows verified hours.</p>
+        </div>
+        <div class="offer">
+          <p class="num">C · See</p>
+          <h3>Owner dashboards</h3>
+          <p class="note">One screen for volume, delays, complaints and staff hours across every location, with a weekly report sent on its own.</p>
+        </div>
+        <div class="offer">
+          <p class="num">D · Automate</p>
+          <h3>AI assistants &amp; automation</h3>
+          <p class="note">Assistants that answer routine customer questions and draft follow-ups from your own data, with a person approving anything that goes out.</p>
+        </div>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <p class="num">01 · Discovery</p>
+          <h3>We see where the work happens</h3>
+          <p class="note">We visit, count the real volumes and costs, and write down what success means in numbers before any code is written.</p>
+        </div>
+        <div class="step">
+          <p class="num">02 · Pilot</p>
+          <h3>One location, 6–8 weeks</h3>
+          <p class="note">The system runs in a small slice of your business, measured against the numbers from discovery.</p>
+        </div>
+        <div class="step">
+          <p class="num">03 · Rollout</p>
+          <h3>Everywhere, if it worked</h3>
+          <p class="note">If the pilot hits the target, it goes to every location. If it does not, you have the data to know why.</p>
+        </div>
+      </div>
+
+      <p class="note measure">Pricing is quoted per project after discovery: a fixed price for the pilot, then a monthly fee per location for hosting and support.</p>
+
+      <div class="group">
+        <p class="label">Sample builds · made-up data</p>
+        <div class="samples">
+          <a class="sample" href="work/samples/sales-analysis-report.pdf">
+            <img src="work/samples/sales-trend.png" alt="Line chart of monthly revenue and profit from the sample sales report" width="1180" height="508">
+            <h3>Sales analysis report</h3>
+            <p class="meta">PDF · Python, pandas, automated charts</p>
+            <p class="note">A year of sales data cleaned, analysed and turned into a report with no manual formatting.</p>
+          </a>
+          <a class="sample" href="work/samples/sales-forecasting-dashboard.xlsx">
+            <div class="slot slot-wide"><span>Excel dashboard<br>download to open</span></div>
+            <h3>Sales forecasting dashboard</h3>
+            <p class="meta">Excel · generated with Python</p>
+            <p class="note">Actuals, margins and a six-month forecast in a workbook the owner already knows how to use.</p>
+          </a>
+        </div>
+        <p class="note measure">These were built on invented data to show the kind of work we do. They are not client projects.</p>
+      </div>
+
+      <div class="stack-sm">
+        <span class="pill">Software clients</span>
+        <p class="measure muted">We are taking on our first software projects now. When one ships, it goes here with the before-and-after numbers.</p>
       </div>
     </div>
   </section>
@@ -388,7 +526,8 @@
         <h2>We will make you one, free.</h2>
       </div>
       <div class="stack">
-        <p class="measure muted">Send us your shop name and Instagram handle. We will make one ad for your business and send it over — no charge, no meeting needed. If you like it, we will talk. If you don't, you keep it anyway.</p>
+        <p class="measure muted">For ads: send us your shop name and Instagram handle. We will make one ad for your business and send it over — no charge, no meeting needed. If you like it, we will talk. If you don't, you keep it anyway.</p>
+        <p class="measure muted">For software: tell us what your staff or customers keep chasing by phone. We will reply with how we would fix it, and what a pilot would cost.</p>
         <div class="cta-row">
           <a class="btn btn-primary" href="mailto:hellosaffronlabs@gmail.com">hellosaffronlabs@gmail.com</a>
           <a class="btn btn-ghost" href="#top">WhatsApp — add your number</a>
@@ -405,8 +544,23 @@
     <a class="mark" href="#top"><i></i>Saffron Labs</a>
     <p class="note">saffronlabs.in · Phagwara, Punjab</p>
   </div>
-  <p class="note">Ads on this site marked as concepts were made for businesses that have not commissioned us, and are not client work. Creative produced with AI assistance is labelled on the ad.</p>
+  <p class="note">Ads on this site marked as concepts were made for businesses that have not commissioned us, and are not client work. Software samples use invented data. Creative produced with AI assistance is labelled on the ad.</p>
 </footer>
 
+<script>
+  // Showcase videos: play muted while on screen, pause when scrolled away.
+  (function () {
+    var vids = document.querySelectorAll('#work video');
+    if (!vids.length || !('IntersectionObserver' in window)) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        var v = e.target; v.muted = true;
+        if (e.isIntersecting) { var p = v.play(); if (p) p.catch(function () {}); } else { v.pause(); }
+      });
+    }, { threshold: 0.6 });
+    vids.forEach(function (v) { io.observe(v); });
+  })();
+</script>
 </body>
 </html>
