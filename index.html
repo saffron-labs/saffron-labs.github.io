@@ -1,566 +1,82 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Saffron Labs makes video and poster ads for local businesses in Phagwara and Jalandhar, and builds the software that runs their operations: order tracking, staff scheduling and dashboards.">
-<meta name="theme-color" content="#ffffff">
-<meta property="og:title" content="Saffron Labs">
-<meta property="og:description" content="Ads that look like you paid a lot more.">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://saffronlabs.in/">
-<style>
-  html { color-scheme: light dark; }
-  body { margin: 0; }
-  img { max-width: 100%; }
-  [hidden] { display: none !important; }
-  html { scroll-behavior: smooth; }
-  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-</style>
-<title>Saffron Labs</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=Anek+Latin:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<style>
-  :root {
-    --surface-000: #ffffff;
-    --surface-100: #f5f4f1;
-    --ink-900: #121211;
-    --ink-500: #6b665e;
-    --line-200: #e4e2dd;
-    --saffron-600: #b85c0d;
-    --saffron-400: #e89b3c;
-    --ink-on-saffron: #1a0f04;
-    --signal-ok: #2f6d46;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#210807" />
+    <title>Saffron Labs — Make Local Legendary</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="noise"></div>
+    <header class="nav">
+      <a class="brand" href="#top" aria-label="Saffron Labs home">
+        <svg class="brand-mark" viewBox="0 0 42 42" aria-hidden="true"><path d="M21 35V8M21 35L8 12M21 35L34 12"/><circle cx="21" cy="7" r="2.8"/><circle cx="8" cy="12" r="2.8"/><circle cx="34" cy="12" r="2.8"/><circle cx="21" cy="35" r="2.8"/></svg>
+        <span>SAFFRON<br />LABS</span>
+      </a>
+      <nav><a href="#work">Selected work</a><a href="#system">The system</a><a href="#contact">Let’s talk <i>↗</i></a></nav>
+    </header>
 
-    --font-display: Archivo, "Anek Devanagari", Helvetica, Arial, sans-serif;
-    --font-text: "Anek Latin", "Anek Devanagari", system-ui, sans-serif;
-    --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
-
-    --s1: 4px; --s2: 8px; --s3: 16px; --s4: 24px; --s5: 40px; --s6: 64px;
-    --wrap: 1080px;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --surface-000: #0e0e0d;
-      --surface-100: #1a1918;
-      --ink-900: #f6f5f3;
-      --ink-500: #a8a29a;
-      --line-200: #2e2c2a;
-      --saffron-600: #e0821f;
-      --saffron-400: #c97d21;
-      --signal-ok: #5fa77c;
-    }
-  }
-  :root[data-theme="dark"] {
-    --surface-000: #0e0e0d;
-    --surface-100: #1a1918;
-    --ink-900: #f6f5f3;
-    --ink-500: #a8a29a;
-    --line-200: #2e2c2a;
-    --saffron-600: #e0821f;
-    --saffron-400: #c97d21;
-    --signal-ok: #5fa77c;
-  }
-
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--surface-000);
-    color: var(--ink-900);
-    font-family: var(--font-text);
-    font-size: 16px;
-    line-height: 26px;
-    -webkit-font-smoothing: antialiased;
-  }
-  .wrap { width: 100%; max-width: var(--wrap); margin: 0 auto; padding-left: var(--s3); padding-right: var(--s3); }
-  @media (min-width: 720px) { .wrap { padding-left: var(--s5); padding-right: var(--s5); } }
-
-  h1, h2, h3 { font-family: var(--font-display); font-weight: 700; margin: 0; text-wrap: balance; }
-  h1 { font-size: clamp(38px, 7vw, 64px); line-height: 1.02; letter-spacing: -0.02em; }
-  h2 { font-size: clamp(26px, 4vw, 40px); line-height: 1.06; letter-spacing: -0.015em; font-weight: 600; }
-  h3 { font-size: 20px; line-height: 26px; letter-spacing: -0.01em; font-weight: 600; }
-  p { margin: 0; }
-  a { color: var(--saffron-600); text-decoration-thickness: 1px; text-underline-offset: 3px; }
-  a:focus-visible, button:focus-visible { outline: 2px solid var(--saffron-600); outline-offset: 3px; }
-
-  .label {
-    font-family: var(--font-text);
-    font-size: 12px; line-height: 16px; font-weight: 500;
-    letter-spacing: 0.06em; text-transform: uppercase;
-    color: var(--ink-500);
-  }
-  .mono { font-family: var(--font-mono); font-size: 13px; line-height: 20px; }
-  .muted { color: var(--ink-500); }
-  .lede { font-size: 18px; line-height: 29px; max-width: 62ch; }
-  .measure { max-width: 62ch; }
-
-  /* header */
-  header.site {
-    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
-    background: var(--surface-000);
-    border-bottom: 1px solid var(--line-200);
-  }
-  .bar { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding-block: var(--s3); }
-  .mark { font-family: var(--font-display); font-weight: 700; font-size: 19px; letter-spacing: -0.02em; text-decoration: none; color: var(--ink-900); display: inline-flex; align-items: baseline; gap: 7px; }
-  .mark i { width: 9px; height: 9px; background: var(--saffron-600); display: inline-block; }
-  nav.site { display: none; gap: var(--s4); }
-  @media (min-width: 720px) { nav.site { display: flex; } }
-  nav.site a { color: var(--ink-500); text-decoration: none; font-size: 15px; }
-  nav.site a:hover { color: var(--ink-900); }
-
-  section { border-bottom: 1px solid var(--line-200); }
-  .pad { padding-block: var(--s6); }
-  @media (max-width: 719px) { .pad { padding-block: var(--s5); } }
-
-  /* hero */
-  .hero-grid { display: grid; gap: var(--s5); grid-template-columns: 1fr; align-items: end; }
-  @media (min-width: 900px) { .hero-grid { grid-template-columns: 1.35fr 1fr; } }
-  .hero-stack { display: grid; gap: var(--s4); }
-  .cta-row { display: flex; flex-wrap: wrap; gap: var(--s2); }
-  .btn {
-    display: inline-block; padding: 12px 20px; border-radius: 3px;
-    font-family: var(--font-text); font-weight: 600; font-size: 15px; text-decoration: none;
-  }
-  .btn-primary { background: var(--saffron-600); color: #fff; }
-  .btn-ghost { border: 1px solid var(--line-200); color: var(--ink-900); }
-
-  .bands { display: grid; grid-template-columns: 3fr 1.1fr 0.5fr; gap: var(--s2); height: 220px; }
-  .bands div:nth-child(1) { background: var(--ink-900); background-image: radial-gradient(var(--surface-000) 1.8px, transparent 1.9px); background-size: 40px 40px; background-position: 18px 14px; }
-  .bands div:nth-child(2) { background: var(--saffron-600); }
-  .bands div:nth-child(3) { background: var(--saffron-400); height: 62%; }
-
-  /* generic two-col */
-  .split { display: grid; gap: var(--s5); grid-template-columns: 1fr; }
-  @media (min-width: 900px) { .split { grid-template-columns: 300px 1fr; } }
-
-  /* steps */
-  .steps { display: grid; gap: var(--s4); grid-template-columns: 1fr; counter-reset: step; }
-  @media (min-width: 720px) { .steps { grid-template-columns: repeat(3, 1fr); gap: var(--s5); } }
-  .step { display: grid; gap: var(--s2); padding-top: var(--s3); border-top: 2px solid var(--ink-900); }
-  .step .num { font-family: var(--font-mono); font-size: 13px; color: var(--saffron-600); }
-
-  /* table */
-  .tablewrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 15px; }
-  th, td { text-align: left; padding: 13px var(--s3) 13px 0; border-bottom: 1px solid var(--line-200); vertical-align: top; }
-  th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 500; color: var(--ink-500); border-bottom-color: var(--ink-900); white-space: nowrap; }
-  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
-
-  /* work grid */
-  .work { display: grid; gap: var(--s3); grid-template-columns: repeat(2, 1fr); }
-  @media (min-width: 720px) { .work { grid-template-columns: repeat(3, 1fr); gap: var(--s4); } }
-  .piece { display: grid; gap: var(--s2); }
-  .slot {
-    aspect-ratio: 9 / 14; max-width: 100%;
-    background: var(--surface-100);
-    border: 1px dashed var(--line-200);
-    display: grid; place-items: center; padding: var(--s3);
-    text-align: center;
-  }
-  .slot span { font-family: var(--font-mono); font-size: 12px; color: var(--ink-500); }
-  .piece h3 { font-size: 16px; line-height: 22px; }
-
-  .pill { justify-self: start;
-    display: inline-block; border-radius: 999px; padding: 3px 10px;
-    background: var(--surface-100); color: var(--ink-500);
-    font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 500;
-  }
-
-  /* price cards */
-  .tiers { display: grid; gap: var(--s4); grid-template-columns: 1fr; }
-  @media (min-width: 720px) { .tiers { grid-template-columns: 1fr 1fr; } }
-  .tier { border: 1px solid var(--line-200); padding: var(--s4); display: grid; gap: var(--s3); align-content: start; border-radius: 6px; }
-  .tier.lead { border-color: var(--ink-900); }
-  .price { font-family: var(--font-display); font-weight: 700; font-size: 32px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-  .tier ul { margin: 0; padding-left: 1.1em; display: grid; gap: var(--s1); font-size: 15px; }
-
-  .nolist { display: grid; gap: var(--s2); margin: 0; padding: 0; list-style: none; }
-  .nolist li { padding-left: 26px; position: relative; }
-  .nolist li::before { content: "—"; position: absolute; left: 0; color: var(--saffron-600); }
-
-  footer.site { padding-block: var(--s5); display: grid; gap: var(--s3); }
-  .footrow { display: flex; flex-wrap: wrap; gap: var(--s4); justify-content: space-between; align-items: baseline; }
-
-  .note { font-size: 14px; line-height: 22px; color: var(--ink-500); }
-  .stack { display: grid; gap: var(--s4); }
-  .stack-sm { display: grid; gap: var(--s2); }
-  /* showcase */
-  .group { display: grid; gap: var(--s3); min-width: 0; }
-  .stack > *, .split > * { min-width: 0; }
-  .work { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  @media (min-width: 720px) { .work { grid-template-columns: repeat(3, minmax(0, 1fr)); } .work.posters { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-  .piece { margin: 0; }
-  .piece figcaption { display: grid; gap: 2px; }
-  .meta { font-family: var(--font-mono); font-size: 12px; line-height: 18px; color: var(--saffron-600); }
-  .slot-wide { aspect-ratio: 16 / 9; }
-  .slot-poster { aspect-ratio: 4 / 5; }
-  .feature { display: grid; gap: var(--s3); grid-template-columns: minmax(0, 1fr); }
-  .group > *, .feature > * { min-width: 0; }
-  @media (min-width: 900px) { .feature { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: end; gap: var(--s4); } }
-  .feature-cap { display: grid; gap: var(--s2); }
-  .piece video, .piece img, .feature video, .feature img { width: 100%; display: block; object-fit: cover; background: var(--surface-100); }
-
-  /* software */
-  .offers { display: grid; gap: var(--s4); grid-template-columns: 1fr; }
-  @media (min-width: 720px) { .offers { grid-template-columns: 1fr 1fr; gap: var(--s5) var(--s5); } }
-  .offer { display: grid; gap: var(--s2); padding-top: var(--s3); border-top: 1px solid var(--line-200); align-content: start; }
-  .offer .num { font-family: var(--font-mono); font-size: 13px; color: var(--ink-500); }
-  .samples { display: grid; gap: var(--s4); grid-template-columns: 1fr; }
-  @media (min-width: 720px) { .samples { grid-template-columns: 1fr 1fr; } }
-  .sample { display: grid; gap: var(--s2); align-content: start; color: inherit; text-decoration: none; }
-  .sample img { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: contain; background: #fff; border: 1px solid var(--line-200); }
-  .sample:hover h3 { text-decoration: underline; text-underline-offset: 3px; }
-</style>
-</head>
-<body>
-<header class="site">
-  <div class="wrap bar">
-    <a class="mark" href="#top"><i></i>Saffron Labs</a>
-    <nav class="site">
-      <a href="#work">Ads</a>
-      <a href="#software">Software</a>
-      <a href="#how">How it works</a>
-      <a href="#pricing">Pricing</a>
-      <a href="#contact">Contact</a>
-    </nav>
-  </div>
-</header>
-
-<main id="top">
-
-  <section class="pad">
-    <div class="wrap hero-grid">
-      <div class="hero-stack">
-        <p class="label">Ads &amp; software studio · Phagwara &amp; Jalandhar</p>
-        <h1>Ads that look like you paid a lot more.</h1>
-        <p class="lede muted">We make video and poster ads for local businesses — seven videos and four posters in a week, for the price of a single photoshoot. No crew, no shoot day, no waiting a month.</p>
-        <p class="lede muted">And when the problem is not marketing, we build the software: order tracking your customers can follow, staff scheduling that checks who turned up, and one dashboard for the owner.</p>
-        <div class="cta-row">
-          <a class="btn btn-primary" href="#contact">Get a free sample ad</a>
-          <a class="btn btn-ghost" href="#software">Software for your operations</a>
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow"><span></span> Creative growth partner / India</p>
+          <h1>Make local<br /><em>legendary.</em></h1>
+          <p class="hero-sub">The creative studio and growth system for businesses that are done blending in.</p>
+          <a class="round-link" href="#contact"><span>Start a project</span><b>↗</b></a>
         </div>
-      </div>
-      <div class="bands" aria-hidden="true"><div></div><div></div><div></div></div>
-    </div>
-  </section>
-
-  <section class="pad" id="how">
-    <div class="wrap stack">
-      <div class="split">
-        <div class="stack-sm">
-          <p class="label">How it works</p>
-          <h2>Learn once. Make a lot. Keep what worked.</h2>
-        </div>
-        <p class="measure muted">Most studios start every brief from zero. We write your brand down once — your products, your offers, your prices, the claims we are not allowed to make — and everything after that gets faster and closer to right. It is why the tenth ad is better than the first.</p>
-      </div>
-      <div class="steps">
-        <div class="step">
-          <p class="num">01 · Samajh</p>
-          <h3>We learn your business</h3>
-          <p class="note">One sitting. Your products, your busiest hours, what you already post, what actually sells. We write it down and keep it.</p>
-        </div>
-        <div class="step">
-          <p class="num">02 · Banao</p>
-          <h3>We make a lot, fast</h3>
-          <p class="note">Seven videos and four posters in seven days, in Hindi, Punjabi or English. Every one checked by a person before you see it.</p>
-        </div>
-        <div class="step">
-          <p class="num">03 · Parakh</p>
-          <h3>We see what worked</h3>
-          <p class="note">Which post got saved, which one got calls. The winners go back into your file, so the next batch starts ahead.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="pad" id="work">
-    <div class="wrap stack">
-      <div class="split">
-        <div class="stack-sm">
-          <p class="label">Ads · Selected concepts</p>
-          <h2>Work we made to show what is possible.</h2>
-        </div>
-        <p class="measure muted">These are concept pieces, made for real local businesses that have not commissioned us. They are not client campaigns and are not presented as such. If your shop is one of them and you would rather we took it down, message us and it is gone the same day.</p>
-      </div>
-
-      <div class="group">
-        <p class="label">Hero film</p>
-        <figure class="piece feature">
-          <div class="slot slot-wide"><span>16:9 · 20–30 sec<br>replace with hero film</span></div>
-          <figcaption class="feature-cap">
-            <h3>Café &amp; restaurant — evening menu</h3>
-            <p class="meta">Hero · 30 sec · Hindi + English</p>
-            <p class="note">One dish, three hooks. The long cut for YouTube and the feed; the reels below are cut from the same generation.</p>
-          </figcaption>
-        </figure>
-      </div>
-
-      <div class="group">
-        <p class="label">Reels</p>
-        <div class="work">
-          <figure class="piece">
-            <div class="slot"><span>9:16 · 15 sec<br>replace with reel</span></div>
-            <figcaption><h3>Café &amp; restaurant</h3><p class="meta">Reel · 15 sec · Hindi</p><p class="note">Evening menu, one dish, three hooks.</p></figcaption>
-          </figure>
-          <figure class="piece">
-            <div class="slot"><span>9:16 · 15 sec<br>replace with reel</span></div>
-            <figcaption><h3>Gym &amp; fitness studio</h3><p class="meta">Reel · 15 sec · Punjabi</p><p class="note">Joining offer, two audiences, same footage.</p></figcaption>
-          </figure>
-          <figure class="piece">
-            <div class="slot"><span>9:16 · 15 sec<br>replace with reel</span></div>
-            <figcaption><h3>Salon</h3><p class="meta">Reel · 12 sec · English</p><p class="note">Before-and-after, no claims about results.</p></figcaption>
-          </figure>
-          <figure class="piece">
-            <div class="slot"><span>9:16 · 15 sec<br>replace with reel</span></div>
-            <figcaption><h3>Coaching institute</h3><p class="meta">Reel · 15 sec · Hindi + English</p><p class="note">Admissions window, bilingual cut.</p></figcaption>
-          </figure>
-          <figure class="piece">
-            <div class="slot"><span>9:16 · 15 sec<br>replace with reel</span></div>
-            <figcaption><h3>Clothing boutique</h3><p class="meta">Reel · 10 sec · Punjabi</p><p class="note">New arrivals, festival timing.</p></figcaption>
-          </figure>
-          <figure class="piece">
-            <div class="slot"><span>9:16 · 15 sec<br>replace with reel</span></div>
-            <figcaption><h3>Local real estate</h3><p class="meta">Reel · 15 sec · English</p><p class="note">One property, walk-through and stills.</p></figcaption>
-          </figure>
-        </div>
-      </div>
-
-      <div class="group">
-        <p class="label">Posters</p>
-        <div class="work posters">
-          <figure class="piece">
-            <div class="slot slot-poster"><span>4:5 poster<br>replace with image</span></div>
-            <figcaption><h3>Café — weekend offer</h3><p class="meta">Feed · 4:5</p></figcaption>
-          </figure>
-          <figure class="piece">
-            <div class="slot slot-poster"><span>4:5 poster<br>replace with image</span></div>
-            <figcaption><h3>Gym — joining offer</h3><p class="meta">Story · 9:16 crop</p></figcaption>
-          </figure>
-          <figure class="piece">
-            <div class="slot slot-poster"><span>4:5 poster<br>replace with image</span></div>
-            <figcaption><h3>Boutique — festival drop</h3><p class="meta">Feed · 4:5</p></figcaption>
-          </figure>
-          <figure class="piece">
-            <div class="slot slot-poster"><span>4:5 poster<br>replace with image</span></div>
-            <figcaption><h3>Coaching — admissions open</h3><p class="meta">Feed · 4:5</p></figcaption>
-          </figure>
-        </div>
-      </div>
-
-      <div class="stack-sm">
-        <span class="pill">Clients</span>
-        <p class="measure muted">We opened this month. No client campaigns to show yet — when the first one ships, it goes here with the numbers attached. We would rather leave this empty than pad it.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="pad" id="software">
-    <div class="wrap stack">
-      <div class="split">
-        <div class="stack-sm">
-          <p class="label">Software</p>
-          <h2>The app your operations are missing.</h2>
-        </div>
-        <p class="measure muted">Some businesses we meet do not need another ad first. They need customers to stop calling to ask where their order is, and staff rosters to move out of WhatsApp groups. We build small, focused systems for that, and run them with you after launch.</p>
-      </div>
-
-      <div class="offers">
-        <div class="offer">
-          <p class="num">A · Track</p>
-          <h3>Order &amp; status tracking</h3>
-          <p class="note">Customers scan a QR at drop-off and follow each stage — received, in progress, ready — on WhatsApp or a web app. Nothing to install from an app store.</p>
-        </div>
-        <div class="offer">
-          <p class="num">B · Staff</p>
-          <h3>Shifts &amp; attendance</h3>
-          <p class="note">People book shifts around their own availability. Check-in is verified on site, no-shows are covered from a standby pool, and pay follows verified hours.</p>
-        </div>
-        <div class="offer">
-          <p class="num">C · See</p>
-          <h3>Owner dashboards</h3>
-          <p class="note">One screen for volume, delays, complaints and staff hours across every location, with a weekly report sent on its own.</p>
-        </div>
-        <div class="offer">
-          <p class="num">D · Automate</p>
-          <h3>AI assistants &amp; automation</h3>
-          <p class="note">Assistants that answer routine customer questions and draft follow-ups from your own data, with a person approving anything that goes out.</p>
-        </div>
-      </div>
-
-      <div class="steps">
-        <div class="step">
-          <p class="num">01 · Discovery</p>
-          <h3>We see where the work happens</h3>
-          <p class="note">We visit, count the real volumes and costs, and write down what success means in numbers before any code is written.</p>
-        </div>
-        <div class="step">
-          <p class="num">02 · Pilot</p>
-          <h3>One location, 6–8 weeks</h3>
-          <p class="note">The system runs in a small slice of your business, measured against the numbers from discovery.</p>
-        </div>
-        <div class="step">
-          <p class="num">03 · Rollout</p>
-          <h3>Everywhere, if it worked</h3>
-          <p class="note">If the pilot hits the target, it goes to every location. If it does not, you have the data to know why.</p>
-        </div>
-      </div>
-
-      <p class="note measure">Pricing is quoted per project after discovery: a fixed price for the pilot, then a monthly fee per location for hosting and support.</p>
-
-      <div class="group">
-        <p class="label">Sample builds · made-up data</p>
-        <div class="samples">
-          <a class="sample" href="work/samples/sales-analysis-report.pdf">
-            <img src="work/samples/sales-trend.png" alt="Line chart of monthly revenue and profit from the sample sales report" width="1180" height="508">
-            <h3>Sales analysis report</h3>
-            <p class="meta">PDF · Python, pandas, automated charts</p>
-            <p class="note">A year of sales data cleaned, analysed and turned into a report with no manual formatting.</p>
-          </a>
-          <a class="sample" href="work/samples/sales-forecasting-dashboard.xlsx">
-            <div class="slot slot-wide"><span>Excel dashboard<br>download to open</span></div>
-            <h3>Sales forecasting dashboard</h3>
-            <p class="meta">Excel · generated with Python</p>
-            <p class="note">Actuals, margins and a six-month forecast in a workbook the owner already knows how to use.</p>
-          </a>
-        </div>
-        <p class="note measure">These were built on invented data to show the kind of work we do. They are not client projects.</p>
-      </div>
-
-      <div class="stack-sm">
-        <span class="pill">Software clients</span>
-        <p class="measure muted">We are taking on our first software projects now. When one ships, it goes here with the before-and-after numbers.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="pad" id="pricing">
-    <div class="wrap stack">
-      <div class="split">
-        <div class="stack-sm">
-          <p class="label">Pricing</p>
-          <h2>Two ways to start. Both in the open.</h2>
-        </div>
-        <p class="measure muted">No hidden costs, no per-video surprises, no lock-in. What is written here is what you pay.</p>
-      </div>
-
-      <div class="tiers">
-        <div class="tier lead">
-          <div class="stack-sm">
-            <span class="pill">Start here</span>
-            <p class="price">₹8,000 – ₹12,000</p>
-            <p class="note">One-off pilot · delivered in 7 days</p>
+        <div class="hero-orbit" aria-hidden="true">
+          <div class="ring ring-one"></div><div class="ring ring-two"></div><div class="ring ring-three"></div>
+          <div class="signal">
+            <svg viewBox="0 0 300 300"><path class="beam a" d="M150 238L64 74"/><path class="beam b" d="M150 238L150 45"/><path class="beam c" d="M150 238L236 74"/><circle cx="150" cy="238" r="9"/><circle cx="64" cy="74" r="9"/><circle cx="150" cy="45" r="9"/><circle cx="236" cy="74" r="9"/></svg>
           </div>
-          <ul>
-            <li>1 hero video — 20–30 sec, for feed and stories</li>
-            <li>6 short vertical videos — 10–15 sec, for Reels</li>
-            <li>4 poster creatives — feed and story sizes</li>
-            <li>Your brand file, written once and kept</li>
-            <li>2 revision rounds on the hero, 1 on the shorts</li>
-            <li>A 30-minute review call at the end</li>
-          </ul>
-          <p class="note">₹8,000 for a single-location shop · ₹12,000 with two languages or a festival deadline inside 4 days.</p>
+          <p class="orbit-label one">ATTENTION</p><p class="orbit-label two">MOMENTUM</p><p class="orbit-label three">GROWTH</p>
         </div>
+        <div class="hero-foot"><span>Scroll to enter</span><span class="scroll-line"></span><span>01 — 05</span></div>
+      </section>
 
-        <div class="tier">
-          <div class="stack-sm">
-            <span class="pill">Once you have seen it work</span>
-            <p class="price">₹15,000 – ₹25,000</p>
-            <p class="note">Monthly · cancel any month</p>
-          </div>
-          <ul>
-            <li>12–20 assets a month across video and posters</li>
-            <li>Monthly review of what performed</li>
-            <li>Posting handled, if you want it</li>
-            <li>Festival and offer calendar planned ahead</li>
-            <li>Priority turnaround on anything urgent</li>
-          </ul>
-          <p class="note">Ad spend is separate and always paid by you, directly to the platform.</p>
+      <section class="manifesto reveal">
+        <p class="section-index">01 / THE POINT</p>
+        <h2>Big cities don’t own <em>big ideas.</em></h2>
+        <div class="manifesto-bottom"><p>We take the heart of your business and turn up the volume — with campaigns people remember and systems that keep the good kind of busy under control.</p><a href="#system">How we work <i>↘</i></a></div>
+      </section>
+
+      <section class="work" id="work">
+        <div class="work-head reveal"><p class="section-index">02 / SELECTED SIGNALS</p><h2>Work with a<br /><em>pulse.</em></h2><p>Hover to tune in.</p></div>
+        <div class="project-grid">
+          <article class="project project-saffron reveal"><div class="project-num">01</div><div class="project-image"><video autoplay muted loop playsinline poster="media/serum-product.png"><source src="media/serum-film.mp4" type="video/mp4" /></video><div class="media-label">LUMIÈRE / BEAUTY FILM</div></div><div class="project-info"><span>Beauty / Product film</span><h3>Lumière Serum</h3><b>↗</b></div></article>
+          <article class="project project-violet reveal"><div class="project-num">02</div><div class="project-image"><video autoplay muted loop playsinline poster="media/watch.png"><source src="media/watch-film.mp4" type="video/mp4" /></video><div class="media-label">HIGGS / BRAND FILM</div></div><div class="project-info"><span>Luxury / Product film</span><h3>Higgs Watches</h3><b>↗</b></div></article>
+          <article class="project project-lime reveal"><div class="project-num">03</div><div class="project-image"><video autoplay muted loop playsinline poster="media/audio.png"><source src="media/audio-film.mp4" type="video/mp4" /></video><div class="media-label">TRUE WIRELESS / SOUND FILM</div></div><div class="project-info"><span>Audio / Campaign</span><h3>Listen Closer</h3><b>↗</b></div></article>
+          <article class="project project-fashion reveal"><div class="project-num">04</div><div class="project-image"><video autoplay muted loop playsinline poster="media/model-poster.avif"><source src="media/dress-change.mp4" type="video/mp4" /></video><div class="media-label">THE SWITCH / FASHION FILM</div></div><div class="project-info"><span>Fashion / Transformation film</span><h3>The Switch</h3><b>↗</b></div></article>
         </div>
-      </div>
+      </section>
 
-      <div class="tablewrap">
-        <table>
-          <caption class="label" style="text-align:left; padding-bottom: 12px;">What the pilot contains</caption>
-          <thead>
-            <tr><th scope="col">Deliverable</th><th scope="col">Quantity</th><th scope="col">Spec</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Brand file</td><td class="num">1</td><td>Voice, products, offers, and the claims we will not make</td></tr>
-            <tr><td>Hero ad video</td><td class="num">1</td><td>20–30 sec, 16:9 and 1:1 export</td></tr>
-            <tr><td>Vertical short-form</td><td class="num">6</td><td>10–15 sec, 9:16, Reels and Stories</td></tr>
-            <tr><td>Poster creatives</td><td class="num">4</td><td>Feed and story sizes</td></tr>
-            <tr><td>Revision rounds</td><td class="num">2</td><td>On the hero; shorts get one pass</td></tr>
-            <tr><td>Turnaround</td><td class="num">7 days</td><td>From the day we receive your photos and offers</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="note">Not included in the pilot: ad spend management, community management, a second hero video, unlimited revisions, or more than one language.</p>
-    </div>
-  </section>
+      <section class="lab-reel reveal">
+        <div class="reel-phone"><video autoplay muted loop playsinline poster="media/serum-lifestyle.png"><source src="media/saffron-film.mp4" type="video/mp4" /></video></div>
+        <div class="reel-copy"><p class="section-index">THE SAFFRON CUT / 00:27</p><h2>The work should feel <em>alive.</em></h2><p>Not mockups. Not placeholders. Movement, light and a point of view people can feel before they read a word.</p><a href="#contact">See the full reel <i>↗</i></a></div>
+      </section>
 
-  <section class="pad" id="honest">
-    <div class="wrap split">
-      <div class="stack-sm">
-        <p class="label">What we will not make</p>
-        <h2>The list we hand every client.</h2>
-      </div>
-      <div class="stack">
-        <p class="measure muted">We use AI to make the work, and we say so on the ad. That is going to be the rule in Indian advertising soon, and we would rather be early than corrected. It also means there are things we turn down, even when a client asks:</p>
-        <ul class="nolist measure">
-          <li>Customer testimonials from people who do not exist</li>
-          <li>Doctors, lawyers or experts we invented</li>
-          <li>Before-and-after results we cannot stand behind</li>
-          <li>Real places dressed up as somewhere they are not</li>
-          <li>Anyone's face or voice without their written permission</li>
-        </ul>
-        <p class="note">This protects your business more than it restricts ours. An ad that gets pulled costs you far more than the ad cost in the first place.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="pad" id="contact">
-    <div class="wrap split">
-      <div class="stack-sm">
-        <p class="label">Contact</p>
-        <h2>We will make you one, free.</h2>
-      </div>
-      <div class="stack">
-        <p class="measure muted">For ads: send us your shop name and Instagram handle. We will make one ad for your business and send it over — no charge, no meeting needed. If you like it, we will talk. If you don't, you keep it anyway.</p>
-        <p class="measure muted">For software: tell us what your staff or customers keep chasing by phone. We will reply with how we would fix it, and what a pilot would cost.</p>
-        <div class="cta-row">
-          <a class="btn btn-primary" href="mailto:hello@saffronlabs.in">hellosaffronlabs@gmail.com</a>
-          <a class="btn btn-ghost" href="#top">WhatsApp</a>
+      <section class="system" id="system">
+        <div class="system-intro reveal"><p class="section-index">03 / THE SAFFRON SYSTEM</p><h2>From heads<br />turning to <em>doors opening.</em></h2></div>
+        <div class="system-steps">
+          <article class="step reveal"><div class="step-no">01</div><div class="step-title"><span class="step-icon">✹</span><h3>Make them<br />notice.</h3></div><p>Films, reels, campaigns, visual identities and everything needed to become the name people pass on.</p><a href="#contact">Creative studio <i>↗</i></a></article>
+          <article class="step reveal"><div class="step-no">02</div><div class="step-title"><span class="step-icon">⌁</span><h3>Make it<br />convert.</h3></div><p>Landing pages, lead flows and sharp digital touchpoints that turn curiosity into a customer.</p><a href="#contact">Digital experiences <i>↗</i></a></article>
+          <article class="step reveal"><div class="step-no">03</div><div class="step-title"><span class="step-icon">⌘</span><h3>Make it<br />run.</h3></div><p>Custom dashboards, WhatsApp automation and intelligent operations that buy your team time back.</p><a href="#contact">Growth systems <i>↗</i></a></article>
         </div>
-        <p class="note">Based in Phagwara. We work with businesses across Jalandhar, Ludhiana and Kapurthala.</p>
-      </div>
-    </div>
-  </section>
+      </section>
 
-</main>
+      <section class="statement reveal"><div class="statement-signal"><svg viewBox="0 0 100 100"><path d="M50 85V20M50 85L20 35M50 85L80 35"/><circle cx="50" cy="20" r="4"/><circle cx="20" cy="35" r="4"/><circle cx="80" cy="35" r="4"/><circle cx="50" cy="85" r="4"/></svg></div><p>Not an agency.<br />A <em>signal amplifier.</em></p></section>
 
-<footer class="site wrap">
-  <div class="footrow">
-    <a class="mark" href="#top"><i></i>Saffron Labs</a>
-    <p class="note">saffronlabs.in · Phagwara, Punjab</p>
-  </div>
-  <p class="note">Ads on this site marked as concepts were made for businesses that have not commissioned us, and are not client work. Software samples use invented data. Creative produced with AI assistance is labelled on the ad.</p>
-</footer>
-
-<script>
-  // Showcase videos: play muted while on screen, pause when scrolled away.
-  (function () {
-    var vids = document.querySelectorAll('#work video');
-    if (!vids.length || !('IntersectionObserver' in window)) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) {
-        var v = e.target; v.muted = true;
-        if (e.isIntersecting) { var p = v.play(); if (p) p.catch(function () {}); } else { v.pause(); }
-      });
-    }, { threshold: 0.6 });
-    vids.forEach(function (v) { io.observe(v); });
-  })();
-</script>
-</body>
+      <section class="contact" id="contact">
+        <p class="section-index">04 / YOUR TURN</p>
+        <h2>Ready to be<br /><em>remembered?</em></h2>
+        <a class="contact-cta" href="mailto:hello@saffronlabs.in">hello@saffronlabs.in <span>↗</span></a>
+        <div class="contact-foot"><span>Phagwara / Jalandhar / Everywhere</span><span>© 2026 Saffron Labs</span><span>Instagram &nbsp; LinkedIn</span></div>
+      </section>
+    </main>
+    <script src="script.js"></script>
+  </body>
 </html>
