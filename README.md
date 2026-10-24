@@ -2,52 +2,60 @@
 
 The Saffron Labs website, served by GitHub Pages at **https://saffronlabs.in**.
 
-Static HTML, no build step, no dependencies. Edit `index.html` and push; Pages redeploys in about a minute.
+Static HTML, no build step, no dependencies. Edit and push to `main`; Pages redeploys in about a minute.
 
 ## Files
 
 | File | What it is |
 | --- | --- |
-| `index.html` | The whole site — markup, styles and content in one file |
-| `404.html` | Not-found page, same brand |
+| `index.html` | The homepage: every section's markup and copy |
+| `style.css` | All styles. Colour and type tokens are at the top in `:root` |
+| `script.js` | The "What does your business need?" picker, the Work tabs, the live demos and the video loading |
+| `media/loops/` | The short video loops and poster images the homepage uses |
+| `media/` | Older full-length films, not loaded by the current homepage |
+| `404.html` | Not-found page |
 | `CNAME` | Tells GitHub Pages to serve this repo at `saffronlabs.in`. Do not delete it |
 
-## Adding work to the portfolio
+## Homepage sections, top to bottom
 
-The **Ads** section (`#work`) has three groups of placeholders: one hero film (16:9), six reels (9:16) and four posters (4:5). Each placeholder is a `<div class="slot">…</div>` inside a `<figure class="piece">`. Replace the slot with the real asset and keep the caption:
+Statement and showreel, the needs picker (`#need`), Work (`#work`), What we build (`#services`), Start with one week, How a project runs (`#process`), the AI promise, Contact (`#contact`).
+
+## Adding work
+
+The Work section has three tabs, each a `<div class="grid" role="tabpanel">` in `index.html`:
+
+- `#p-media` for films, reels and posters
+- `#p-soft` for websites and software
+- `#p-auto` for automations
+
+Add a client project as the first `<figure class="piece">` in its tab and update the count in the matching tab button. `piece wide` takes half the row, `piece` a third, `piece full` the whole row.
+
+A video piece looks like this. Videos load and play only while on screen:
 
 ```html
-<!-- a poster -->
-<img src="work/cafe-weekend.jpg" alt="Weekend offer poster for a Phagwara café" style="aspect-ratio:4/5">
-
-<!-- a reel (use 16/9 for the hero film) -->
-<video src="work/cafe-reel.mp4" poster="work/cafe-reel.jpg" muted loop playsinline preload="metadata"
-       style="aspect-ratio:9/16"></video>
+<figure class="piece"><div class="frame">
+  <video muted loop playsinline preload="metadata" poster="media/loops/cafe.jpg" data-src="media/loops/cafe.mp4" aria-label="What the video shows"></video>
+</div><figcaption>Client name <span>What it is</span></figcaption></figure>
 ```
 
-Videos in the Ads section play muted automatically while on screen and pause when scrolled away (skipped for visitors who prefer reduced motion). Update the `meta` line under each piece with the real format, length and language.
+Keep each loop under 1 MB: about 8 seconds, no sound, H.264, roughly 600 px on the short side. For example:
 
-Put files in a `work/` folder at the repo root. Keep each video under ~10 MB — GitHub Pages is not a video host, and a heavy page loses the visitor before it loads. For anything larger, upload to YouTube or Vimeo unlisted and embed.
-
-## Software section
-
-`#software` lists the four software offers, the discovery → pilot → rollout process, and two sample builds in `work/samples/`. When a real software project ships, add it under **Software clients** with before-and-after numbers.
-
-## Brand
-
-Colours, type and usage rules live in the Saffron Labs design system. The short version, both defined at the top of `index.html`:
-
-- Ground is white, text is near-black, saffron appears **once per section** and never as a large field.
-- Corners are square by default. Only status pills are round.
-- Type is Archivo (display), Anek Latin / Anek Devanagari (text), IBM Plex Mono (utility).
+```sh
+ffmpeg -i input.mp4 -t 8 -an -vf "scale=480:-2,fps=24" -c:v libx264 -crf 30 -pix_fmt yuv420p -movflags +faststart media/loops/name.mp4
+ffmpeg -i media/loops/name.mp4 -frames:v 1 -q:v 5 media/loops/name.jpg
+```
 
 ## Honesty rules baked into the page
 
-Two things on this site are deliberate and should not be quietly removed:
+These are deliberate and should not be quietly removed:
 
-1. The concepts section states that those pieces were made for businesses that have not commissioned us. Do not present them as client work.
-2. The Clients section is empty and says so. Fill it with real work and real numbers, or leave it.
-3. The software sample builds are labelled as made on invented data. Do not present them as client projects.
+1. Every film in the Media tab is a concept made for a brand that did not hire us, and carries a "Concept" tag. Do not present them as client work.
+2. Every piece in the Websites and software and Automation tabs is a demo on invented data, tagged "Demo" or "Live demo", and its caption says so. Replace demos with real projects as they ship; never relabel a demo as a client.
+3. No client logos, testimonials, stats or prices we can't back with a named client.
+
+## Contact details used on the page
+
+WhatsApp +91 82816 96632 (every WhatsApp button links to `wa.me/918281696632` with a pre-filled message) and hello@saffronlabs.in.
 
 ## Local preview
 
