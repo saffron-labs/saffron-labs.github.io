@@ -28,6 +28,22 @@ const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const reelVideo = document.querySelector('#reel video');
 if (still) { reelVideo.removeAttribute('autoplay'); reelVideo.pause(); }
 
+/* one switch pauses every video on the page; starts paused for reduced-motion users */
+let videosOff = still;
+const motionBtn = $('motion-toggle');
+const onScreen = new Set();
+function setVideos(off){
+  videosOff = off;
+  motionBtn.textContent = off ? 'Play videos' : 'Pause videos';
+  motionBtn.setAttribute('aria-pressed', String(off));
+  document.querySelectorAll('video').forEach(v => {
+    if (off) v.pause();
+    else if (v === reelVideo || onScreen.has(v)) v.play().catch(() => {});
+  });
+}
+motionBtn.addEventListener('click', () => setVideos(!videosOff));
+setVideos(videosOff);
+
 /* the one orchestrated moment: the showreel settles to full size as you scroll into it */
 const reel = $('reel');
 if (!still) {
@@ -44,9 +60,10 @@ const works = document.querySelectorAll('.frame video[data-src]');
 const io = new IntersectionObserver(entries => entries.forEach(e => {
   const v = e.target;
   if (e.isIntersecting) {
+    onScreen.add(v);
     if (!v.src) v.src = v.dataset.src;
-    if (!still) v.play().catch(() => {});
-  } else { v.pause(); }
+    if (!videosOff) v.play().catch(() => {});
+  } else { onScreen.delete(v); v.pause(); }
 }), {threshold:0.35});
 works.forEach(v => io.observe(v));
 
@@ -89,3 +106,31 @@ $('send-lead').addEventListener('click', () => {
     if (i === 2) $('flow-note').textContent = 'Done in under a second. The owner already has the lead on their phone.';
   }, still ? 0 : 500 * (i + 1)));
 });
+
+/* menu */
+const menu = $('menu');
+$('menu-open').addEventListener('click', () => menu.showModal());
+$('menu-close').addEventListener('click', () => menu.close());
+menu.addEventListener('click', e => { if (e.target === menu) menu.close(); });
+menu.querySelectorAll('.menu-links a').forEach(a => a.addEventListener('click', e => {
+  e.preventDefault();
+  const target = document.querySelector(a.getAttribute('href'));
+  menu.close();
+  target.scrollIntoView({behavior: still ? 'auto' : 'smooth'});
+  history.replaceState(null, '', a.getAttribute('href'));
+}));
+
+/* FAQ: each chip opens its answer in a side panel */
+const panel = $('faq-panel');
+let lastChip = null;
+document.querySelectorAll('.chip[data-faq]').forEach(chip => chip.addEventListener('click', () => {
+  const src = $('faq-' + chip.dataset.faq);
+  $('faq-g').textContent = src.dataset.group;
+  $('faq-q').textContent = src.querySelector('h4').textContent;
+  $('faq-body').replaceChildren(...[...src.querySelectorAll('p')].map(p => p.cloneNode(true)));
+  lastChip = chip; chip.setAttribute('aria-expanded', 'true');
+  panel.showModal();
+}));
+$('faq-close').addEventListener('click', () => panel.close());
+panel.addEventListener('click', e => { if (e.target === panel) panel.close(); });
+panel.addEventListener('close', () => { if (lastChip) lastChip.setAttribute('aria-expanded', 'false'); });

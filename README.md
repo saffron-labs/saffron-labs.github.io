@@ -18,7 +18,17 @@ Static HTML, no build step, no dependencies. Edit and push to `main`; Pages rede
 
 ## Homepage sections, top to bottom
 
-Statement and showreel, the needs picker (`#need`), Work (`#work`), What we build (`#services`), Start with one week, How a project runs (`#process`), the AI promise, Contact (`#contact`).
+Statement and showreel, the needs picker (`#need`), Work (`#work`), What we build (`#services`), Start with one week, How a project runs (`#process`), the AI promise, Team (`#team`), FAQs (`#faq`), Contact (`#contact`).
+
+The **Menu** button in the header opens a slide-in panel (`<dialog id="menu">`). Add a section to it by adding an `<li>` to `.menu-links` with the next number.
+
+## Team
+
+Each founder is an `<li class="mate">` in `#team`. The `.face` box shows initials for now. To use a photo, replace the `<span>` inside `.face` with an `<img src="media/team/name.jpg" alt="">` (portrait, about 800 × 1000 px, under 150 KB) and add `.face img{width:100%;height:100%;object-fit:cover}` to `style.css`.
+
+## FAQs
+
+Each question is a `<button class="chip" data-faq="key">` in a `.faq-group`, and its answer is a `<div id="faq-key" data-group="Group name">` inside `.faq-answers` (an `<h4>` for the question, `<p>` for the answer). Tapping a chip opens that answer in a side panel. Keep answers to things we actually do; don't promise anything not on the page.
 
 ## Adding work
 
