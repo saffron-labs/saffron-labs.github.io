@@ -1,62 +1,58 @@
+/* Shared by every page. Each block only runs if its section is on the page. */
+const $ = id => document.getElementById(id);
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const wa = t => 'https://wa.me/918281696632?text=' + encodeURIComponent(t);
+
+/* menu */
+const menu = $('menu');
+if (menu) {
+  $('menu-open').addEventListener('click', () => menu.showModal());
+  $('menu-close').addEventListener('click', () => menu.close());
+  menu.addEventListener('click', e => { if (e.target === menu) menu.close(); });
+}
+
+/* "What does your business need?" picker (home) */
 const needs = {
   ads:{title:'Ads people stop scrolling for',lead:'Reels, product films and posters for Instagram and WhatsApp, in English, Hindi or Punjabi.',list:['A month of reels and posters','Product and launch films','Festival and offer campaigns'],time:'First ads in 5 days',cta:'Ask about ads on WhatsApp',msg:'Hi Saffron Labs, I want ads for my business.'},
   web:{title:'A website that brings enquiries',lead:'A fast site that shows what you sell and where you are, and sends customers straight to WhatsApp.',list:['Business or catalogue website','Landing page for one offer','Domain, email and Google listing'],time:'1 to 2 weeks',cta:'Ask about a website on WhatsApp',msg:'Hi Saffron Labs, I need a website for my business.'},
   soft:{title:'Software that replaces the register',lead:'Screens built around how your staff already work, so orders, stock and bookings stop living on paper.',list:['Order intake and tracking','Staff and admin dashboards','Booking or inventory system'],time:'Prototype in about a week',cta:'Ask about software on WhatsApp',msg:'Hi Saffron Labs, I want software for my business.'},
   auto:{title:'Answers that send themselves',lead:'The questions and updates you type every day, handled on WhatsApp, email or your website.',list:['WhatsApp auto-replies and order updates','Website chat that captures leads','Reports that update themselves'],time:'3 to 10 days',cta:'Ask about automation on WhatsApp',msg:'Hi Saffron Labs, I want to automate messages for my business.'}
 };
-const $ = id => document.getElementById(id);
 const tabs = [...document.querySelectorAll('#need .tab')];
-function show(k){
-  const n = needs[k];
-  tabs.forEach(t => { const on = t.dataset.k === k; t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; if (on) $('answer').setAttribute('aria-labelledby', t.id); });
-  $('a-title').textContent = n.title; $('a-lead').textContent = n.lead;
-  $('a-list').replaceChildren(...n.list.map(t => { const li = document.createElement('li'); li.textContent = t; return li; }));
-  $('a-time').textContent = n.time; $('a-cta').textContent = n.cta; $('a-cta').href = wa(n.msg);
-}
-tabs.forEach((t, i) => {
-  t.addEventListener('click', () => show(t.dataset.k));
-  t.addEventListener('keydown', e => {
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-    const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
-    next.focus(); show(next.dataset.k);
+if (tabs.length) {
+  const show = k => {
+    const n = needs[k];
+    tabs.forEach(t => { const on = t.dataset.k === k; t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; if (on) $('answer').setAttribute('aria-labelledby', t.id); });
+    $('a-title').textContent = n.title; $('a-lead').textContent = n.lead;
+    $('a-list').replaceChildren(...n.list.map(t => { const li = document.createElement('li'); li.textContent = t; return li; }));
+    $('a-time').textContent = n.time; $('a-cta').textContent = n.cta; $('a-cta').href = wa(n.msg);
+  };
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => show(t.dataset.k));
+    t.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      next.focus(); show(next.dataset.k);
+    });
   });
-});
-show('ads');
+  show('ads');
+}
 
-const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* videos: work loops load and play only while on screen; one switch pauses them all */
 const reelVideo = document.querySelector('#reel video');
-if (still) { reelVideo.removeAttribute('autoplay'); reelVideo.pause(); }
-
-/* one switch pauses every video on the page; starts paused for reduced-motion users */
+if (reelVideo && still) { reelVideo.removeAttribute('autoplay'); reelVideo.pause(); }
 let videosOff = still;
-const motionBtn = $('motion-toggle');
 const onScreen = new Set();
-function setVideos(off){
+const motionBtn = $('motion-toggle');
+const setVideos = off => {
   videosOff = off;
-  motionBtn.textContent = off ? 'Play videos' : 'Pause videos';
-  motionBtn.setAttribute('aria-pressed', String(off));
+  if (motionBtn) { motionBtn.textContent = off ? 'Play videos' : 'Pause videos'; motionBtn.setAttribute('aria-pressed', String(off)); }
   document.querySelectorAll('video').forEach(v => {
     if (off) v.pause();
     else if (v === reelVideo || onScreen.has(v)) v.play().catch(() => {});
   });
-}
-motionBtn.addEventListener('click', () => setVideos(!videosOff));
-setVideos(videosOff);
-
-/* the one orchestrated moment: the showreel settles to full size as you scroll into it */
-const reel = $('reel');
-if (!still) {
-  const fit = () => {
-    const r = reel.getBoundingClientRect();
-    const p = Math.min(1, Math.max(0, 1 - (r.top - innerHeight * 0.25) / (innerHeight * 0.6)));
-    reel.style.transform = `scale(${0.9 + 0.1 * p})`;
-  };
-  addEventListener('scroll', fit, {passive:true}); addEventListener('resize', fit); fit();
-}
-
-/* work loops play only while on screen */
-const works = document.querySelectorAll('.frame video[data-src]');
+};
+if (motionBtn) { motionBtn.addEventListener('click', () => setVideos(!videosOff)); setVideos(videosOff); }
 const io = new IntersectionObserver(entries => entries.forEach(e => {
   const v = e.target;
   if (e.isIntersecting) {
@@ -65,13 +61,22 @@ const io = new IntersectionObserver(entries => entries.forEach(e => {
     if (!videosOff) v.play().catch(() => {});
   } else { onScreen.delete(v); v.pause(); }
 }), {threshold:0.35});
-works.forEach(v => io.observe(v));
+document.querySelectorAll('.frame video[data-src]').forEach(v => io.observe(v));
 
-/* work tabs */
-const wtabs = [...document.querySelectorAll('.wtab')];
-function openWork(t){
-  wtabs.forEach(x => { const on = x === t; x.setAttribute('aria-selected', String(on)); x.tabIndex = on ? 0 : -1; $(x.getAttribute('aria-controls')).hidden = !on; });
+/* the showreel settles to full size as you scroll into it (home) */
+const reel = $('reel');
+if (reel && !still) {
+  const fit = () => {
+    const r = reel.getBoundingClientRect();
+    const p = Math.min(1, Math.max(0, 1 - (r.top - innerHeight * 0.25) / (innerHeight * 0.6)));
+    reel.style.transform = `scale(${0.9 + 0.1 * p})`;
+  };
+  addEventListener('scroll', fit, {passive:true}); addEventListener('resize', fit); fit();
 }
+
+/* work tabs (work page) */
+const wtabs = [...document.querySelectorAll('.wtab')];
+const openWork = t => wtabs.forEach(x => { const on = x === t; x.setAttribute('aria-selected', String(on)); x.tabIndex = on ? 0 : -1; $(x.getAttribute('aria-controls')).hidden = !on; });
 wtabs.forEach((t, i) => {
   t.addEventListener('click', () => openWork(t));
   t.addEventListener('keydown', e => {
@@ -97,7 +102,8 @@ document.querySelectorAll('#chips button').forEach(b => b.addEventListener('clic
 }));
 
 /* lead capture demo */
-$('send-lead').addEventListener('click', () => {
+const sendLead = $('send-lead');
+if (sendLead) sendLead.addEventListener('click', () => {
   const ids = ['f1','f2','f3'];
   ids.forEach(id => $(id).classList.remove('on'));
   $('flow-note').textContent = 'Sending...';
@@ -107,30 +113,19 @@ $('send-lead').addEventListener('click', () => {
   }, still ? 0 : 500 * (i + 1)));
 });
 
-/* menu */
-const menu = $('menu');
-$('menu-open').addEventListener('click', () => menu.showModal());
-$('menu-close').addEventListener('click', () => menu.close());
-menu.addEventListener('click', e => { if (e.target === menu) menu.close(); });
-menu.querySelectorAll('.menu-links a').forEach(a => a.addEventListener('click', e => {
-  e.preventDefault();
-  const target = document.querySelector(a.getAttribute('href'));
-  menu.close();
-  target.scrollIntoView({behavior: still ? 'auto' : 'smooth'});
-  history.replaceState(null, '', a.getAttribute('href'));
-}));
-
-/* FAQ: each chip opens its answer in a side panel */
+/* FAQ: each chip opens its answer in a side panel (FAQ page) */
 const panel = $('faq-panel');
-let lastChip = null;
-document.querySelectorAll('.chip[data-faq]').forEach(chip => chip.addEventListener('click', () => {
-  const src = $('faq-' + chip.dataset.faq);
-  $('faq-g').textContent = src.dataset.group;
-  $('faq-q').textContent = src.querySelector('h4').textContent;
-  $('faq-body').replaceChildren(...[...src.querySelectorAll('p')].map(p => p.cloneNode(true)));
-  lastChip = chip; chip.setAttribute('aria-expanded', 'true');
-  panel.showModal();
-}));
-$('faq-close').addEventListener('click', () => panel.close());
-panel.addEventListener('click', e => { if (e.target === panel) panel.close(); });
-panel.addEventListener('close', () => { if (lastChip) lastChip.setAttribute('aria-expanded', 'false'); });
+if (panel) {
+  let lastChip = null;
+  document.querySelectorAll('.chip[data-faq]').forEach(chip => chip.addEventListener('click', () => {
+    const src = $('faq-' + chip.dataset.faq);
+    $('faq-g').textContent = src.dataset.group;
+    $('faq-q').textContent = src.querySelector('h4').textContent;
+    $('faq-body').replaceChildren(...[...src.querySelectorAll('p')].map(p => p.cloneNode(true)));
+    lastChip = chip; chip.setAttribute('aria-expanded', 'true');
+    panel.showModal();
+  }));
+  $('faq-close').addEventListener('click', () => panel.close());
+  panel.addEventListener('click', e => { if (e.target === panel) panel.close(); });
+  panel.addEventListener('close', () => { if (lastChip) lastChip.setAttribute('aria-expanded', 'false'); });
+}

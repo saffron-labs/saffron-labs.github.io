@@ -4,35 +4,48 @@ The Saffron Labs website, served by GitHub Pages at **https://saffronlabs.in**.
 
 Static HTML, no build step, no dependencies. Edit and push to `main`; Pages redeploys in about a minute.
 
+## Pages
+
+| Page | File | What's on it |
+| --- | --- | --- |
+| Home | `index.html` | Statement and showreel, the needs picker, recent work (3 pieces), Start with one week |
+| Work | `work/index.html` | All work in three tabs: Media, Websites and software, Automation |
+| Services | `services/index.html` | What we build, How a project runs, Start with one week |
+| About | `about/index.html` | The three founders, and how we use AI |
+| FAQs | `faq/index.html` | Question chips; each answer opens in a side panel |
+| Contact | `contact/index.html` | WhatsApp, email, partnerships, Instagram |
+| Links | `links/index.html` | The Instagram bio link page |
+
+Every page except Contact ends with a "Let's talk →" band linking to `/contact/`.
+
+## Shared parts
+
+There's no build step, so the **header, menu and footer are copied into every page**. If you change one (a new menu item, a new phone number), change it in all six pages. The menu marks the current page with `aria-current="page"`, so move that attribute when you copy it.
+
+Paths start with `/` (`/style.css`, `/media/...`) so they work from any folder.
+
 ## Files
 
 | File | What it is |
 | --- | --- |
-| `index.html` | The homepage: every section's markup and copy |
 | `style.css` | All styles. Colour and type tokens are at the top in `:root` |
-| `script.js` | The "What does your business need?" picker, the Work tabs, the live demos and the video loading |
-| `media/loops/` | The short video loops and poster images the homepage uses |
-| `media/` | Older full-length films, not loaded by the current homepage |
+| `script.js` | Menu, needs picker, work tabs, demos, FAQ panel, video loading and the pause button. Each part only runs on pages that have it |
+| `media/loops/` | The short video loops and poster images the site uses |
+| `media/` | Older full-length films, not loaded by any page |
 | `404.html` | Not-found page |
 | `CNAME` | Tells GitHub Pages to serve this repo at `saffronlabs.in`. Do not delete it |
 
-## Homepage sections, top to bottom
-
-Statement and showreel, the needs picker (`#need`), Work (`#work`), What we build (`#services`), Start with one week, How a project runs (`#process`), the AI promise, Team (`#team`), FAQs (`#faq`), Contact (`#contact`).
-
-The **Menu** button in the header opens a slide-in panel (`<dialog id="menu">`). Add a section to it by adding an `<li>` to `.menu-links` with the next number.
-
 ## Team
 
-Each founder is an `<li class="mate">` in `#team`. The `.face` box shows initials for now. To use a photo, replace the `<span>` inside `.face` with an `<img src="media/team/name.jpg" alt="">` (portrait, about 800 × 1000 px, under 150 KB) and add `.face img{width:100%;height:100%;object-fit:cover}` to `style.css`.
+Each founder is an `<li class="mate">` in `about/index.html`. The `.face` box shows initials for now. To use a photo, replace the `<span>` inside `.face` with an `<img src="/media/team/name.jpg" alt="">` (portrait, about 800 × 1000 px, under 150 KB) and add `.face img{width:100%;height:100%;object-fit:cover}` to `style.css`.
 
 ## FAQs
 
-Each question is a `<button class="chip" data-faq="key">` in a `.faq-group`, and its answer is a `<div id="faq-key" data-group="Group name">` inside `.faq-answers` (an `<h4>` for the question, `<p>` for the answer). Tapping a chip opens that answer in a side panel. Keep answers to things we actually do; don't promise anything not on the page.
+Each question is a `<button class="chip" data-faq="key">` in a `.faq-group` in `faq/index.html`, and its answer is a `<div id="faq-key" data-group="Group name">` inside `.faq-answers` (an `<h4>` for the question, `<p>` for the answer). Keep answers to things we actually do; don't promise anything not on the site.
 
 ## Adding work
 
-The Work section has three tabs, each a `<div class="grid" role="tabpanel">` in `index.html`:
+The Work page has three tabs, each a `<div class="grid" role="tabpanel">` in `work/index.html`:
 
 - `#p-media` for films, reels and posters
 - `#p-soft` for websites and software

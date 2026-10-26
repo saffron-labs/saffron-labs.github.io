@@ -215,6 +215,34 @@ footer a:hover{color:var(--gold)}
 .fstep.on span{color:var(--saffron)}
 .flow-note{font-size:14px;color:var(--quiet)}
 
+/* inner-page header: one huge word, like a magazine section opener */
+.page-hero{background:var(--maroon);color:var(--on-maroon)}
+.page-hero .wrap{padding-block:clamp(56px,9vw,128px) clamp(40px,6vw,80px);display:grid;gap:18px}
+.eyebrow{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.page-hero h1{font-size:clamp(64px,16vw,230px);line-height:.86;font-weight:780;font-variation-settings:"wdth" 116;letter-spacing:-.05em;color:var(--white)}
+.hero-line{font-size:clamp(18px,1.6vw,21px);color:var(--muted-on-maroon);max-width:46ch}
+.page-hero + .team .wrap,.page-hero + .contact .wrap{padding-top:clamp(8px,2vw,24px)}
+.page-hero + .team .head{border-top:1px solid var(--maroon-line);padding-top:clamp(36px,5vw,64px)}
+
+/* "see all" link under previews */
+.more{justify-self:start;font:650 20px/1.2 var(--display);color:var(--ink);text-decoration:none;border-bottom:2px solid var(--saffron);padding-bottom:4px}
+.more:hover{color:var(--saffron)}
+
+/* closing call to action on every page but Contact */
+.cta{background:var(--maroon);color:var(--on-maroon)}
+.cta .wrap{padding-block:clamp(72px,10vw,140px);display:grid;gap:12px}
+.cta p{font-size:clamp(18px,1.8vw,22px);color:var(--muted-on-maroon)}
+.cta-word{justify-self:start;font:760 clamp(64px,13vw,200px)/.9 var(--display);font-variation-settings:"wdth" 114;letter-spacing:-.045em;color:var(--gold);text-decoration:none;transition:color .2s}
+.cta-word:hover{color:var(--white)}
+.cta-word:focus-visible{outline-color:var(--gold)}
+.cta-word span{display:inline-block;transition:transform .25s}
+.cta-word:hover span{transform:translateX(.12em)}
+
+/* footer */
+footer .wrap{flex-direction:column;gap:16px}
+.foot-nav{display:flex;flex-wrap:wrap;gap:8px 28px;font-size:16px}
+.foot-meta{display:flex;flex-wrap:wrap;gap:8px 32px}
+
 /* menu */
 html:has(dialog[open]){overflow:hidden}
 dialog{color:inherit}
@@ -228,6 +256,7 @@ dialog{color:inherit}
 .menu-links li:not(:last-child)::after{content:" / " / "";color:var(--muted-on-maroon);font-weight:400}
 .menu-links a{color:var(--white);text-decoration:none;transition:color .15s}
 .menu-links a:hover,.menu-links a:focus-visible{color:var(--gold)}
+.menu-links a[aria-current="page"]{color:var(--gold)}
 .menu-links a:focus-visible{outline-color:var(--gold)}
 .menu-links sup{font:600 .28em/1 var(--text);color:var(--gold);margin-left:.15em;vertical-align:1.9em;letter-spacing:0}
 .menu-foot{display:flex;flex-wrap:wrap;gap:10px 28px;font-size:15px;border-top:1px solid var(--maroon-line);padding-top:20px}
