@@ -349,3 +349,19 @@ dialog{color:inherit}
   .menu[open] .menu-panel,.answer-panel[open] .ap-inner{animation:none}
   .btn:active{transform:none}
 }
+
+/* about: how we work */
+.ways-we-work{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--maroon-line)}
+.ways-we-work li{display:grid;gap:10px;align-content:start;padding:28px 24px 8px 0}
+.ways-we-work li + li{padding-left:24px;border-left:1px solid var(--maroon-line)}
+.ways-we-work span{font:700 15px/1 var(--display);color:var(--gold)}
+.ways-we-work h3{font-size:22px;line-height:1.2;font-weight:680;color:var(--white)}
+.ways-we-work p{color:var(--muted-on-maroon)}
+@media (max-width:960px){
+  .ways-we-work{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ways-we-work li:nth-child(3){padding-left:0;border-left:0}
+}
+@media (max-width:520px){
+  .ways-we-work{grid-template-columns:minmax(0,1fr)}
+  .ways-we-work li + li{padding-left:0;border-left:0;border-top:1px solid var(--maroon-line)}
+}

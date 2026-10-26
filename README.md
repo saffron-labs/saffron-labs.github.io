@@ -11,7 +11,7 @@ Static HTML, no build step, no dependencies. Edit and push to `main`; Pages rede
 | Home | `index.html` | Statement and showreel, the needs picker, recent work (3 pieces), Start with one week |
 | Work | `work/index.html` | All work in three tabs: Media, Websites and software, Automation |
 | Services | `services/index.html` | What we build, How a project runs, Start with one week |
-| About | `about/index.html` | The three founders, and how we use AI |
+| About | `about/index.html` | How we work (four points), and how we use AI |
 | FAQs | `faq/index.html` | Question chips; each answer opens in a side panel |
 | Contact | `contact/index.html` | WhatsApp, email, partnerships, Instagram |
 | Links | `links/index.html` | The Instagram bio link page |
@@ -34,10 +34,6 @@ Paths start with `/` (`/style.css`, `/media/...`) so they work from any folder.
 | `media/` | Older full-length films, not loaded by any page |
 | `404.html` | Not-found page |
 | `CNAME` | Tells GitHub Pages to serve this repo at `saffronlabs.in`. Do not delete it |
-
-## Team
-
-Each founder is an `<li class="mate">` in `about/index.html`. The `.face` box shows initials for now. To use a photo, replace the `<span>` inside `.face` with an `<img src="/media/team/name.jpg" alt="">` (portrait, about 800 × 1000 px, under 150 KB) and add `.face img{width:100%;height:100%;object-fit:cover}` to `style.css`.
 
 ## FAQs
 
@@ -75,6 +71,7 @@ These are deliberate and should not be quietly removed:
 1. Every film in the Media tab is a concept made for a brand that did not hire us, and carries a "Concept" tag. Do not present them as client work.
 2. Every piece in the Websites and software and Automation tabs is a demo on invented data, tagged "Demo" or "Live demo", and its caption says so. Replace demos with real projects as they ship; never relabel a demo as a client.
 3. No client logos, testimonials, stats or prices we can't back with a named client.
+4. The site presents Saffron Labs as an agency that works remotely with clients anywhere. Don't add a city or region, or describe the team's size.
 
 ## Contact details used on the page
 
