@@ -57,7 +57,7 @@ A video piece looks like this. Videos load and play only while on screen:
 
 ```html
 <figure class="piece"><div class="frame">
-  <video muted loop playsinline preload="metadata" poster="media/loops/cafe.jpg" data-src="media/loops/cafe.mp4" aria-label="What the video shows"></video>
+  <video muted loop playsinline preload="metadata" poster="/media/loops/cafe.jpg" data-src="/media/loops/cafe.mp4" aria-label="What the video shows"></video>
 </div><figcaption>Client name <span>What it is</span></figcaption></figure>
 ```
 
