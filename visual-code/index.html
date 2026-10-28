@@ -22,6 +22,8 @@
   --ok: #217D57; --warn: #A86A08; --err: #C0324A; --err-soft: rgba(192, 50, 74, .11); --warn-soft: rgba(168, 106, 8, .13); --ok-soft: rgba(33, 125, 87, .12);
   --code-bg: #FBFCFE; --gutter: #9AA4B5; --step: rgba(34, 117, 134, .13); --sel: rgba(34, 117, 134, .24);
   --s-kw: #8A3DA6; --s-ty: #1D69AD; --s-str: #2B7A3D; --s-num: #AE461D; --s-com: #8A95A7; --s-pre: #87570E; --s-mem: #C46A12; --s-null: #AE461D; --s-io: #11788A; --s-st: #0E7586;
+  --skin: #F2C9A0; --skin-line: #C99A6E; --trousers: #3B4A63;
+  --shirt-0: #E0793A; --shirt-1: #3F8FD2; --shirt-2: #4FAE7A; --shirt-3: #C65A8E; --shirt-4: #E3B53B; --shirt-5: #7B67C9;
   --f-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --f-code: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 }
@@ -33,6 +35,8 @@
   --ok: #4BC18B; --warn: #EFB24B; --err: #FF6E81; --err-soft: rgba(255, 110, 129, .13); --warn-soft: rgba(239, 178, 75, .13); --ok-soft: rgba(75, 193, 139, .12);
   --code-bg: #0D1520; --gutter: #4D5B71; --step: rgba(90, 193, 211, .13); --sel: rgba(90, 193, 211, .26);
   --s-kw: #C792EA; --s-ty: #7AB8FF; --s-str: #A5D98B; --s-num: #F7A072; --s-com: #5E6C84; --s-pre: #DFB76F; --s-mem: #F0A443; --s-null: #F7A072; --s-io: #6FD2DD; --s-st: #5AC1D3;
+  --skin: #E2B48A; --skin-line: #A97E58; --trousers: #2A3650;
+  --shirt-0: #E8874A; --shirt-1: #4F9BDB; --shirt-2: #5CBB86; --shirt-3: #D16A9B; --shirt-4: #E9BF4C; --shirt-5: #8C79D6;
   color-scheme: dark;
 } }
 :root[data-theme="dark"] {
@@ -43,6 +47,8 @@
   --ok: #4BC18B; --warn: #EFB24B; --err: #FF6E81; --err-soft: rgba(255, 110, 129, .13); --warn-soft: rgba(239, 178, 75, .13); --ok-soft: rgba(75, 193, 139, .12);
   --code-bg: #0D1520; --gutter: #4D5B71; --step: rgba(90, 193, 211, .13); --sel: rgba(90, 193, 211, .26);
   --s-kw: #C792EA; --s-ty: #7AB8FF; --s-str: #A5D98B; --s-num: #F7A072; --s-com: #5E6C84; --s-pre: #DFB76F; --s-mem: #F0A443; --s-null: #F7A072; --s-io: #6FD2DD; --s-st: #5AC1D3;
+  --skin: #E2B48A; --skin-line: #A97E58; --trousers: #2A3650;
+  --shirt-0: #E8874A; --shirt-1: #4F9BDB; --shirt-2: #5CBB86; --shirt-3: #D16A9B; --shirt-4: #E9BF4C; --shirt-5: #8C79D6;
   color-scheme: dark;
 }
 html, body { height: 100%; }
@@ -229,6 +235,33 @@ button, select, input { font: inherit; color: inherit; }
 .hdisk.moved rect { fill: var(--panel); stroke: var(--accent); stroke-width: 2.2; }
 .lane { font-size: 11.5px; fill: var(--err); font-family: var(--f-ui) !important; font-weight: 600; }
 
+
+.qstyle { position: absolute; top: 8px; right: 10px; display: flex; align-items: center; gap: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 3px; font-size: 12px; }
+.qstyle span { color: var(--muted); padding: 0 8px 0 6px; }
+.qstyle button { border: 0; background: transparent; padding: 5px 10px; border-radius: 6px; cursor: pointer; color: var(--muted); font-weight: 500; }
+.qstyle button:hover { color: var(--fg); }
+.qstyle button[aria-pressed="true"] { background: var(--accent); color: var(--tag-ink); }
+.person .head { fill: var(--skin); stroke: var(--skin-line); stroke-width: 1.2; }
+.person .eye { fill: var(--fg); }
+.person .smile { fill: none; stroke: var(--fg); stroke-width: 1.3; stroke-linecap: round; }
+.person .leg { fill: var(--trousers); }
+.person .body { stroke: rgba(0, 0, 0, .12); stroke-width: 1; }
+.person .shadow { fill: var(--fg); opacity: .12; }
+.person .sign { fill: var(--panel); stroke: var(--fg); stroke-opacity: .25; }
+.person .sign-t { font-size: 11.5px; font-weight: 700; fill: var(--fg); }
+.person.s0 .body { fill: var(--shirt-0); } .person.s1 .body { fill: var(--shirt-1); } .person.s2 .body { fill: var(--shirt-2); }
+.person.s3 .body { fill: var(--shirt-3); } .person.s4 .body { fill: var(--shirt-4); } .person.s5 .body { fill: var(--shirt-5); }
+.person.arriving { animation: walkin .6s cubic-bezier(.25, .8, .3, 1); }
+.person.leaving { animation: walkout .7s ease-in forwards; }
+.person.reading .sign { stroke: var(--warn); stroke-width: 2; stroke-opacity: 1; }
+@keyframes walkin { 0% { transform: translateX(46px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes walkout { 0% { transform: none; opacity: 1; } 100% { transform: translateX(-46px); opacity: 0; } }
+.spot { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.gone { font-size: 11px; fill: var(--faint); text-decoration: line-through; }
+.desk { fill: var(--node); stroke: var(--node-line); stroke-width: 1.4; }
+.desk-top { fill: var(--node-line); }
+.desk-t { font-size: 9px; fill: var(--node-ink); font-family: var(--f-ui) !important; font-weight: 600; }
+
 @media (max-width: 960px) {
   .app { height: auto; min-height: 100%; }
   .main { grid-template-columns: minmax(0, 1fr); }
@@ -299,6 +332,7 @@ button, select, input { font: inherit; color: inherit; }
         </div>
         <div class="chips" id="chips"></div>
         <div class="empty" id="empty" hidden></div>
+        <div class="qstyle" id="qstyle" role="group" aria-label="How to draw queues" hidden><span>Queue view</span><button type="button" data-style="boxes" aria-pressed="true">Boxes</button><button type="button" data-style="people" aria-pressed="false">People</button></div>
         <div class="legend"><span><i></i>in memory</span><span><i class="g"></i>still typing</span><span><i class="l"></i>lost</span></div>
       </div>
       <div class="bottom">
@@ -1738,7 +1772,7 @@ const DEFAULT_EXAMPLE = '00_by_hand';
   const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ---------- state ----------
-  const state = { steps: [], idx: 0, live: true, lines: [], prog: null, kinds: {}, parseErr: null, playing: null, structNames: new Set(), funcNames: [] };
+  const state = { queueStyle: 'boxes', steps: [], idx: 0, live: true, lines: [], prog: null, kinds: {}, parseErr: null, playing: null, structNames: new Set(), funcNames: [] };
   let kinds = {};
 
   // ---------- editor ----------
@@ -2064,6 +2098,37 @@ const DEFAULT_EXAMPLE = '00_by_hand';
     return { svg: s, h: baseY - y0 + 34, w: 3 * pw + 40 };
   }
 
+
+  // ---------- queue as people ----------
+  const SHIRTS = 6;
+  const shirtOf = v => { const t = valText(v, true); let h = 0; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h % SHIRTS; };
+  function personSVG(x, y, v, cls) {
+    const t = valText(v, true); const sw = Math.max(26, t.length * 7.4 + 10);
+    return `<g transform="translate(${x},${y})"><g class="person s${shirtOf(v)} ${cls}">` +
+      `<ellipse class="shadow" cx="26" cy="92" rx="17" ry="4"/>` +
+      `<rect class="leg" x="16" y="62" width="8" height="28" rx="3.5"/><rect class="leg" x="28" y="62" width="8" height="28" rx="3.5"/>` +
+      `<path class="body" d="M9 66 V48 a17 17 0 0 1 34 0 V66 z"/>` +
+      `<circle class="head" cx="26" cy="17" r="11.5"/><circle class="eye" cx="22" cy="16" r="1.5"/><circle class="eye" cx="30" cy="16" r="1.5"/><path class="smile" d="M22 21.5 q4 3 8 0"/>` +
+      `<rect class="sign" x="${26 - sw / 2}" y="40" width="${sw}" height="19" rx="3"/><text class="sign-t" x="26" y="53.5" text-anchor="middle">${esc(t)}</text>` +
+      `</g></g>`;
+  }
+  function spotSVG(x, y, idx) {
+    return `<g transform="translate(${x},${y})"><ellipse class="spot" cx="26" cy="92" rx="18" ry="5"/>${idx != null ? `<text class="cidx" x="26" y="110" text-anchor="middle">${idx}</text>` : ''}</g>`;
+  }
+  function counterSVG(x, y) {
+    return `<g transform="translate(${x},${y})"><rect class="desk" x="0" y="52" width="46" height="40" rx="4"/><rect class="desk-top" x="-4" y="46" width="54" height="8" rx="3"/><text class="desk-t" x="23" y="76" text-anchor="middle">served</text><text class="desk-t" x="23" y="87" text-anchor="middle">here</text></g>`;
+  }
+  function queueChip(x, y, text, dim) {
+    const w = text.length * 7.2 + 14;
+    return `<g class="ichip${dim ? ' dim' : ''}"><path d="M${x} ${y} l-4 6 h8 z"/><rect x="${x - w / 2}" y="${y + 6}" width="${w}" height="16" rx="8"/><text x="${x}" y="${y + 17.5}" text-anchor="middle">${esc(text)}</text></g>`;
+  }
+  function isQueueArray(it, step) {
+    if (it.val.k !== 'arr' || it.val.dims !== 1 || it.val.vals.some(c => c.k === 'ptr' || c.k === 'cont')) return false;
+    const nm = it.name.split('.').pop();
+    const names = new Set([...it.recInts.map(r => r.name), ...[...it.fis].flatMap(fi => step.frames[fi].vars.filter(v => v.val.k === 'num').map(v => v.name))]);
+    return /^(q|que|queue|qu)$/i.test(nm) || /queue/i.test(nm) || (names.has('front') && names.has('rear'));
+  }
+
   // ---------- full layout ----------
   function computeLayout(step) {
     const heap = step.heap; const byId = new Map(heap.map(o => [o.id, o]));
@@ -2074,6 +2139,7 @@ const DEFAULT_EXAMPLE = '00_by_hand';
     const lastFi = step.frames.length - 1;
     let svg = ''; const anchors = []; let y = 22; let maxX = 300;
     const items = collectData(step);
+    let hasQueue = false; const si = state.steps.indexOf(step); const prevStep = si > 0 ? state.steps[si - 1] : null;
 
     // roots and reachability (vars, rec fields, array and container cells)
     const roots = []; const varPtrs = [];
@@ -2181,6 +2247,47 @@ const DEFAULT_EXAMPLE = '00_by_hand';
         }
         y += h + 12; maxX = Math.max(maxX, colX + w + 40);
         continue;
+      }
+      const queueLike = (isCont && (v.kind === 'queue' || v.kind === 'deque')) || isQueueArray(it, step);
+      if (queueLike) hasQueue = true;
+      if (queueLike && state.queueStyle === 'people') {
+        const lx = G.PADX; const PW = 54;
+        const title = isCont ? `${v.kind} ${it.name}` : it.name;
+        svg += labelSVG(lx, y + 14, title, isCont ? `${n} waiting` : `array of ${n}`);
+        const top = y + 26; const x0 = lx + 64;
+        svg += counterSVG(lx, top);
+        const prevIt = prevStep ? collectData(prevStep).find(p => p.key === it.key) : null;
+        if (isCont) {
+          const prevN = prevIt ? prevIt.val.vals.length : n;
+          if (prevIt && prevN > n && prevIt.val.vals.length) svg += personSVG(x0 - 40, top, (v.kind === 'deque' && prevIt.val.vals[prevN - 1] && vals[n - 1] === undefined) ? prevIt.val.vals[prevN - 1] : prevIt.val.vals[0], 'leaving');
+          vals.forEach((c, i) => { svg += personSVG(x0 + i * PW, top, c, prevIt && n > prevN && i === n - 1 && !reduceMotion ? 'arriving' : ''); });
+          if (!n) svg += `<text class="psub" x="${x0 + 10}" y="${top + 60}">Nobody waiting</text>`;
+          if (n) { svg += queueChip(x0 + PW / 2, top + 98, 'front'); if (n > 1) svg += queueChip(x0 + (n - 1) * PW + PW / 2, top + 98, v.kind === 'deque' ? 'back' : 'rear'); }
+          maxX = Math.max(maxX, x0 + Math.max(n, 1) * PW + 60); y = top + 130; continue;
+        }
+        const ints = new Map(); for (const r of it.recInts) ints.set(r.name, r.v);
+        for (const fi of [...it.fis].sort((a, b) => a - b)) for (const vv of step.frames[fi].vars) if (vv.val.k === 'num') ints.set(vv.name, vv.val.v);
+        const f = ints.get('front'), r = ints.get('rear'); const cnt = ints.has('count') ? ints.get('count') : ints.has('size') ? ints.get('size') : null;
+        const occ = new Set();
+        if (f != null && f >= 0) {
+          if (cnt != null) { for (let k = 0; k < cnt && k < n; k++) occ.add((f + k) % n); }
+          else if (r != null && r >= f) { for (let i = f; i <= r && i < n; i++) occ.add(i); }
+          else if (r != null && r < f && r >= 0) { for (let i = f; i < n; i++) occ.add(i); for (let i = 0; i <= r; i++) occ.add(i); }
+        } else if (f == null) vals.forEach((c, i) => { if (c.k !== 'uninit') occ.add(i); });
+        const show2 = Math.min(n, 24); const hs2 = hiSets(step, v.id);
+        let prevOcc = null;
+        if (prevIt) { const pv = prevIt.val.vals; prevOcc = new Set(); /* compare values to spot arrivals */ pv.forEach((c, i) => { if (c.k !== 'uninit' && valText(c) === valText(vals[i])) prevOcc.add(i); }); }
+        for (let i = 0; i < show2; i++) {
+          const x = x0 + i * PW;
+          svg += spotSVG(x, top, i);
+          if (occ.has(i)) svg += personSVG(x, top, vals[i], (hs2.w.has(i) && !reduceMotion ? 'arriving' : '') + (hs2.r.has(i) ? ' reading' : ''));
+          else if (vals[i].k !== 'uninit' && !(vals[i].k === 'num' && vals[i].v === 0)) svg += `<text class="gone" x="${x + 26}" y="${top + 60}" text-anchor="middle">${esc(valText(vals[i], true))}</text>`;
+        }
+        if (show2 < n) svg += `<text class="psub" x="${x0 + show2 * PW + 6}" y="${top + 70}">… ${n - show2} more spots</text>`;
+        const marks = []; if (f != null && f >= 0 && f <= n) marks.push(['front', f]); if (r != null && r >= 0 && r < n) marks.push(['rear', r]);
+        const lanes = {}; for (const [name, i] of marks) { const lane = lanes[i] || 0; lanes[i] = lane + 1; svg += queueChip(x0 + i * PW + PW / 2, top + 116 + lane * 20, name); }
+        if (f === -1 || (f != null && occ.size === 0)) svg += `<text class="psub" x="${x0 + 4}" y="${top + 50}">Queue is empty</text>`;
+        maxX = Math.max(maxX, x0 + show2 * PW + 60); y = top + 150 + (Object.values(lanes).some(l => l > 1) ? 20 : 0); continue;
       }
       const label = isCont ? `${v.kind.replace('_', ' ')} ${it.name}` : it.name;
       const sub = isCont ? (v.kind === 'priority_queue' ? (v.min ? 'min-heap' : 'max-heap') : `${n} item${n === 1 ? '' : 's'}`) : `[${n}]`;
@@ -2335,7 +2442,7 @@ const DEFAULT_EXAMPLE = '00_by_hand';
 
     if (lanes.length) svg += `<text class="lane" x="${G.PADX}" y="${lanes[0].y}">Lost in memory: no pointer reaches these nodes</text>`;
     const h = Math.max(yy, y) + 40;
-    return { svg, nodes, edges, tags, ghost, blueprint, w: maxX + 40, h, byId, isLost, linkTo, rows: ordered, nullChips, items, reach, han };
+    return { svg, nodes, edges, tags, ghost, blueprint, w: maxX + 40, h, byId, isLost, linkTo, rows: ordered, nullChips, items, reach, han, hasQueue };
   }
 
   // ---------- node drawing ----------
@@ -2417,6 +2524,7 @@ const DEFAULT_EXAMPLE = '00_by_hand';
 
     // null pointer chips
     $('#chips').innerHTML = Lay.nullChips.slice(0, 8).map(c => `<span class="nchip"><b>${esc(c.label)}</b> → ${c.uninit ? '? (not set)' : 'NULL'}</span>`).join('');
+    $('#qstyle').hidden = !Lay.hasQueue;
     const empty = !Lay.nodes.length && !Lay.svg && !Lay.ghost && !Lay.blueprint;
     const em = $('#empty'); em.hidden = !empty;
     if (empty) em.innerHTML = step.flags.nomain && !Object.keys(state.prog.structs).length
@@ -2543,6 +2651,13 @@ const DEFAULT_EXAMPLE = '00_by_hand';
     nodeEls.forEach(el => el.remove()); nodeEls.clear(); edgeEls.forEach(p => p.remove()); edgeEls.clear(); tagEls.forEach(g => g.remove()); tagEls.clear();
     onInput(); sel.value = '';
   };
+
+  // ---------- queue style toggle ----------
+  try { const q = localStorage.getItem('vc-queue-style'); if (q === 'people' || q === 'boxes') state.queueStyle = q; } catch (e) { /* storage unavailable */ }
+  const qBtns = document.querySelectorAll('#qstyle button');
+  const syncQ = () => qBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.style === state.queueStyle)));
+  qBtns.forEach(b => b.addEventListener('click', () => { state.queueStyle = b.dataset.style; syncQ(); try { localStorage.setItem('vc-queue-style', state.queueStyle); } catch (e) { /* storage unavailable */ } render(); }));
+  syncQ();
 
   // ---------- boot ----------
   let start = null;
