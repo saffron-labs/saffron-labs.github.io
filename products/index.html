@@ -33,7 +33,9 @@
   .product-body li{padding-left:22px;position:relative}
   .product-body li::before{content:"";position:absolute;left:0;top:.75em;width:10px;height:1px;background:var(--saffron)}
   .product-actions{display:flex;flex-wrap:wrap;align-items:center;gap:14px 20px;margin-top:8px}
-  .product-actions .note{font-size:14px;color:var(--quiet)}
+  .btn-link{font:600 15px/1 var(--text);color:var(--saffron);text-decoration:none;padding:14px 4px}
+  .btn-link:hover{text-decoration:underline}
+  .product-actions .note{flex-basis:100%;font-size:14px;color:var(--quiet)}
   @media (max-width:860px){.product{grid-template-columns:minmax(0,1fr)}}
   @media (prefers-reduced-motion:reduce){.product-shot{transition:none}.product-shot:hover{transform:none}}
 </style>
@@ -101,6 +103,7 @@
           </ul>
           <div class="product-actions">
             <a class="btn btn-ink" href="/visual-code/">Open Visual Code<span aria-hidden="true"> →</span></a>
+            <a class="btn-link" href="/visual-code/#new">Start with a blank file</a>
             <span class="note">No sign-up. Works on laptops and phones.</span>
           </div>
         </div>

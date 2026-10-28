@@ -262,6 +262,12 @@ button, select, input { font: inherit; color: inherit; }
 .desk-top { fill: var(--node-line); }
 .desk-t { font-size: 9px; fill: var(--node-ink); font-family: var(--f-ui) !important; font-weight: 600; }
 
+
+.newbtn { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; padding: 7px 13px; border-radius: 7px; border: 1px solid var(--accent); background: var(--accent); color: var(--tag-ink); cursor: pointer; transition: transform .1s, filter .15s; }
+.newbtn:hover { filter: brightness(1.06); } .newbtn:active { transform: scale(.96); }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 30; display: flex; align-items: center; gap: 14px; background: var(--fg); color: var(--bg); font-size: 13px; padding: 9px 10px 9px 16px; border-radius: 9px; box-shadow: 0 10px 30px -10px rgba(0, 0, 0, .4); max-width: calc(100% - 32px); }
+.toast button { border: 0; background: transparent; color: var(--accent); font-weight: 700; cursor: pointer; padding: 4px 8px; border-radius: 5px; }
+
 @media (max-width: 960px) {
   .app { height: auto; min-height: 100%; }
   .main { grid-template-columns: minmax(0, 1fr); }
@@ -278,6 +284,7 @@ button, select, input { font: inherit; color: inherit; }
 .brand .by { color: var(--accent); text-decoration: none; font-weight: 500; } .brand .by:hover { text-decoration: underline; }
 </style>
 
+<div class="toast" id="toast" role="status" hidden><span id="toast-msg"></span><button type="button" id="toast-undo">Undo</button></div>
 </head>
 <body>
 <div class="app">
@@ -286,6 +293,7 @@ button, select, input { font: inherit; color: inherit; }
       <svg width="30" height="22" viewBox="0 0 30 22" aria-hidden="true"><rect x="1" y="5" width="11" height="12" rx="3" fill="none" stroke="var(--node-line)" stroke-width="1.8"/><rect x="18" y="5" width="11" height="12" rx="3" fill="none" stroke="var(--node-line)" stroke-width="1.8"/><path d="M9 11h7" stroke="var(--accent)" stroke-width="1.8"/><path d="M14.5 8.5l2.5 2.5-2.5 2.5" fill="none" stroke="var(--accent)" stroke-width="1.8"/><circle cx="9" cy="11" r="1.8" fill="var(--accent)"/></svg>
       <span class="name">Visual Code</span><span class="sub">by <a href="/products/" class="by">Saffron Labs</a></span>
     </div>
+    <button class="newbtn" id="newfile" type="button" title="Start a blank C++ file"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>New file</button>
     <label class="pick" for="ex">Examples <select id="ex"></select></label>
     <div class="detect" id="detect" aria-label="Recognized structures"></div>
   </header>
@@ -2644,12 +2652,28 @@ const DEFAULT_EXAMPLE = '00_by_hand';
   for (const g of EXAMPLES) html += `<optgroup label="${esc(g.unit)}">` + g.items.map(it => `<option value="${esc(it.id)}">${esc(it.name)}</option>`).join('') + '</optgroup>';
   sel.innerHTML = html;
   const byId = {}; EXAMPLES.forEach(g => g.items.forEach(it => { byId[it.id] = it; }));
-  sel.onchange = () => {
-    const it = byId[sel.value]; if (!it) return;
-    ta.value = it.code; $('#stdin').value = it.stdin || '';
+  const BLANK = '#include <iostream>\nusing namespace std;\n\nint main() {\n    \n    return 0;\n}\n';
+  let undoCode = null, toastTimer = null;
+  function loadCode(code, stdin, message, cursorAt) {
+    const before = ta.value;
+    ta.value = code; $('#stdin').value = stdin || '';
     ta.scrollTop = 0; ta.scrollLeft = 0;
     nodeEls.forEach(el => el.remove()); nodeEls.clear(); edgeEls.forEach(p => p.remove()); edgeEls.clear(); tagEls.forEach(g => g.remove()); tagEls.clear();
-    onInput(); sel.value = '';
+    onInput();
+    if (cursorAt != null) { ta.focus(); ta.setSelectionRange(cursorAt, cursorAt); updateCursor(); }
+    if (message && before.trim() && before !== code) showToast(message, before);
+  }
+  function showToast(message, before) {
+    undoCode = before; const t = $('#toast');
+    $('#toast-msg').textContent = message; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; undoCode = null; }, 7000);
+  }
+  $('#toast-undo').onclick = () => { if (undoCode == null) return; const c = undoCode; $('#toast').hidden = true; undoCode = null; loadCode(c, '', null); };
+  const newFile = () => loadCode(BLANK, '', 'Started a new file.', BLANK.indexOf('    \n') + 4);
+  $('#newfile').onclick = newFile;
+  sel.onchange = () => {
+    const it = byId[sel.value]; if (!it) return;
+    loadCode(it.code, it.stdin, `Loaded "${it.name}".`); sel.value = '';
   };
 
   // ---------- queue style toggle ----------
@@ -2662,8 +2686,8 @@ const DEFAULT_EXAMPLE = '00_by_hand';
   // ---------- boot ----------
   let start = null;
   try { start = localStorage.getItem('vc-draft'); } catch (e) { start = null; }
-  ta.value = start || byId[DEFAULT_EXAMPLE].code;
-  renderCode(); updateCursor(); runNow();
+  if (location.hash === '#new') { ta.value = BLANK; renderCode(); runNow(); ta.focus(); const p = BLANK.indexOf('    \n') + 4; ta.setSelectionRange(p, p); updateCursor(); }
+  else { ta.value = start || byId[DEFAULT_EXAMPLE].code; renderCode(); updateCursor(); runNow(); }
   window.addEventListener('resize', () => render());
 })();
 
