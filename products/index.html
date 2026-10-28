@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Products · Saffron Labs</title>
+<meta name="description" content="Free tools built by Saffron Labs, including Visual Code, a C++ editor that draws data structures as you type.">
+<meta name="theme-color" content="#2b0c0a">
+<link rel="canonical" href="https://saffronlabs.in/products/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://saffronlabs.in/products/">
+<meta property="og:title" content="Products · Saffron Labs">
+<meta property="og:description" content="Free tools built by Saffron Labs, including Visual Code, a C++ editor that draws data structures as you type.">
+<meta property="og:image" content="https://saffronlabs.in/media/products/visual-code.jpg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Crect width='42' height='42' rx='8' fill='%232b0c0a'/%3E%3Cpath d='M21 35V8M21 35L8 12M21 35L34 12' stroke='%23e9ae3c' stroke-width='2.6' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='21' cy='7' r='2.8' fill='%23e9ae3c'/%3E%3Ccircle cx='8' cy='12' r='2.8' fill='%23e9ae3c'/%3E%3Ccircle cx='34' cy='12' r='2.8' fill='%23e9ae3c'/%3E%3Ccircle cx='21' cy='35' r='2.8' fill='%23e9ae3c'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anek+Latin:wght@400;500;600&family=Archivo:wdth,wght@62..125,400..800&display=swap">
+<link rel="stylesheet" href="/style.css">
+
+<style>
+  .products .wrap{padding-block:clamp(56px,8vw,112px)}
+  .product{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:clamp(28px,4vw,56px);align-items:center}
+  .product-shot{display:block;border-radius:6px;overflow:hidden;border:1px solid var(--line);background:var(--panel);box-shadow:0 18px 50px -28px rgba(43,12,10,.45);transition:transform .25s}
+  .product-shot:hover{transform:translateY(-3px)}
+  .product-shot img{display:block;width:100%;height:auto;max-width:100%}
+  .product-body{display:grid;gap:18px;align-content:start}
+  .product-tag{font:600 13px/1 var(--text);letter-spacing:.08em;text-transform:uppercase;color:var(--saffron)}
+  .product-body h2{font-size:clamp(36px,4.6vw,60px);line-height:1;font-weight:740;font-variation-settings:"wdth" 110;letter-spacing:-.03em}
+  .product-body .lead{color:var(--quiet);font-size:18px;max-width:42ch}
+  .product-body ul{margin:4px 0 0;padding:0;list-style:none;display:grid;gap:10px}
+  .product-body li{padding-left:22px;position:relative}
+  .product-body li::before{content:"";position:absolute;left:0;top:.75em;width:10px;height:1px;background:var(--saffron)}
+  .product-actions{display:flex;flex-wrap:wrap;align-items:center;gap:14px 20px;margin-top:8px}
+  .product-actions .note{font-size:14px;color:var(--quiet)}
+  @media (max-width:860px){.product{grid-template-columns:minmax(0,1fr)}}
+  @media (prefers-reduced-motion:reduce){.product-shot{transition:none}.product-shot:hover{transform:none}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top band">
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Saffron Labs home">
+      <svg viewBox="0 0 42 42" aria-hidden="true"><path d="M21 35V8M21 35L8 12M21 35L34 12"/><circle cx="21" cy="7" r="2.8"/><circle cx="8" cy="12" r="2.8"/><circle cx="34" cy="12" r="2.8"/><circle cx="21" cy="35" r="2.8"/></svg>
+      <span>SAFFRON LABS</span>
+    </a>
+    <button class="pill" type="button" id="menu-open" aria-haspopup="dialog" aria-controls="menu">Menu</button>
+    <a class="btn btn-gold" href="https://wa.me/918281696632?text=Hi%20Saffron%20Labs%2C%20I%27d%20like%20to%20talk%20about%20a%20project." target="_blank" rel="noopener"><span class="long">Chat on WhatsApp</span><span class="short">WhatsApp</span></a>
+  </div>
+</header>
+
+<dialog class="menu" id="menu" aria-label="Menu">
+  <div class="menu-panel">
+    <div class="menu-top">
+      <button class="pill pill-on-dark" type="button" id="menu-close">Close</button>
+    </div>
+    <nav aria-label="Main">
+      <ol class="menu-links">
+        <li><a href="/">Home<sup aria-hidden="true">01</sup></a></li>
+        <li><a href="/work/">Work<sup aria-hidden="true">02</sup></a></li>
+        <li><a href="/services/">Services<sup aria-hidden="true">03</sup></a></li>
+        <li><a href="/about/">About<sup aria-hidden="true">04</sup></a></li>
+        <li><a href="/faq/">FAQs<sup aria-hidden="true">05</sup></a></li>
+        <li><a href="/contact/">Contact<sup aria-hidden="true">06</sup></a></li>
+      </ol>
+    </nav>
+    <div class="menu-foot">
+      <a href="https://wa.me/918281696632?text=Hi%20Saffron%20Labs%2C%20I%27d%20like%20to%20talk%20about%20a%20project." target="_blank" rel="noopener">WhatsApp</a>
+      <a href="mailto:hello@saffronlabs.in">hello@saffronlabs.in</a>
+      <a href="https://www.instagram.com/saffron.labs/" target="_blank" rel="noopener">Instagram</a>
+    </div>
+  </div>
+</dialog>
+
+<main id="main">
+  <section class="page-hero band">
+    <div class="wrap">
+      <p class="eyebrow">Saffron Labs</p>
+      <h1>Products</h1>
+      <p class="hero-line">Tools we built and made free for anyone to use.</p>
+    </div>
+  </section>
+
+  <section class="products band">
+    <div class="wrap">
+      <article class="product">
+        <a class="product-shot" href="/visual-code/" aria-label="Open Visual Code">
+          <img src="/media/products/visual-code.jpg" width="1440" height="880" alt="Visual Code: C++ code on the left; on the right, a linked list drawn as boxes and arrows, with head, temp and newNode labels on the nodes they point to." loading="eager">
+        </a>
+        <div class="product-body">
+          <p class="product-tag">Free · Runs in your browser</p>
+          <h2>Visual Code</h2>
+          <p class="lead">A C++ editor for students learning data structures. Write code and watch it drawn as you type: nodes, pointers, arrays, the call stack and recursion.</p>
+          <ul>
+            <li>Linked lists, stacks, queues, trees, heaps, hash tables and graphs</li>
+            <li>Step forward and back through the program one line at a time</li>
+            <li>Plain-English warnings for NULL pointers, lost nodes and endless loops</li>
+            <li>42 ready examples, from bubble sort to Dijkstra</li>
+          </ul>
+          <div class="product-actions">
+            <a class="btn btn-ink" href="/visual-code/">Open Visual Code<span aria-hidden="true"> →</span></a>
+            <span class="note">No sign-up. Works on laptops and phones.</span>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="cta band">
+    <div class="wrap">
+      <p>Have a project in mind?</p>
+      <a class="cta-word" href="/contact/">Let's talk<span aria-hidden="true"> →</span></a>
+    </div>
+  </section>
+</main>
+
+<footer class="band"><div class="wrap">
+  <nav class="foot-nav" aria-label="Footer"><a href="/work/">Work</a> <a href="/services/">Services</a> <a href="/about/">About</a> <a href="/faq/">FAQs</a> <a href="/contact/">Contact</a></nav>
+  <div class="foot-meta"><span>© 2026 Saffron Labs</span><a href="mailto:hello@saffronlabs.in">hello@saffronlabs.in</a><a href="tel:+918281696632">+91 82816 96632</a><a href="https://www.instagram.com/saffron.labs/" target="_blank" rel="noopener">Instagram</a></div>
+</div></footer>
+<script src="/script.js"></script>
+</body>
+</html>

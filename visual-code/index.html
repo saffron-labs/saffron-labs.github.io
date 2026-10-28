@@ -1,0 +1,2557 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<link rel="canonical" href="https://saffronlabs.in/visual-code/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 22'%3E%3Crect x='1' y='5' width='11' height='12' rx='3' fill='none' stroke='%23227586' stroke-width='1.8'/%3E%3Crect x='18' y='5' width='11' height='12' rx='3' fill='none' stroke='%23227586' stroke-width='1.8'/%3E%3Cpath d='M9 11h7' stroke='%23C46A12' stroke-width='1.8'/%3E%3C/svg%3E">
+<title>Visual Code</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="A C++ editor that draws your data structures live as you type and step through the code.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout concept: an IDE split. Code on the left, memory drawn on the right, inspectors docked under the drawing. */
+:root {
+  --bg: #E8ECF2; --panel: #FFFFFF; --panel-2: #F3F5F9; --line: #D4DBE6; --line-2: #E3E8EF;
+  --fg: #162033; --muted: #59667A; --faint: #8893A6;
+  --accent: #C46A12; --accent-soft: rgba(196, 106, 18, .14); --accent-ink: #7A3F05; --tag-ink: #FFFFFF;
+  --node: #E2F0F3; --node-line: #227586; --node-ink: #0E3942;
+  --ok: #217D57; --warn: #A86A08; --err: #C0324A; --err-soft: rgba(192, 50, 74, .11); --warn-soft: rgba(168, 106, 8, .13); --ok-soft: rgba(33, 125, 87, .12);
+  --code-bg: #FBFCFE; --gutter: #9AA4B5; --step: rgba(34, 117, 134, .13); --sel: rgba(34, 117, 134, .24);
+  --s-kw: #8A3DA6; --s-ty: #1D69AD; --s-str: #2B7A3D; --s-num: #AE461D; --s-com: #8A95A7; --s-pre: #87570E; --s-mem: #C46A12; --s-null: #AE461D; --s-io: #11788A; --s-st: #0E7586;
+  --f-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-code: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0A1019; --panel: #101824; --panel-2: #151F2E; --line: #233045; --line-2: #1A2537;
+  --fg: #DCE4EF; --muted: #8B99AF; --faint: #5E6C84;
+  --accent: #F0A443; --accent-soft: rgba(240, 164, 67, .17); --accent-ink: #FFD39A; --tag-ink: #1A1206;
+  --node: #112B34; --node-line: #5AC1D3; --node-ink: #D4F2F7;
+  --ok: #4BC18B; --warn: #EFB24B; --err: #FF6E81; --err-soft: rgba(255, 110, 129, .13); --warn-soft: rgba(239, 178, 75, .13); --ok-soft: rgba(75, 193, 139, .12);
+  --code-bg: #0D1520; --gutter: #4D5B71; --step: rgba(90, 193, 211, .13); --sel: rgba(90, 193, 211, .26);
+  --s-kw: #C792EA; --s-ty: #7AB8FF; --s-str: #A5D98B; --s-num: #F7A072; --s-com: #5E6C84; --s-pre: #DFB76F; --s-mem: #F0A443; --s-null: #F7A072; --s-io: #6FD2DD; --s-st: #5AC1D3;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0A1019; --panel: #101824; --panel-2: #151F2E; --line: #233045; --line-2: #1A2537;
+  --fg: #DCE4EF; --muted: #8B99AF; --faint: #5E6C84;
+  --accent: #F0A443; --accent-soft: rgba(240, 164, 67, .17); --accent-ink: #FFD39A; --tag-ink: #1A1206;
+  --node: #112B34; --node-line: #5AC1D3; --node-ink: #D4F2F7;
+  --ok: #4BC18B; --warn: #EFB24B; --err: #FF6E81; --err-soft: rgba(255, 110, 129, .13); --warn-soft: rgba(239, 178, 75, .13); --ok-soft: rgba(75, 193, 139, .12);
+  --code-bg: #0D1520; --gutter: #4D5B71; --step: rgba(90, 193, 211, .13); --sel: rgba(90, 193, 211, .26);
+  --s-kw: #C792EA; --s-ty: #7AB8FF; --s-str: #A5D98B; --s-num: #F7A072; --s-com: #5E6C84; --s-pre: #DFB76F; --s-mem: #F0A443; --s-null: #F7A072; --s-io: #6FD2DD; --s-st: #5AC1D3;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-ui); margin: 0; -webkit-font-smoothing: antialiased; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+.editor, #viz text, .explain code, .var, #out, #stdin, .nchip { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { height: 100%; display: flex; flex-direction: column; gap: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 10px; }
+.top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-height: 34px; }
+.brand { display: flex; align-items: center; gap: 9px; }
+.brand svg { flex: none; }
+.brand .name { font-weight: 600; font-size: 16px; letter-spacing: -.01em; }
+.brand .sub { font-size: 12px; color: var(--muted); }
+.pick { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.pick select { background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 6px 10px; font-size: 13px; color: var(--fg); max-width: 260px; }
+.detect { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.dchip { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-weight: 500; }
+.dchip.dim { background: var(--panel-2); color: var(--muted); }
+
+.main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 10px; }
+.pane { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
+.pane-head { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line-2); font-size: 12px; color: var(--muted); min-height: 38px; }
+.file { font-family: var(--f-code); color: var(--fg); font-size: 12px; padding: 3px 8px; background: var(--panel-2); border-radius: 5px; }
+
+/* editor */
+.editor { position: relative; flex: 1; min-height: 0; display: flex; background: var(--code-bg); font-family: var(--f-code); font-size: 13px; line-height: 20px; }
+.gutter { width: 46px; flex: none; overflow: hidden; position: relative; border-right: 1px solid var(--line-2); color: var(--gutter); text-align: right; user-select: none; }
+#gutter { position: absolute; top: 0; left: 0; right: 0; padding: 12px 10px 12px 0; }
+.ln { height: 20px; position: relative; font-variant-numeric: tabular-nums; }
+.ln.cur { color: var(--fg); }
+.ln.err::before { content: ""; position: absolute; left: 7px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--err); }
+.code { position: relative; flex: 1; min-width: 0; overflow: hidden; }
+.code pre, .code textarea { margin: 0; padding: 12px 16px; font: inherit; line-height: inherit; tab-size: 4; white-space: pre; letter-spacing: 0; border: 0; }
+.code pre { position: absolute; top: 0; left: 0; min-width: 100%; pointer-events: none; color: var(--fg); }
+.code textarea { position: absolute; inset: 0; width: 100%; height: 100%; resize: none; background: transparent; color: transparent; -webkit-text-fill-color: transparent; caret-color: var(--fg); outline: none; overflow: auto; }
+.code textarea::selection { background: var(--sel); }
+.hl-line { position: absolute; left: 0; right: 0; height: 20px; background: var(--step); border-left: 3px solid var(--node-line); pointer-events: none; }
+.hl-line.err { background: var(--err-soft); border-left-color: var(--err); }
+.hl-line.warn { background: var(--warn-soft); border-left-color: var(--warn); }
+.s-kw { color: var(--s-kw); } .s-ty { color: var(--s-ty); } .s-str { color: var(--s-str); } .s-num { color: var(--s-num); }
+.s-com { color: var(--s-com); font-style: italic; } .s-pre { color: var(--s-pre); } .s-mem { color: var(--s-mem); font-weight: 700; }
+.s-null { color: var(--s-null); font-weight: 500; } .s-io { color: var(--s-io); } .s-st { color: var(--s-st); font-weight: 500; }
+.status { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 12px; border-top: 1px solid var(--line-2); font-size: 12px; color: var(--muted); }
+.st { display: flex; align-items: center; gap: 7px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex: none; }
+.st.ok::before { background: var(--ok); } .st.warn::before { background: var(--warn); } .st.err::before { background: var(--err); }
+#cursor { font-family: var(--f-code); font-variant-numeric: tabular-nums; flex: none; }
+
+/* visualizer */
+.toolbar { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-bottom: 1px solid var(--line-2); flex-wrap: wrap; }
+.ctrls { display: flex; gap: 4px; }
+.ib { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--line); background: var(--panel); border-radius: 7px; cursor: pointer; color: var(--fg); transition: background .15s, transform .1s; }
+.ib:hover { background: var(--panel-2); } .ib:active { transform: scale(.96); }
+.ib.primary { background: var(--accent); border-color: var(--accent); color: var(--tag-ink); }
+.ib .pause { display: none; } .ib.on .pause { display: block; } .ib.on .playi { display: none; }
+#scrub { flex: 1; min-width: 120px; accent-color: var(--accent); }
+.count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 92px; }
+.speed { font-size: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 5px 6px; }
+.pill { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; background: var(--panel-2); color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.pill.live { color: var(--ok); background: var(--ok-soft); }
+.pill.live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+.explain { display: flex; align-items: baseline; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line-2); font-size: 13px; min-height: 40px; flex-wrap: wrap; }
+.lnchip { font-family: var(--f-code); font-size: 11px; padding: 2px 7px; border-radius: 5px; background: var(--step); color: var(--node-line); font-weight: 500; flex: none; }
+.lnchip.err { background: var(--err-soft); color: var(--err); } .lnchip.warn { background: var(--warn-soft); color: var(--warn); } .lnchip.ok { background: var(--ok-soft); color: var(--ok); }
+.explain code { font-family: var(--f-code); font-size: 12.5px; color: var(--fg); background: var(--panel-2); padding: 1px 6px; border-radius: 4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.explain .note { color: var(--muted); min-width: 0; }
+.canvas-area { position: relative; flex: 1; min-height: 0; }
+.canvas-wrap { position: absolute; inset: 0; overflow: auto; background-image: radial-gradient(var(--line-2) 1px, transparent 1px); background-size: 22px 22px; }
+#viz { display: block; }
+.chips { position: absolute; top: 8px; left: 10px; display: flex; gap: 6px; flex-wrap: wrap; pointer-events: none; max-width: calc(100% - 20px); }
+.nchip { font-family: var(--f-code); font-size: 11.5px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; color: var(--muted); }
+.nchip b { color: var(--accent); font-weight: 600; }
+.empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; padding: 24px; color: var(--muted); font-size: 13px; pointer-events: none; }
+.empty b { color: var(--fg); font-size: 15px; font-weight: 600; }
+.empty code { font-family: var(--f-code); background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
+.legend { position: absolute; right: 10px; bottom: 8px; display: flex; gap: 12px; font-size: 11px; color: var(--muted); background: var(--panel); border: 1px solid var(--line-2); border-radius: 7px; padding: 5px 9px; pointer-events: none; }
+.legend i { display: inline-block; width: 14px; height: 10px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; border: 1.5px solid var(--node-line); background: var(--node); }
+.legend i.g { border-style: dashed; border-color: var(--accent); background: none; }
+.legend i.l { border-style: dashed; border-color: var(--err); background: var(--err-soft); }
+
+.bottom { display: grid; grid-template-columns: 1.15fr 1fr 1fr; border-top: 1px solid var(--line); height: 210px; min-height: 0; }
+.panel { min-width: 0; overflow: auto; padding: 10px 12px; border-right: 1px solid var(--line-2); font-size: 12.5px; }
+.panel:last-child { border-right: 0; }
+.panel h3 { margin: 0 0 8px; font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.frame { border: 1px solid var(--line-2); border-radius: 7px; margin-bottom: 7px; overflow: hidden; }
+.frame.cur { border-color: var(--node-line); }
+.fn { font-family: var(--f-code); font-size: 12px; font-weight: 600; padding: 5px 8px; background: var(--panel-2); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.fbadge { font-family: var(--f-ui); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--node-line); }
+.var { display: grid; grid-template-columns: minmax(48px, auto) auto 1fr; gap: 8px; padding: 4px 8px; font-family: var(--f-code); font-size: 12px; border-top: 1px solid var(--line-2); align-items: baseline; }
+.var .vn { color: var(--fg); font-weight: 500; } .var .vt { color: var(--faint); font-size: 11px; } .var .vv { color: var(--accent-ink); text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.var.ref .vn { font-style: italic; }
+.muted { color: var(--muted); }
+.issue { padding: 7px 9px; border-radius: 6px; margin-bottom: 6px; line-height: 1.45; border-left: 3px solid var(--faint); background: var(--panel-2); }
+.issue.err { border-left-color: var(--err); background: var(--err-soft); }
+.issue.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+.issue.ok { border-left-color: var(--ok); background: var(--ok-soft); }
+.issue.info { border-left-color: var(--node-line); background: var(--step); }
+#stats { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--muted); margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+#stats b { color: var(--fg); font-weight: 600; }
+#out { font-family: var(--f-code); font-size: 12px; margin: 0 0 10px; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--code-bg); border: 1px solid var(--line-2); border-radius: 6px; padding: 7px 9px; min-height: 44px; }
+.inlabel { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+#stdin { width: 100%; font-family: var(--f-code); font-size: 12px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+
+/* svg */
+#viz text { font-family: var(--f-code); }
+.nd { transition: transform .45s cubic-bezier(.3, .7, .2, 1); }
+.nd .box { fill: var(--node); stroke: var(--node-line); stroke-width: 1.5; }
+.nd .div { stroke: var(--node-line); stroke-opacity: .45; }
+.nd .fname { font-size: 9px; fill: var(--muted); letter-spacing: .03em; }
+.nd .fval { font-size: 14px; font-weight: 600; fill: var(--node-ink); }
+.garb { fill: var(--warn) !important; font-weight: 700; font-size: 15px; }
+.dot { fill: var(--accent); }
+.dot.null { fill: var(--faint); }
+.slash { stroke: var(--faint); stroke-width: 1.5; }
+.nd .addr { font-size: 10px; fill: var(--faint); }
+.null-a { stroke: var(--faint); stroke-width: 1.5; marker-end: url(#mh-null); }
+.null-t { font-size: 10px; font-weight: 700; fill: var(--muted); }
+.slot-flash { fill: var(--accent); fill-opacity: 0; animation: flash 1.1s ease-out; }
+@keyframes flash { 0% { fill-opacity: .5; } 100% { fill-opacity: 0; } }
+.nd.lost .box { stroke: var(--err); stroke-dasharray: 5 4; fill: var(--err-soft); }
+.nd.dead .box, .nd.dying .box { fill: var(--panel-2); stroke: var(--faint); stroke-dasharray: 3 3; }
+.nd.dead .fval, .nd.dying .fval { fill: var(--faint); text-decoration: line-through; }
+.nd.ghost .box { fill: none; stroke: var(--accent); stroke-dasharray: 6 5; animation: march 1s linear infinite; }
+.nd.blue .box { fill: none; stroke: var(--node-line); stroke-dasharray: 4 4; }
+.ghost-t { font-size: 11px; fill: var(--accent); font-family: var(--f-ui) !important; font-weight: 500; }
+.nd.blue .ghost-t { fill: var(--node-line); }
+@keyframes march { to { stroke-dashoffset: -22; } }
+.nd.born .nd-body { animation: pop .55s cubic-bezier(.2, .9, .3, 1.25); transform-box: fill-box; transform-origin: center; }
+@keyframes pop { 0% { transform: scale(.35); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.nd.leave { opacity: 0; transition: opacity .3s; }
+.edge { fill: none; stroke: var(--accent); stroke-width: 2; marker-end: url(#mh); transition: d .45s cubic-bezier(.3, .7, .2, 1); }
+.edge.back { stroke: var(--node-line); stroke-opacity: .8; marker-end: url(#mh-back); }
+.edge.cellp { stroke-opacity: .85; }
+.edge.dang { stroke: var(--err); stroke-dasharray: 6 4; marker-end: url(#mh-err); }
+.edge.drawing { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .55s ease-out forwards; }
+.edge.retarget { animation: thick .6s ease-out; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes thick { 0% { stroke-width: 4.5; } 100% { stroke-width: 2; } }
+.mk { fill: var(--accent); } .mk-back { fill: var(--node-line); } .mk-err { fill: var(--err); } .mk-null { fill: var(--faint); } .mk-g { fill: var(--faint); }
+.tag { transition: transform .45s cubic-bezier(.3, .7, .2, 1); }
+.tag rect { fill: var(--accent); }
+.tag text { font-size: 11px; font-weight: 600; fill: var(--tag-ink); }
+.tag .stem { stroke: var(--accent); stroke-width: 1.5; }
+.tag.other rect { fill: var(--panel); stroke: var(--accent); stroke-width: 1; }
+.tag.other text { fill: var(--accent-ink); font-weight: 500; }
+.plabel { font-size: 13px; font-weight: 700; fill: var(--fg); }
+.psub { font-size: 11px; font-weight: 400; fill: var(--muted); font-family: var(--f-ui) !important; }
+.cell rect { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; }
+.cell text { font-size: 13px; font-weight: 600; fill: var(--fg); }
+.cell.small text { font-size: 12px; }
+.cell.mat text { font-size: 11.5px; font-weight: 500; }
+.cell.read rect { stroke: var(--warn); stroke-width: 2; fill: var(--warn-soft); }
+.cell.write rect, .cell.hot rect { stroke: var(--accent); stroke-width: 2; fill: var(--accent-soft); animation: cellflash .9s ease-out; }
+@keyframes cellflash { 0% { stroke-width: 4; } 100% { stroke-width: 2; } }
+.cell.outside rect { fill: var(--panel-2); stroke-dasharray: 3 3; } .cell.outside text { fill: var(--faint); }
+.cidx { font-size: 10px; fill: var(--faint); }
+.ichip rect, .ichip path { fill: var(--node-line); }
+.ichip text { font-size: 10.5px; font-weight: 600; fill: var(--panel); }
+.ichip.dim rect, .ichip.dim path { fill: var(--faint); }
+.bucket { fill: var(--panel-2); stroke: var(--line); }
+.adj-link { stroke: var(--faint); stroke-width: 1.4; }
+.tedge { stroke: var(--line); stroke-width: 1.6; }
+.tnode circle { fill: var(--node); stroke: var(--node-line); stroke-width: 1.5; }
+.tnode text { font-size: 12px; font-weight: 600; fill: var(--node-ink); }
+.tnode .tidx { font-size: 9px; fill: var(--faint); font-weight: 400; }
+.tnode.read circle { stroke: var(--warn); stroke-width: 2.5; }
+.tnode.write circle { stroke: var(--accent); stroke-width: 3; fill: var(--accent-soft); }
+.gedge { stroke: var(--faint); stroke-width: 1.6; }
+.gedge.act { stroke: var(--accent); stroke-width: 2.4; }
+.gw { font-size: 10.5px; fill: var(--muted); font-weight: 600; paint-order: stroke; stroke: var(--panel); stroke-width: 3px; }
+.gnode circle { fill: var(--panel); stroke: var(--node-line); stroke-width: 1.6; }
+.gnode text { font-size: 12px; font-weight: 700; fill: var(--fg); }
+.gnode.vis circle { fill: var(--node-line); } .gnode.vis text { fill: var(--panel); }
+.gnode.vis .gd { fill: var(--muted); }
+.gnode.cur circle { stroke: var(--accent); stroke-width: 3.5; }
+.gd { font-size: 10.5px; fill: var(--muted); font-weight: 500 !important; }
+.hpeg { fill: var(--faint); } .hbase { fill: var(--muted); }
+.hdisk rect { fill: var(--node); stroke: var(--node-line); stroke-width: 1.4; transition: all .3s; }
+.hdisk text { font-size: 10.5px; font-weight: 700; fill: var(--node-ink); }
+.hdisk.moved rect { fill: var(--panel); stroke: var(--accent); stroke-width: 2.2; }
+.lane { font-size: 11.5px; fill: var(--err); font-family: var(--f-ui) !important; font-weight: 600; }
+
+@media (max-width: 960px) {
+  .app { height: auto; min-height: 100%; }
+  .main { grid-template-columns: minmax(0, 1fr); }
+  .editor-pane { height: 58vh; }
+  .canvas-area { height: 60vh; flex: none; }
+  .bottom { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .panel { max-height: 260px; border-right: 0; border-bottom: 1px solid var(--line-2); }
+  .detect { margin-left: 0; }
+  .legend { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before { animation: none !important; transition: none !important; }
+}
+.brand .by { color: var(--accent); text-decoration: none; font-weight: 500; } .brand .by:hover { text-decoration: underline; }
+</style>
+
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg width="30" height="22" viewBox="0 0 30 22" aria-hidden="true"><rect x="1" y="5" width="11" height="12" rx="3" fill="none" stroke="var(--node-line)" stroke-width="1.8"/><rect x="18" y="5" width="11" height="12" rx="3" fill="none" stroke="var(--node-line)" stroke-width="1.8"/><path d="M9 11h7" stroke="var(--accent)" stroke-width="1.8"/><path d="M14.5 8.5l2.5 2.5-2.5 2.5" fill="none" stroke="var(--accent)" stroke-width="1.8"/><circle cx="9" cy="11" r="1.8" fill="var(--accent)"/></svg>
+      <span class="name">Visual Code</span><span class="sub">by <a href="/products/" class="by">Saffron Labs</a></span>
+    </div>
+    <label class="pick" for="ex">Examples <select id="ex"></select></label>
+    <div class="detect" id="detect" aria-label="Recognized structures"></div>
+  </header>
+  <div class="main">
+    <section class="pane editor-pane" aria-label="Code editor">
+      <div class="pane-head"><span class="file">main.cpp</span><span>Type C++. The drawing updates as you write.</span></div>
+      <div class="editor">
+        <div class="gutter"><div id="gutter"></div></div>
+        <div class="code">
+          <div class="hl-line" id="hlStep" hidden></div>
+          <pre id="hl" aria-hidden="true"></pre>
+          <textarea id="src" spellcheck="false" wrap="off" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="C++ code"></textarea>
+        </div>
+      </div>
+      <div class="status"><span class="st" id="status-msg"></span><span id="cursor"></span></div>
+    </section>
+    <section class="pane viz-pane" aria-label="Visualizer">
+      <div class="toolbar">
+        <div class="ctrls">
+          <button class="ib" id="first" aria-label="First step" title="First step (Home)"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 2v10M12 2L5 7l7 5z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+          <button class="ib" id="back" aria-label="Previous step" title="Previous step (←)"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M10 2L4 7l6 5z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+          <button class="ib primary" id="play" aria-label="Play" title="Play (Space)"><svg class="playi" width="14" height="14" viewBox="0 0 14 14"><path d="M4 2l8 5-8 5z" fill="currentColor"/></svg><svg class="pause" width="14" height="14" viewBox="0 0 14 14"><rect x="3" y="2" width="3" height="10" rx="1" fill="currentColor"/><rect x="8" y="2" width="3" height="10" rx="1" fill="currentColor"/></svg></button>
+          <button class="ib" id="fwd" aria-label="Next step" title="Next step (→)"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M4 2l6 5-6 5z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+          <button class="ib" id="live" aria-label="Jump to the latest step" title="Latest step (End)"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M11 2v10M2 2l7 5-7 5z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+        </div>
+        <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Step through the program">
+        <span class="count" id="count"></span>
+        <select id="speed" class="speed" aria-label="Playback speed"><option value="1000">0.5×</option><option value="600" selected>1×</option><option value="300">2×</option><option value="120">4×</option></select>
+        <span class="pill live" id="mode">Live</span>
+      </div>
+      <div class="explain" id="explain" aria-live="polite"></div>
+      <div class="canvas-area">
+        <div class="canvas-wrap" id="canvasWrap">
+          <svg id="viz" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Memory drawing">
+            <defs>
+              <marker id="mh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 1L10 5L0 9z" class="mk"/></marker>
+              <marker id="mh-back" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 1L10 5L0 9z" class="mk-back"/></marker>
+              <marker id="mh-err" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 1L10 5L0 9z" class="mk-err"/></marker>
+              <marker id="mh-null" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 1L10 5L0 9z" class="mk-null"/></marker>
+              <marker id="mh-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 1L10 5L0 9z" class="mk-g"/></marker>
+            </defs>
+            <g id="L-misc"></g><g id="L-edges"></g><g id="L-nodes"></g><g id="L-tags"></g>
+          </svg>
+        </div>
+        <div class="chips" id="chips"></div>
+        <div class="empty" id="empty" hidden></div>
+        <div class="legend"><span><i></i>in memory</span><span><i class="g"></i>still typing</span><span><i class="l"></i>lost</span></div>
+      </div>
+      <div class="bottom">
+        <div class="panel"><h3>Call stack</h3><div id="stack"></div></div>
+        <div class="panel"><h3>Checks</h3><div id="issues"></div></div>
+        <div class="panel"><h3>Output</h3><div id="stats"></div><pre id="out"></pre><label class="inlabel" for="stdin">Input for cin / scanf</label><input id="stdin" placeholder="e.g. 1 5 1 7 2 3" autocomplete="off"></div>
+      </div>
+    </section>
+  </div>
+</div>
+<script>
+// Visual Code engine: a tolerant C/C++ teaching-subset parser and a tracing interpreter.
+// Every statement records a snapshot of the stack, heap and containers so the UI can replay it.
+
+// ===== Lexer =====
+const OPS3 = ['<<=', '>>='];
+const OPS2 = ['->', '++', '--', '<<', '>>', '<=', '>=', '==', '!=', '&&', '||', '+=', '-=', '*=', '/=', '%=', '::'];
+function lex(src, macros = Object.create(null)) {
+  const toks = []; let i = 0, line = 1; const n = src.length;
+  const push = (t, v, s, l) => toks.push({ t, v, pos: s, end: i, line: l });
+  while (i < n) {
+    const c = src[i];
+    if (c === '\n') { line++; i++; continue; }
+    if (c === ' ' || c === '\t' || c === '\r') { i++; continue; }
+    if (c === '/' && src[i + 1] === '/') { while (i < n && src[i] !== '\n') i++; continue; }
+    if (c === '/' && src[i + 1] === '*') { i += 2; while (i < n && !(src[i] === '*' && src[i + 1] === '/')) { if (src[i] === '\n') line++; i++; } i = Math.min(n, i + 2); continue; }
+    if (c === '#') {
+      let j = i; while (j < n && src[j] !== '\n') j++;
+      const m = /^#\s*define\s+([A-Za-z_]\w*)(\(?)\s*(.*)$/.exec(src.slice(i, j).trim());
+      if (m && !m[2] && m[3].trim()) macros[m[1]] = lex(m[3].replace(/\/\/.*$/, ''), macros).slice(0, -1);
+      i = j; continue;
+    }
+    const s = i, l = line;
+    if (/[A-Za-z_]/.test(c)) {
+      while (i < n && /\w/.test(src[i])) i++;
+      const v = src.slice(s, i);
+      if (macros[v]) { for (const mt of macros[v]) toks.push({ ...mt, pos: s, end: i, line: l }); continue; }
+      push('id', v, s, l); continue;
+    }
+    if (/[0-9]/.test(c)) { while (i < n && /[0-9.]/.test(src[i])) i++; const v = src.slice(s, i); while (i < n && /[uUlLfF]/.test(src[i])) i++; push('num', v, s, l); continue; }
+    if (c === '"' || c === "'") {
+      i++; let v = '';
+      while (i < n && src[i] !== c && src[i] !== '\n') {
+        if (src[i] === '\\' && i + 1 < n) { const e = src[i + 1]; v += e === 'n' ? '\n' : e === 't' ? '\t' : e === '0' ? '\0' : e; i += 2; }
+        else v += src[i++];
+      }
+      const closed = src[i] === c; if (closed) i++;
+      push(c === '"' ? 'str' : 'chr', v, s, l);
+      if (!closed) toks[toks.length - 1].open = true;
+      continue;
+    }
+    const op = OPS3.find(o => src.startsWith(o, i)) || OPS2.find(o => src.startsWith(o, i)) || c;
+    i += op.length; push('op', op, s, l);
+  }
+  toks.push({ t: 'eof', v: '', pos: n, end: n, line });
+  return toks;
+}
+
+// ===== Parser =====
+class ParseError { constructor(msg, tok) { this.msg = msg; this.tok = tok; this.line = tok.line; } }
+const BASE_TYPES = new Set(['int', 'long', 'short', 'unsigned', 'signed', 'double', 'float', 'bool', 'char', 'void', 'string', 'auto', 'size_t']);
+const CONT_KINDS = new Set(['vector', 'stack', 'queue', 'deque', 'priority_queue']);
+const TEMPLATE_TYPES = new Set([...CONT_KINDS, 'pair', 'greater', 'less']);
+const PREC = { '||': 1, '&&': 2, '|': 3, '^': 4, '&': 5, '==': 6, '!=': 6, '<': 7, '>': 7, '<=': 7, '>=': 7, '<<': 8, '>>': 8, '+': 9, '-': 9, '*': 10, '/': 10, '%': 10 };
+const ASSIGN_OPS = new Set(['=', '+=', '-=', '*=', '/=', '%=']);
+const normBase = b => (['long', 'short', 'unsigned', 'signed', 'size_t'].includes(b) ? 'int' : b === 'float' ? 'double' : b);
+const RESERVED = new Set(['if', 'while', 'for', 'return', 'else', 'struct', 'class', 'int', 'double', 'char', 'bool', 'void', 'new', 'delete', 'switch', 'case', 'default', 'do', 'break', 'continue']);
+
+class Parser {
+  constructor(src) {
+    this.src = src; this.toks = lex(src); this.i = 0;
+    this.structs = Object.create(null); this.funcs = Object.create(null);
+    this.globals = []; this.err = null; this.halted = false; this.anon = 0; this._targs = null;
+  }
+  peek(k = 0) { return this.toks[Math.min(this.i + k, this.toks.length - 1)]; }
+  prevTok() { return this.toks[Math.max(0, this.i - 1)]; }
+  next() { const t = this.toks[this.i]; if (this.i < this.toks.length - 1) this.i++; return t; }
+  is(v, k = 0) { const t = this.peek(k); return (t.t === 'op' || t.t === 'id') && t.v === v; }
+  expect(v, msg) {
+    if (this.is(v)) return this.next();
+    const t = this.peek();
+    throw new ParseError(msg || `Expected '${v}'` + (t.t === 'eof' ? '' : ` before '${t.v}'`), this.prevTok());
+  }
+  fail(e) { if (!this.err) this.err = e; this.halted = true; }
+  isTypeAt(k) {
+    const t = this.peek(k); if (t.t !== 'id') return false;
+    if (CONT_KINDS.has(t.v) || t.v === 'pair') return this.is('<', k + 1);
+    return BASE_TYPES.has(t.v) || t.v in this.structs || t.v === 'const' || t.v === 'static' || t.v === 'struct' || t.v === 'unsigned' ||
+      (t.v === 'std' && this.is('::', k + 1) && (this.peek(k + 2).v === 'string' || CONT_KINDS.has(this.peek(k + 2).v) || this.peek(k + 2).v === 'pair'));
+  }
+  isDeclStart() {
+    if (!this.isTypeAt(0)) return false;
+    const t = this.peek();
+    if (t.v in this.structs) { const n = this.peek(1); return n.t === 'id' || n.v === '*' || n.v === '&'; }
+    return true;
+  }
+  srcFrom(pos) { return this.src.slice(pos, this.prevTok().end).replace(/\s+/g, ' ').trim(); }
+  closeAngle() {
+    const t = this.peek();
+    if (this.is('>')) { this.next(); return; }
+    if (t.t === 'op' && t.v === '>>') { t.v = '>'; return; }
+    throw new ParseError("Expected '>' to close the template", this.prevTok());
+  }
+
+  parseBaseType() {
+    while (this.is('const') || this.is('static')) this.next();
+    if (this.is('struct') || this.is('class')) this.next();
+    if (this.is('std') && this.is('::', 1)) { this.next(); this.next(); }
+    const t = this.next();
+    if (t.t !== 'id') throw new ParseError('Expected a type', t);
+    let b = t.v;
+    while (this.peek().t === 'id' && ['int', 'long', 'short', 'double', 'char'].includes(this.peek().v) && ['unsigned', 'signed', 'long', 'short'].includes(b)) {
+      b = this.next().v === 'double' ? 'double' : 'int';
+    }
+    b = normBase(b);
+    let targs = null;
+    if (TEMPLATE_TYPES.has(b) && this.is('<')) {
+      this.next(); targs = [];
+      for (;;) {
+        const tb = this.parseBaseType(); const tt = this._targs;
+        let ptr = 0; while (this.is('*')) { this.next(); ptr++; }
+        targs.push({ base: tb, ptr, targs: tt });
+        if (this.is(',')) { this.next(); continue; }
+        this.closeAngle(); break;
+      }
+    }
+    while (this.is('const')) this.next();
+    this._targs = targs;
+    return b;
+  }
+  parseDims() {
+    const dims = [];
+    while (this.is('[')) { this.next(); dims.push(this.is(']') ? null : this.parseExpr()); this.expect(']'); }
+    return dims;
+  }
+
+  parseProgram() {
+    while (this.peek().t !== 'eof' && !this.halted) {
+      try {
+        if (this.is('typedef')) { this.parseTypedef(); continue; }
+        if (this.is('using') || this.is('template')) { while (!this.is(';') && this.peek().t !== 'eof') this.next(); this.expect(';'); continue; }
+        if (this.is(';')) { this.next(); continue; }
+        if ((this.is('struct') || this.is('class')) && this.peek(1).t === 'id' && this.is('{', 2)) { this.parseStruct(false); continue; }
+        if ((this.is('struct') || this.is('class')) && this.peek(1).t === 'id' && this.is(';', 2)) { this.next(); this.next(); this.next(); continue; }
+        if (this.peek().t === 'id' && this.peek().v in this.structs && this.is('::', 1)) { this.parseFunction(null); continue; }
+        if (this.isTypeAt(0)) {
+          const save = this.i; const base = this.parseBaseType(); const targs = this._targs;
+          let ptr = 0; while (this.is('*') || this.is('&')) { if (this.is('*')) ptr++; this.next(); }
+          if (this.peek().t === 'id' && (this.is('(', 1) || this.is('::', 1))) { this.parseFunction({ base, ptr, targs }); continue; }
+          this.i = save; this.globals.push(this.parseDecl(true)); continue;
+        }
+        const t = this.peek();
+        throw new ParseError(`'${t.v}' can't go here. Code that runs must be inside a function like main()`, t);
+      } catch (e) { if (!(e instanceof ParseError)) throw e; this.fail(e); break; }
+    }
+    return { structs: this.structs, funcs: this.funcs, globals: this.globals, err: this.err };
+  }
+
+  parseTypedef() {
+    this.next();
+    if ((this.is('struct') || this.is('class')) && (this.is('{', 1) || this.is('{', 2))) {
+      const def = this.parseStruct(true);
+      do {
+        while (this.is('*')) this.next();
+        const a = this.next(); if (a.t !== 'id') throw new ParseError('Expected a name for the typedef', a);
+        this.structs[a.v] = def; if (def.anon) { def.name = a.v; def.anon = false; }
+      } while (this.is(',') && this.next());
+      this.expect(';'); return;
+    }
+    if (this.is('struct') && this.peek(1).t === 'id' && this.peek(2).t === 'id' && this.is(';', 3)) {
+      this.next(); const orig = this.next().v; const alias = this.next().v; this.next();
+      if (this.structs[orig]) this.structs[alias] = this.structs[orig];
+      else this.pendingAlias = { orig, alias };
+      return;
+    }
+    while (!this.is(';') && this.peek().t !== 'eof') this.next(); this.expect(';');
+  }
+
+  parseStruct(typedef) {
+    this.next();
+    let name;
+    if (this.is('{')) name = '__anon' + (++this.anon); else name = this.next().v;
+    const def = { name, fields: [], ctors: [], methods: Object.create(null), line: this.prevTok().line, complete: false, anon: name.startsWith('__anon') };
+    this.structs[name] = def;
+    if (this.pendingAlias && this.pendingAlias.orig === name) { this.structs[this.pendingAlias.alias] = def; this.pendingAlias = null; }
+    this.expect('{');
+    while (!this.is('}')) {
+      if (this.peek().t === 'eof') throw new ParseError(`struct ${name} is missing its closing '}'`, this.prevTok());
+      if (this.is('public') || this.is('private') || this.is('protected')) { this.next(); this.expect(':'); continue; }
+      if (this.is(';')) { this.next(); continue; }
+      if (this.is(def.name) && this.is('(', 1)) {
+        this.next(); const line = this.prevTok().line; const params = this.parseParams(); const inits = [];
+        if (this.is(':')) {
+          this.next();
+          do {
+            const f = this.next(); if (f.t !== 'id') throw new ParseError('Expected a field name in the initializer list', f);
+            this.expect('('); const args = [];
+            if (!this.is(')')) { do { args.push(this.parseAssign()); } while (this.is(',') && this.next()); }
+            this.expect(')'); inits.push({ f: f.v, args, line: f.line });
+          } while (this.is(',') && this.next());
+        }
+        const ctor = { params, inits, body: null, line }; def.ctors.push(ctor);
+        if (this.is(';')) { this.next(); ctor.body = { k: 'block', stmts: [] }; continue; }
+        ctor.body = this.parseBlock(); if (this.halted) return def;
+        continue;
+      }
+      if (this.is('~')) { this.next(); this.next(); this.parseParams(); if (this.is('{')) this.parseBlock(); else this.expect(';'); if (this.halted) return def; continue; }
+      const base = this.parseBaseType(); const targs = this._targs;
+      let first = true;
+      do {
+        let ptr = 0; while (this.is('*') || this.is('&')) { if (this.is('*')) ptr++; this.next(); }
+        const f = this.next(); if (f.t !== 'id') throw new ParseError('Expected a field name', f);
+        if (first && this.is('(')) {
+          const params = this.parseParams(); while (this.is('const')) this.next();
+          const fn = { name: f.v, ret: { base, ptr, targs }, params, line: f.line, body: null, owner: def.name };
+          def.methods[f.v] = fn;
+          if (this.is(';')) { this.next(); break; }
+          fn.body = this.parseBlock(); if (this.halted) return def;
+          first = null; break;
+        }
+        first = false;
+        const dims = this.parseDims();
+        let init = null;
+        if (this.is('=')) { this.next(); init = this.is('{') ? { k: 'list', items: this.parseList() } : this.parseAssign(); }
+        else if (this.is('{')) { init = { k: 'list', items: this.parseList() }; }
+        def.fields.push({ name: f.v, type: { base, ptr, targs, arr: dims.length > 0 }, dims, init, line: f.line });
+      } while (this.is(',') && this.next());
+      if (first !== null && this.prevTok().v !== ';') this.expect(';');
+    }
+    this.next();
+    if (typedef) { def.complete = true; return def; }
+    if (!this.is(';')) throw new ParseError(`Add ';' after the closing '}' of struct ${name}`, this.prevTok());
+    this.next(); def.complete = true; return def;
+  }
+
+  parseParams() {
+    this.expect('('); const ps = [];
+    if (this.is(')')) { this.next(); return ps; }
+    if (this.is('void') && this.is(')', 1)) { this.next(); this.next(); return ps; }
+    do {
+      const base = this.parseBaseType(); const targs = this._targs;
+      let ptr = 0; while (this.is('*')) { this.next(); ptr++; }
+      let ref = false; if (this.is('&')) { this.next(); ref = true; }
+      while (this.is('*')) { this.next(); ptr++; }
+      let name = null; if (this.peek().t === 'id') name = this.next().v;
+      const dims = this.parseDims();
+      if (this.is('=')) { this.next(); this.parseAssign(); }
+      ps.push({ name, type: { base, ptr, ref, arr: dims.length > 0, targs } });
+    } while (this.is(',') && this.next());
+    this.expect(')'); return ps;
+  }
+
+  parseFunction(ret) {
+    let owner = null;
+    if (!ret) { owner = this.next().v; ret = { base: 'void', ptr: 0 }; this.next(); }
+    const nameT = this.next();
+    let name = nameT.v;
+    if (this.is('::')) { owner = name; this.next(); if (this.is('~')) { this.next(); } name = this.next().v; }
+    const params = this.parseParams();
+    while (this.is('const')) this.next();
+    if (this.is(';')) { this.next(); return; }
+    if (owner && this.structs[owner] && name === owner) {
+      const ctor = { params, inits: [], body: null, line: nameT.line };
+      if (this.is(':')) { this.next(); do { const f = this.next(); this.expect('('); const args = []; if (!this.is(')')) { do { args.push(this.parseAssign()); } while (this.is(',') && this.next()); } this.expect(')'); ctor.inits.push({ f: f.v, args, line: f.line }); } while (this.is(',') && this.next()); }
+      this.structs[owner].ctors.push(ctor); ctor.body = this.parseBlock(); return;
+    }
+    const fn = { name, ret, params, line: nameT.line, body: null, owner };
+    if (owner && this.structs[owner]) this.structs[owner].methods[name] = fn; else this.funcs[name] = fn;
+    fn.body = this.parseBlock();
+  }
+
+  parseBlock() {
+    const open = this.expect('{'); const stmts = []; let endLine = open.line;
+    for (;;) {
+      if (this.peek().t === 'eof') {
+        const e = new ParseError("A closing '}' is missing", this.prevTok()); e.soft = true; this.fail(e);
+        stmts.push({ k: 'halt', line: this.prevTok().line, end: true }); break;
+      }
+      if (this.is('}')) { endLine = this.next().line; break; }
+      const s = this.i;
+      try { stmts.push(this.parseStmt()); }
+      catch (e) {
+        if (!(e instanceof ParseError)) throw e;
+        this.fail(e);
+        stmts.push({ k: 'halt', line: this.toks[s].line, ghost: this.ghostScan(s) });
+        break;
+      }
+      if (this.halted) break;
+    }
+    return { k: 'block', stmts, line: open.line, endLine };
+  }
+  ghostScan(s) {
+    for (let j = s; j < this.toks.length - 1 && j <= this.i + 2; j++) {
+      const t = this.toks[j];
+      if (t.t === 'id' && t.v === 'new') { const n = this.toks[j + 1]; if (n && n.t === 'id' && n.v in this.structs) return { type: this.structs[n.v].name }; }
+      if (t.t === 'id' && t.v === 'malloc') { for (let q = j; q < this.toks.length - 1 && q < j + 8; q++) { const n = this.toks[q]; if (n.t === 'id' && n.v in this.structs) return { type: this.structs[n.v].name }; } }
+    }
+    return null;
+  }
+
+  parseCond() { const st = this.peek().pos; const e = this.parseExpr(); e.src = this.srcFrom(st); return e; }
+  parseSeq() {
+    const st = this.peek().pos; const first = this.parseAssign(); const es = [first];
+    while (this.is(',')) { this.next(); es.push(this.parseAssign()); }
+    const e = es.length > 1 ? { k: 'seq', es, line: first.line } : first; e.src = this.srcFrom(st); return e;
+  }
+
+  parseStmt() {
+    const t = this.peek(), line = t.line;
+    if (this.is('{')) return this.parseBlock();
+    if (this.is(';')) { this.next(); return { k: 'empty', line }; }
+    if (this.is('if')) {
+      this.next(); this.expect('('); const c = this.parseCond(); this.expect(')');
+      const th = this.parseStmt(); let el = null;
+      if (!this.halted && this.is('else')) { this.next(); el = this.parseStmt(); }
+      return { k: 'if', c, th, el, line };
+    }
+    if (this.is('while')) { this.next(); this.expect('('); const c = this.parseCond(); this.expect(')'); const body = this.parseStmt(); return { k: 'while', c, body, line }; }
+    if (this.is('do')) {
+      this.next(); const body = this.parseStmt(); if (this.halted) return { k: 'do', body, c: null, line };
+      this.expect('while'); this.expect('('); const c = this.parseCond(); this.expect(')'); this.expect(';');
+      return { k: 'do', body, c, line };
+    }
+    if (this.is('for')) {
+      this.next(); this.expect('(');
+      if (this.isDeclStart()) {
+        const save = this.i; let range = false;
+        try { this.parseBaseType(); while (this.is('*') || this.is('&')) this.next(); const nm = this.next(); range = nm.t === 'id' && this.is(':'); } catch (e) { if (!(e instanceof ParseError)) throw e; }
+        this.i = save;
+        if (range) {
+          const base = this.parseBaseType(); const targs = this._targs; let ptr = 0, ref = false;
+          while (this.is('*') || this.is('&')) { if (this.is('*')) ptr++; else ref = true; this.next(); }
+          const name = this.next().v; this.next();
+          const it = this.parseCond(); this.expect(')'); const body = this.parseStmt();
+          return { k: 'rfor', name, type: { base, ptr, ref, targs }, it, body, line };
+        }
+      }
+      let init = null;
+      if (!this.is(';')) init = this.isDeclStart() ? this.parseDecl(false) : { k: 'expr', e: this.parseSeq(), line };
+      this.expect(';');
+      const c = this.is(';') ? null : this.parseCond(); this.expect(';');
+      const upd = this.is(')') ? null : this.parseSeq(); this.expect(')');
+      const body = this.parseStmt();
+      return { k: 'for', init, c, upd, body, line };
+    }
+    if (this.is('switch')) {
+      this.next(); this.expect('('); const e = this.parseCond(); this.expect(')'); this.expect('{');
+      const cases = []; let cur = null;
+      for (;;) {
+        if (this.peek().t === 'eof') throw new ParseError("This switch is missing its closing '}'", this.prevTok());
+        if (this.is('}')) { this.next(); break; }
+        if (this.is('case')) { const lt = this.next(); const v = this.parseTernary(); this.expect(':'); cur = { v, stmts: [], line: lt.line }; cases.push(cur); continue; }
+        if (this.is('default')) { const lt = this.next(); this.expect(':'); cur = { v: null, stmts: [], line: lt.line }; cases.push(cur); continue; }
+        if (!cur) throw new ParseError('Code inside a switch must come after a case label', this.peek());
+        cur.stmts.push(this.parseStmt()); if (this.halted) break;
+      }
+      return { k: 'switch', e, cases, line };
+    }
+    if (this.is('return')) { this.next(); const e = this.is(';') ? null : this.parseExpr(); this.expect(';'); return { k: 'return', e, line }; }
+    if (this.is('break')) { this.next(); this.expect(';'); return { k: 'break', line }; }
+    if (this.is('continue')) { this.next(); this.expect(';'); return { k: 'continue', line }; }
+    if (this.is('delete')) {
+      this.next(); if (this.is('[')) { this.next(); this.expect(']'); }
+      const st = this.peek().pos; const e = this.parseExpr(); e.src = this.srcFrom(st); this.expect(';');
+      return { k: 'delete', e, line };
+    }
+    if (this.isDeclStart()) return this.parseDecl(true);
+    const e = this.parseSeq(); this.expect(';'); return { k: 'expr', e, line };
+  }
+
+  parseDecl(semi) {
+    const line = this.peek().line; const base = this.parseBaseType(); const targs = this._targs; const decls = [];
+    do {
+      let ptr = 0; while (this.is('*')) { this.next(); ptr++; }
+      let ref = false; if (this.is('&')) { this.next(); ref = true; }
+      const n = this.next(); if (n.t !== 'id') throw new ParseError('Expected a variable name', n);
+      if (RESERVED.has(n.v)) throw new ParseError(`'${n.v}' is a keyword and can't be a variable name`, n);
+      const dims = this.parseDims();
+      const d = { name: n.v, type: { base, ptr, ref, arr: dims.length > 0, targs }, dims, line: n.line, init: null, list: null, cargs: null };
+      if (this.is('=')) { this.next(); if (this.is('{')) d.list = this.parseList(); else d.init = this.parseAssign(); }
+      else if (this.is('{')) d.list = this.parseList();
+      else if (this.is('(') && !dims.length) d.cargs = this.parseArgs();
+      decls.push(d);
+    } while (this.is(',') && this.next());
+    if (semi) this.expect(';');
+    return { k: 'decl', decls, line };
+  }
+  parseList() {
+    this.expect('{'); const xs = [];
+    if (!this.is('}')) {
+      do {
+        if (this.is('}')) break;
+        if (this.is('{')) xs.push({ k: 'list', items: this.parseList() }); else xs.push(this.parseAssign());
+      } while (this.is(',') && this.next());
+    }
+    this.expect('}'); return xs;
+  }
+
+  parseExpr() { return this.parseAssign(); }
+  parseAssign() {
+    const st = this.peek().pos, line = this.peek().line;
+    const l = this.parseTernary(); const t = this.peek();
+    if (t.t === 'op' && ASSIGN_OPS.has(t.v)) {
+      this.next(); l.src = this.src.slice(st, t.pos).replace(/\s+/g, ' ').trim();
+      const r = this.is('{') ? { k: 'list', items: this.parseList(), line } : this.parseAssign();
+      return { k: 'assign', op: t.v, l, r, line };
+    }
+    return l;
+  }
+  parseTernary() {
+    const c = this.parseBin(1);
+    if (this.is('?')) { this.next(); const a = this.parseAssign(); this.expect(':'); const b = this.parseAssign(); return { k: 'cond', c, a, b, line: c.line }; }
+    return c;
+  }
+  parseBin(min) {
+    let l = this.parseUnary();
+    for (;;) {
+      const t = this.peek(); const p = t.t === 'op' ? PREC[t.v] : undefined;
+      if (p === undefined || p < min) break;
+      this.next(); const r = this.parseBin(p + 1); l = { k: 'bin', op: t.v, l, r, line: t.line };
+    }
+    return l;
+  }
+  isCast() {
+    let k = 1; if (this.is('struct', k) || this.is('const', k)) k++;
+    const t = this.peek(k);
+    if (t.t !== 'id' || !(BASE_TYPES.has(t.v) || t.v in this.structs)) return false;
+    k++; while (this.is('*', k)) k++;
+    return this.is(')', k);
+  }
+  parseUnary() {
+    const t = this.peek();
+    if (t.t === 'op' && ['!', '-', '+', '~', '*', '&'].includes(t.v)) { this.next(); const a = this.parseUnary(); return { k: 'un', op: t.v, a, line: t.line }; }
+    if (t.t === 'op' && (t.v === '++' || t.v === '--')) { this.next(); const a = this.parseUnary(); return { k: 'pre', op: t.v, a, line: t.line }; }
+    if (this.is('new')) {
+      this.next(); const type = this.parseBaseType(); let ptr = 0; while (this.is('*')) { this.next(); ptr++; }
+      if (this.is('[')) { this.next(); const size = this.parseExpr(); this.expect(']'); return { k: 'newarr', type, size, line: t.line }; }
+      let args = [], paren = false;
+      if (this.is('(')) { paren = true; args = this.parseArgs(); }
+      else if (this.is('{')) { paren = true; args = this.parseList(); }
+      return { k: 'new', type, ptr, args, paren, line: t.line };
+    }
+    if (this.is('sizeof')) {
+      this.next(); this.expect('('); let e;
+      if (this.isTypeAt(0) && !this.is('(', 1)) { const b = this.parseBaseType(); let ptr = 0; while (this.is('*')) { this.next(); ptr++; } e = { k: 'sizeT', base: b, ptr }; }
+      else e = { k: 'sizeE', a: this.parseExpr() };
+      this.expect(')'); e.line = t.line; return e;
+    }
+    if (this.is('(') && this.isCast()) {
+      this.next(); const b = this.parseBaseType(); let ptr = 0; while (this.is('*')) { this.next(); ptr++; } this.expect(')');
+      const a = this.parseUnary(); return { k: 'cast', base: b, ptr, a, line: t.line };
+    }
+    return this.parsePostfix();
+  }
+  parsePostfix() {
+    let e = this.parsePrimary();
+    for (;;) {
+      const t = this.peek();
+      if (this.is('(') && e.k === 'id') { const args = this.parseArgs(); e = { k: 'call', name: e.name, args, line: e.line, targs: e.targs }; continue; }
+      if (this.is('[')) { this.next(); const i = this.parseExpr(); this.expect(']'); e = { k: 'index', a: e, i, line: t.line }; continue; }
+      if (this.is('->') || this.is('.')) {
+        this.next(); const f = this.next();
+        if (f.t !== 'id') throw new ParseError(`Expected a field name after '${t.v}'`, f.t === 'eof' ? this.prevTok() : f);
+        if (this.is('(')) { const args = this.parseArgs(); e = { k: 'mcall', obj: e, name: f.v, args, arrow: t.v === '->', line: t.line }; continue; }
+        e = { k: t.v === '->' ? 'arrow' : 'dot', a: e, f: f.v, line: t.line }; continue;
+      }
+      if (t.t === 'op' && (t.v === '++' || t.v === '--')) { this.next(); e = { k: 'post', op: t.v, a: e, line: t.line }; continue; }
+      break;
+    }
+    return e;
+  }
+  parseArgs() {
+    this.expect('('); const xs = [];
+    if (!this.is(')')) { do { xs.push(this.is('{') ? { k: 'list', items: this.parseList() } : this.parseAssign()); } while (this.is(',') && this.next()); }
+    this.expect(')'); return xs;
+  }
+  parsePrimary() {
+    const t = this.peek();
+    if (t.t === 'num') { this.next(); return { k: 'num', v: parseFloat(t.v), dbl: t.v.includes('.'), line: t.line }; }
+    if (t.t === 'str') {
+      this.next(); if (t.open) throw new ParseError('This text is missing its closing quote', t);
+      let v = t.v; while (this.peek().t === 'str' && !this.peek().open) v += this.next().v;
+      return { k: 'str', v, line: t.line };
+    }
+    if (t.t === 'chr') { this.next(); if (t.open) throw new ParseError('This character is missing its closing quote', t); return { k: 'chr', v: t.v.charCodeAt(0) || 0, line: t.line }; }
+    if (t.t === 'id') {
+      if (t.v === 'std' && this.is('::', 1)) { this.next(); this.next(); return this.parsePrimary(); }
+      if (RESERVED.has(t.v)) throw new ParseError(`Unexpected '${t.v}'`, t);
+      if ((t.v === 'greater' || t.v === 'less' || CONT_KINDS.has(t.v) || t.v === 'pair') && this.is('<', 1)) {
+        const b = this.parseBaseType(); return { k: 'id', name: b, targs: this._targs, line: t.line };
+      }
+      this.next(); return { k: 'id', name: t.v, line: t.line };
+    }
+    if (this.is('(')) { this.next(); const e = this.parseExpr(); this.expect(')'); return e; }
+    throw new ParseError(t.t === 'eof' ? 'This line is not finished yet' : `Unexpected '${t.v}'`, t.t === 'eof' ? this.prevTok() : t);
+  }
+}
+
+// ===== Interpreter =====
+class RtErr { constructor(msg, line) { this.msg = msg; this.line = line; } }
+class HaltSig {}
+class ExitSig {}
+class RetSig { constructor(v) { this.v = v; } }
+class BrkSig {}
+class ContSig {}
+const MAX_STEPS = 4000, MAX_DEPTH = 150, MAX_OPS = 40000;
+const NUM = (v, t = 'int') => ({ k: 'num', v, t });
+const typeStr = t => {
+  const ta = t.targs ? `<${t.targs.map(typeStr).join(', ')}>` : '';
+  return `${t.base}${ta}${'*'.repeat(t.ptr || 0)}${t.ref ? '&' : ''}${t.arr ? '[]' : ''}`;
+};
+
+function exprStr(e) {
+  if (!e) return '';
+  switch (e.k) {
+    case 'id': return e.name;
+    case 'num': return String(e.v);
+    case 'str': return JSON.stringify(e.v);
+    case 'chr': return `'${String.fromCharCode(e.v)}'`;
+    case 'arrow': return exprStr(e.a) + '->' + e.f;
+    case 'dot': return exprStr(e.a) + '.' + e.f;
+    case 'index': return `${exprStr(e.a)}[${exprStr(e.i)}]`;
+    case 'bin': return `${exprStr(e.l)} ${e.op} ${exprStr(e.r)}`;
+    case 'un': case 'pre': return e.op + exprStr(e.a);
+    case 'post': return exprStr(e.a) + e.op;
+    case 'call': return `${e.name}(${e.args.map(exprStr).join(', ')})`;
+    case 'mcall': return `${exprStr(e.obj)}${e.arrow ? '->' : '.'}${e.name}(${e.args.map(exprStr).join(', ')})`;
+    case 'new': return `new ${e.type}(${e.args.map(exprStr).join(', ')})`;
+    case 'assign': return `${exprStr(e.l)} ${e.op} ${exprStr(e.r)}`;
+    case 'cast': return `(${e.base}${'*'.repeat(e.ptr || 0)})${exprStr(e.a)}`;
+    default: return '…';
+  }
+}
+
+class Interp {
+  constructor(prog, stdin) {
+    this.p = prog; this.heap = new Map(); this.seq = 0; this.addr = 0x5A10; this.arrSeq = 0; this.contSeq = 0;
+    this.frames = []; this.global = { fn: 'globals', scopes: [new Map()], line: 0, thisObj: null, self: null };
+    this.out = ''; this.steps = []; this.ev = this.freshEv();
+    this.input = (stdin || '').split(/\s+/).filter(Boolean); this.ops = 0;
+    this.stats = { steps: 0, cmp: 0, writes: 0, calls: 0, maxDepth: 0 };
+  }
+  freshEv() { return { alloc: [], free: [], sets: [], reads: [], writes: [], desc: [], conts: [] }; }
+  get frame() { return this.frames[this.frames.length - 1] || this.global; }
+  sdef(t) { return t && !t.ptr ? this.p.structs[t.base] : null; }
+
+  run() {
+    try {
+      for (const g of this.p.globals) this.execStmt(g);
+      const main = this.p.funcs.main;
+      if (!main || !main.body) { this.snapRaw(0, null, { nomain: true }); return this.steps; }
+      this.frames.push({ fn: 'main', scopes: [new Map()], line: main.line, thisObj: null, self: null });
+      this.snap(main.line, 'The program starts in main()');
+      try { this.execBlock(main.body, false); } catch (e) { if (!(e instanceof RetSig)) throw e; }
+      this.snap(main.body.endLine || main.line, 'Program finished', { done: true });
+    } catch (e) {
+      if (e instanceof HaltSig) { /* paused */ }
+      else if (e instanceof ExitSig) this.snapRaw(this.lastLine || 0, 'exit() ended the program', { done: true });
+      else if (e instanceof RtErr) { if (!e.snapped) this.snapRaw(e.line || 0, e.msg, { error: true }); }
+      else if (e instanceof BrkSig || e instanceof ContSig) this.snapRaw(0, 'break or continue used outside a loop or switch', { error: true });
+      else if (e instanceof RangeError) this.snapRaw(this.lastLine || 0, 'The program went too deep. Check the recursion base case', { error: true });
+      else throw e;
+    }
+    return this.steps;
+  }
+
+  // ----- variables
+  declare(name, entry) { const sc = this.frame.scopes; sc[sc.length - 1].set(name, entry); }
+  lookup(name) {
+    const f = this.frame;
+    for (let i = f.scopes.length - 1; i >= 0; i--) { const e = f.scopes[i].get(name); if (e) return e.cell; }
+    if (f.self && f.self.cells[name]) return f.self.cells[name];
+    if (f !== this.global) for (let i = this.global.scopes.length - 1; i >= 0; i--) { const e = this.global.scopes[i].get(name); if (e) return e.cell; }
+    return null;
+  }
+  numType(t) { return t.base === 'char' ? 'char' : t.base === 'bool' ? 'bool' : t.base === 'double' ? 'double' : 'int'; }
+  isCont(t) { return t && !t.ptr && CONT_KINDS.has(t.base); }
+  isPair(t) { return t && !t.ptr && t.base === 'pair'; }
+  newCont(t) {
+    const kind = t.base, et = (t.targs && t.targs[0]) || { base: 'int', ptr: 0 };
+    const cmpT = t.targs && t.targs[2];
+    return { k: 'cont', kind, id: ++this.contSeq, et, items: [], min: !!(cmpT && cmpT.base === 'greater') };
+  }
+  newRec(t, line) {
+    if (this.isPair(t)) {
+      const ts = t.targs || [{ base: 'int', ptr: 0 }, { base: 'int', ptr: 0 }];
+      const r = { k: 'rec', type: 'pair', cells: {}, order: ['first', 'second'] };
+      r.cells.first = { val: this.defaultVal(ts[0]), type: ts[0], owner: { rec: 1 } };
+      r.cells.second = { val: this.defaultVal(ts[1]), type: ts[1], owner: { rec: 1 } };
+      return r;
+    }
+    const def = this.sdef(t);
+    const r = { k: 'rec', type: def.name, cells: {}, order: [] };
+    for (const f of def.fields) {
+      const ft = { base: f.type.base, ptr: f.type.ptr, targs: f.type.targs };
+      let v;
+      if (f.dims.length) { const sizes = f.dims.map(d => this.sizeOf(d, f.line)); v = this.makeArr(f.name, ft, sizes, f.init && f.init.k === 'list' ? f.init.items : null, f.line); }
+      else v = f.init ? (f.init.k === 'list' ? this.fromList(ft, f.init.items, line) : this.coerce(ft, this.eval(f.init), line)) : this.defaultVal(ft);
+      r.cells[f.name] = { val: v, type: f.dims.length ? { ...ft, arr: true } : ft, owner: { rec: 1 } }; r.order.push(f.name);
+    }
+    return r;
+  }
+  defaultVal(t) {
+    if (t.ptr) return { k: 'ptr', to: null, uninit: true };
+    if (this.isCont(t)) return this.newCont(t);
+    if (this.isPair(t) || this.sdef(t)) return this.newRec(t, 0);
+    if (t.base === 'string') return { k: 'str', v: '' };
+    return { k: 'uninit' };
+  }
+  zero(t) {
+    if (t.ptr) return { k: 'ptr', to: null };
+    if (this.isCont(t)) return this.newCont(t);
+    if (this.isPair(t) || this.sdef(t)) { const r = this.newRec(t, 0); for (const f of r.order) { const c = r.cells[f]; if (c.val.k === 'uninit' || (c.val.k === 'ptr' && c.val.uninit)) c.val = this.zero(c.type); } return r; }
+    if (t.base === 'string') return { k: 'str', v: '' };
+    return NUM(0, this.numType(t));
+  }
+  copyVal(v) {
+    if (v.k === 'rec') {
+      const r = { k: 'rec', type: v.type, cells: {}, order: [...v.order] };
+      for (const f of v.order) { const c = v.cells[f]; r.cells[f] = { val: this.copyVal(c.val), type: c.type, owner: { rec: 1 } }; }
+      return r;
+    }
+    if (v.k === 'cont') return { ...v, id: ++this.contSeq, items: v.items.map(c => ({ val: this.copyVal(c.val), type: c.type, owner: null })) };
+    return v;
+  }
+  coerce(t, v, line) {
+    if (v === undefined || v.k === 'void') throw new RtErr('This function does not return a value', line);
+    if (!t || t.base === 'auto' || t.arr) return v;
+    if (t.ptr > 0) {
+      if (v.k === 'ptr') return { k: 'ptr', to: v.to, uninit: v.uninit };
+      if (v.k === 'num' && v.v === 0) return { k: 'ptr', to: null };
+      if (v.k === 'arr') throw new RtErr("Pointing into an array isn't drawn yet. Use an index variable like int i instead", line);
+      throw new RtErr(`Can't store ${this.describe(v)} in a pointer`, line);
+    }
+    if (this.isCont(t)) { if (v.k === 'cont') return this.copyVal(v); throw new RtErr(`Expected a ${t.base} here`, line); }
+    if (this.isPair(t) || this.sdef(t)) { if (v.k === 'rec') return this.copyVal(v); throw new RtErr(`Expected a ${t.base} value here`, line); }
+    if (t.base === 'string') {
+      if (v.k === 'str') return { k: 'str', v: v.v };
+      if (v.k === 'num' && v.t === 'char') return { k: 'str', v: String.fromCharCode(v.v) };
+      if (v.k === 'arr') return { k: 'str', v: this.arrString(v) };
+      throw new RtErr('A string needs text in quotes', line);
+    }
+    if (v.k === 'uninit') return v;
+    if (v.k !== 'num') {
+      if (v.k === 'ptr' && t.base === 'bool') return NUM(v.to != null ? 1 : 0, 'bool');
+      throw new RtErr(`Can't store ${v.k === 'ptr' ? 'a pointer' : this.describe(v)} in a ${t.base}`, line);
+    }
+    const nt = this.numType(t); let x = v.v;
+    if (nt === 'int' || nt === 'char') x = Math.trunc(x);
+    if (nt === 'int' && Math.abs(x) > 2147483647) x = x | 0;
+    if (nt === 'bool') x = x ? 1 : 0;
+    return NUM(x, nt);
+  }
+  evalItem(t, item, line) { return item && item.k === 'list' ? this.fromList(t, item.items, line) : this.coerce(t, this.eval(item), line); }
+  fromList(t, items, line) {
+    if (this.isCont(t)) { const c = this.newCont(t); for (const it of items) this.contPush(c, this.evalItem(c.et, it, line)); return c; }
+    if (this.isPair(t) || this.sdef(t)) {
+      const r = this.zero(t);
+      items.forEach((it, i) => { const f = r.order[i]; if (!f) throw new RtErr(`${t.base} has only ${r.order.length} field(s)`, line); const c = r.cells[f]; c.val = this.evalItem(c.type, it, line); });
+      return r;
+    }
+    return items.length ? this.evalItem(t, items[0], line) : this.zero(t);
+  }
+  sizeOf(d, line) {
+    if (d == null) return null;
+    const v = this.eval(d); this.needNum(v, line); return Math.trunc(v.v);
+  }
+  makeArr(name, et, sizes, list, line) {
+    let size = sizes[0];
+    if (size == null) { if (!list) throw new RtErr(`Give ${name} a size, like int ${name}[5]`, line); size = list.length; }
+    if (size <= 0) throw new RtErr('An array size must be at least 1', line);
+    if (size > 512) throw new RtErr('Arrays over 512 elements are too big to draw', line);
+    if (list && sizes.length > 1 && list.length && list[0].k !== 'list') {
+      const inner = sizes.slice(1).reduce((a, b) => a * (b || 1), 1); const rows = [];
+      for (let i = 0; i < list.length; i += inner) rows.push({ k: 'list', items: list.slice(i, i + inner) });
+      list = rows;
+    }
+    const arr = { k: 'arr', id: ++this.arrSeq, name, elems: [], et, dims: sizes.length };
+    for (let i = 0; i < size; i++) {
+      let v; const item = list ? list[i] : undefined;
+      if (sizes.length > 1) v = this.makeArr(`${name}[${i}]`, et, sizes.slice(1), item && item.k === 'list' ? item.items : (list ? [] : null), line);
+      else if (list) v = item !== undefined ? this.evalItem(et, item, line) : this.zero(et);
+      else v = this.defaultVal(et);
+      arr.elems.push({ val: v, type: sizes.length > 1 ? { arr: true } : et, owner: { arr: arr.id, idx: i } });
+    }
+    return arr;
+  }
+  arrString(a) { let s = ''; for (const c of a.elems) { if (c.val.k !== 'num' || c.val.v === 0) break; s += String.fromCharCode(c.val.v); } return s; }
+  fillCharArr(a, s, line) {
+    if (s.length + 1 > a.elems.length) throw new RtErr(`"${s}" does not fit in ${a.name} (size ${a.elems.length})`, line);
+    a.elems.forEach((c, i) => { c.val = NUM(i < s.length ? s.charCodeAt(i) : 0, 'char'); this.ev.writes.push(c.owner); });
+  }
+  describe(v) {
+    if (!v) return 'nothing';
+    switch (v.k) {
+      case 'ptr': return v.uninit ? 'an unset pointer' : v.to == null ? 'NULL' : `node ${this.heap.get(v.to).addr}`;
+      case 'num': return v.t === 'bool' ? (v.v ? 'true' : 'false') : v.t === 'char' ? `'${String.fromCharCode(v.v)}'` : String(+v.v.toFixed(6));
+      case 'str': return JSON.stringify(v.v);
+      case 'arr': return `array ${v.name}`;
+      case 'rec': return `{${v.order.map(f => this.describe(v.cells[f].val)).join(', ')}}`;
+      case 'cont': return `${v.kind} of ${v.items.length}`;
+      case 'uninit': return 'no value';
+      default: return v.k;
+    }
+  }
+  fmtOut(v) {
+    switch (v.k) {
+      case 'endl': return '\n';
+      case 'num': return v.t === 'char' ? String.fromCharCode(v.v) : v.t === 'double' ? String(Number(v.v.toPrecision(6))) : String(v.v);
+      case 'str': return v.v;
+      case 'ptr': return v.to == null ? '0' : this.heap.get(v.to).addr.toLowerCase();
+      case 'arr': return this.arrString(v);
+      case 'uninit': throw new RtErr('Printing a variable that has no value yet', 0);
+      case 'manip': return '';
+      default: return '';
+    }
+  }
+  readCell(c, label, line) {
+    const v = c.val;
+    if (v.k === 'uninit') throw new RtErr(`${label} has no value yet. Give it one before using it`, line);
+    if (v.k === 'ptr' && v.uninit) throw new RtErr(`${label} was never given an address. Set it to NULL or to a node first`, line);
+    return v;
+  }
+  truthy(v, e) {
+    if (v.k === 'num') return v.v !== 0;
+    if (v.k === 'ptr') { if (v.uninit) throw new RtErr(`${exprStr(e)} was never given an address`, e.line); return v.to != null; }
+    if (v.k === 'str') return true;
+    throw new RtErr('This condition is not true/false', e.line);
+  }
+  needNum(v, line) {
+    if (v.k === 'ptr') throw new RtErr("Arithmetic on pointers isn't supported here. Move with p = p->next instead", line);
+    if (v.k !== 'num') throw new RtErr('Expected a number here', line);
+  }
+  tick(line) { if (++this.ops > MAX_OPS) throw new RtErr('Stopped: loops ran more than 40,000 times. Check that each loop moves toward its end', line); }
+
+  // ----- snapshots
+  sv(v) {
+    if (!v) return { k: 'void' };
+    switch (v.k) {
+      case 'ptr': return { k: 'ptr', to: v.to, uninit: !!v.uninit };
+      case 'num': return { k: 'num', v: v.v, t: v.t };
+      case 'str': return { k: 'str', v: v.v };
+      case 'arr': return { k: 'arr', id: v.id, name: v.name, dims: v.dims, vals: v.elems.map(c => this.sv(c.val)) };
+      case 'rec': return { k: 'rec', type: v.type, fields: v.order.map(f => ({ name: f, val: this.sv(v.cells[f].val) })) };
+      case 'cont': return { k: 'cont', kind: v.kind, id: v.id, min: v.min, vals: v.items.map(c => this.sv(c.val)) };
+      default: return { k: v.k };
+    }
+  }
+  flat(f) {
+    const vs = [];
+    if (f.thisObj != null) vs.push({ name: 'this', type: this.heap.get(f.thisObj).type + '*', val: { k: 'ptr', to: f.thisObj }, ptr: true });
+    else if (f.self) vs.push({ name: '*this', type: f.self.type, val: this.sv(f.self), ref: true, alias: f.selfName || 'object' });
+    for (const sc of f.scopes) for (const [n, e] of sc) vs.push({ name: n, type: typeStr(e.type), val: this.sv(e.cell.val), ref: !!e.ref, alias: e.alias });
+    return vs;
+  }
+  snap(line, note, flags) {
+    if (this.steps.length >= MAX_STEPS) throw new RtErr('Stopped after 4,000 steps. The program may be stuck in a loop', line);
+    this.snapRaw(line, note, flags);
+  }
+  snapRaw(line, note, flags = {}) {
+    const ev = this.ev; this.ev = this.freshEv(); this.lastLine = line; this.stats.steps++;
+    const frames = [];
+    const gl = this.flat(this.global); if (gl.length) frames.push({ fn: 'globals', vars: gl, global: true });
+    for (const f of this.frames) frames.push({ fn: f.fn, vars: this.flat(f), ctor: !!f.ctor });
+    const targets = new Set();
+    const addT = v => {
+      if (!v) return;
+      if (v.k === 'ptr' && v.to != null) targets.add(v.to);
+      else if (v.k === 'arr' || v.k === 'cont') v.vals.forEach(addT);
+      else if (v.k === 'rec') v.fields.forEach(f => addT(f.val));
+    };
+    for (const fr of frames) for (const v of fr.vars) addT(v.val);
+    for (const o of this.heap.values()) if (o.alive) for (const f of o.order) addT(this.sv(o.cells[f].val));
+    const heap = [];
+    for (const o of this.heap.values()) {
+      if (!o.alive && !targets.has(o.id) && !ev.free.includes(o.id)) continue;
+      heap.push({ id: o.id, type: o.type, addr: o.addr, alive: o.alive, fields: o.order.map(f => ({ name: f, val: this.sv(o.cells[f].val), ptr: o.cells[f].type.ptr > 0 })) });
+    }
+    this.steps.push({ line, note: note ?? (ev.desc.slice(-2).join(' · ') || null), flags, frames, heap, out: this.out, ev, stats: { ...this.stats } });
+  }
+
+  // ----- statements
+  execStmt(s) {
+    try { this.exec(s); }
+    catch (e) {
+      if (e instanceof RtErr && !e.snapped) { e.snapped = true; if (!e.line) e.line = s.line; this.snapRaw(e.line, e.msg, { error: true }); }
+      throw e;
+    }
+  }
+  execBlock(b, scope) {
+    if (scope) this.frame.scopes.push(new Map());
+    try { for (const st of b.stmts) this.execStmt(st); }
+    catch (e) { if (scope && (e instanceof BrkSig || e instanceof ContSig || e instanceof RetSig)) this.frame.scopes.pop(); throw e; }
+    if (scope) this.frame.scopes.pop();
+  }
+  loopBody(body) {
+    try { this.execStmt(body); return 0; }
+    catch (e) { if (e instanceof BrkSig) return 1; if (e instanceof ContSig) return 0; throw e; }
+  }
+  condNote(c, v) { return `Check ${c.src}: ${v ? 'true' : 'false'}`; }
+  exec(s) {
+    switch (s.k) {
+      case 'block': return this.execBlock(s, true);
+      case 'empty': return;
+      case 'halt': this.snapRaw(s.line, null, { halt: true, ghost: s.ghost, end: !!s.end }); throw new HaltSig();
+      case 'decl': for (const d of s.decls) this.declVar(d); this.snap(s.line); return;
+      case 'expr': this.eval(s.e); this.snap(s.line); return;
+      case 'if': {
+        const c = this.truthy(this.eval(s.c), s.c);
+        this.snap(s.line, this.condNote(s.c, c), { cond: c });
+        if (c) this.execStmt(s.th); else if (s.el) this.execStmt(s.el);
+        return;
+      }
+      case 'while':
+        for (;;) {
+          this.tick(s.line);
+          const c = this.truthy(this.eval(s.c), s.c);
+          this.snap(s.line, this.condNote(s.c, c), { cond: c });
+          if (!c || this.loopBody(s.body)) break;
+        }
+        return;
+      case 'do':
+        for (;;) {
+          this.tick(s.line);
+          if (this.loopBody(s.body) || !s.c) break;
+          const c = this.truthy(this.eval(s.c), s.c);
+          this.snap(s.line, this.condNote(s.c, c), { cond: c });
+          if (!c) break;
+        }
+        return;
+      case 'for': {
+        this.frame.scopes.push(new Map());
+        if (s.init) { if (s.init.k === 'decl') for (const d of s.init.decls) this.declVar(d); else this.eval(s.init.e); }
+        for (;;) {
+          this.tick(s.line);
+          if (s.c) { const c = this.truthy(this.eval(s.c), s.c); this.snap(s.line, this.condNote(s.c, c), { cond: c }); if (!c) break; }
+          let r;
+          try { r = this.loopBody(s.body); } catch (e) { if (e instanceof RetSig) this.frame.scopes.pop(); throw e; }
+          if (r) break;
+          if (s.upd) this.eval(s.upd);
+        }
+        this.frame.scopes.pop(); this.ev.desc = [];
+        return;
+      }
+      case 'rfor': {
+        const it = this.eval(s.it);
+        const cells = it.k === 'arr' ? it.elems : it.k === 'cont' ? [...it.items] : it.k === 'str' ? [...it.v].map(ch => ({ val: NUM(ch.charCodeAt(0), 'char'), type: { base: 'char', ptr: 0 } })) : null;
+        if (!cells) throw new RtErr(`Can't loop over ${this.describe(it)}`, s.line);
+        for (const c of cells) {
+          this.tick(s.line);
+          this.frame.scopes.push(new Map());
+          if (s.type.ref) this.declare(s.name, { cell: c, type: s.type, ref: true, alias: `${s.it.src}[…]` });
+          else { const t = s.type.base === 'auto' ? c.type : s.type; this.declare(s.name, { cell: { val: this.coerce(t, this.readCell(c, s.name, s.line), s.line), type: t, owner: { v: s.name } }, type: t }); }
+          this.snap(s.line, `${s.name} = ${this.describe(c.val)}`);
+          let r; try { r = this.loopBody(s.body); } catch (e) { if (e instanceof RetSig) this.frame.scopes.pop(); throw e; }
+          this.frame.scopes.pop();
+          if (r) break;
+        }
+        return;
+      }
+      case 'switch': {
+        const v = this.eval(s.e);
+        let start = s.cases.findIndex(c => c.v && this.valEq(v, this.eval(c.v)));
+        if (start < 0) start = s.cases.findIndex(c => !c.v);
+        this.snap(s.line, start < 0 ? `switch (${s.e.src}): no case matches` : `switch (${s.e.src}) jumps to ${s.cases[start].v ? 'case ' + exprStr(s.cases[start].v) : 'default'}`);
+        if (start < 0) return;
+        this.frame.scopes.push(new Map());
+        try { for (let i = start; i < s.cases.length; i++) for (const st of s.cases[i].stmts) this.execStmt(st); }
+        catch (e) { this.frame.scopes.pop(); if (e instanceof BrkSig) return; throw e; }
+        this.frame.scopes.pop();
+        return;
+      }
+      case 'return': {
+        const v = s.e ? this.eval(s.e) : { k: 'void' };
+        this.snap(s.line, s.e ? `return ${this.describe(v)}` : 'return');
+        throw new RetSig(v);
+      }
+      case 'break': throw new BrkSig();
+      case 'continue': throw new ContSig();
+      case 'delete': this.freeNode(this.eval(s.e), s.line); this.snap(s.line); return;
+    }
+  }
+  valEq(a, b) { if (a.k === 'num' && b.k === 'num') return a.v === b.v; if (a.k === 'str' && b.k === 'str') return a.v === b.v; return false; }
+  freeNode(p, line) {
+    if (p.k !== 'ptr') throw new RtErr('delete/free needs a pointer', line);
+    if (p.uninit) throw new RtErr('Deleting a pointer that was never given an address', line);
+    if (p.to == null) { this.ev.desc.push('Deleting NULL does nothing'); return; }
+    const o = this.heap.get(p.to);
+    if (!o.alive) throw new RtErr('This node was already deleted. Deleting twice crashes real programs (double free)', line);
+    o.alive = false; this.ev.free.push(o.id);
+    this.ev.desc.push(`Deleted node ${o.addr}. Its memory is given back`);
+  }
+  declVar(d) {
+    const t = d.type;
+    if (t.arr) {
+      const et = { base: t.base, ptr: t.ptr, targs: t.targs };
+      const sizes = d.dims.map(x => this.sizeOf(x, d.line));
+      let list = d.list;
+      if (!list && d.init && d.init.k === 'str' && t.base === 'char') list = [...d.init.v, '\0'].map(ch => ({ k: 'chr', v: ch.charCodeAt(0), line: d.line }));
+      else if (d.init) throw new RtErr(`Use { } to give ${d.name} its starting values`, d.line);
+      const arr = this.makeArr(d.name, et, sizes, list || (this.frames.length ? null : []), d.line);
+      this.declare(d.name, { cell: { val: arr, type: t, owner: { v: d.name } }, type: t });
+      this.ev.desc.push(`Created array ${d.name} with ${arr.elems.length}${arr.dims > 1 ? '×' + arr.elems[0].val.elems.length : ''} slots`);
+      return;
+    }
+    if (t.ref) {
+      if (!d.init) throw new RtErr(`The reference ${d.name} must be set when it is declared`, d.line);
+      this.declare(d.name, { cell: this.lv(d.init), type: t, ref: true, alias: exprStr(d.init) });
+      return;
+    }
+    const cell = { val: null, type: t, owner: { v: d.name } };
+    if (d.cargs) cell.val = this.construct(t, d.cargs, d.line, d.name);
+    else if (d.init) cell.val = d.init.k === 'list' ? this.fromList(t, d.init.items, d.line) : this.coerce(t, this.eval(d.init), d.line);
+    else if (d.list) cell.val = this.fromList(t, d.list, d.line);
+    else {
+      cell.val = this.frames.length ? this.defaultVal(t) : this.zero(t);
+      const def = this.sdef(t);
+      if (def && def.ctors.length) { const ctor = def.ctors.find(c => c.params.length === 0); if (!ctor) throw new RtErr(`${def.name} needs constructor values, like ${def.name} ${d.name}(...)`, d.line); this.runCtor(def, ctor, [], cell.val, null, d.line, d.name); }
+    }
+    this.declare(d.name, { cell, type: t });
+    const v = cell.val;
+    if (d.init || d.list || d.cargs) this.ev.desc.push(v.k === 'ptr' ? (v.to == null ? `${d.name} = NULL` : `${d.name} now points to node ${this.heap.get(v.to).addr}`) : `${d.name} = ${this.describe(v)}`);
+    else this.ev.desc.push(`Declared ${d.name}` + (t.ptr ? ' (it has no address yet)' : v.k === 'uninit' ? ' (no value yet)' : ''));
+  }
+  construct(t, argExprs, line, name) {
+    if (this.isCont(t)) {
+      const c = this.newCont(t); const args = argExprs.map(a => this.eval(a));
+      if (args.length && args[0].k === 'num') { const n = Math.trunc(args[0].v); if (n > 512) throw new RtErr('Containers over 512 items are too big to draw', line); for (let i = 0; i < n; i++) c.items.push({ val: args[1] ? this.coerce(c.et, this.copyVal(args[1]), line) : this.zero(c.et), type: c.et, owner: null }); }
+      else if (args.length && args[0].k === 'cont') return this.copyVal(args[0]);
+      return c;
+    }
+    const def = this.sdef(t);
+    if (def) {
+      const r = this.newRec(t, line); const ctor = def.ctors.find(c => c.params.length === argExprs.length);
+      if (!ctor) { if (!def.ctors.length) return this.fromList(t, argExprs, line); throw new RtErr(`${def.name} has no constructor that takes ${argExprs.length} value(s)`, line); }
+      this.runCtor(def, ctor, argExprs, r, null, line, name); return r;
+    }
+    if (this.isPair(t)) return this.fromList(t, argExprs, line);
+    if (argExprs.length !== 1) throw new RtErr('Expected one starting value', line);
+    return this.coerce(t, this.eval(argExprs[0]), line);
+  }
+  runCtor(def, ctor, argExprs, self, thisObj, line, selfName) {
+    const binds = ctor.params.map((p, i) => this.bindParam(p, argExprs[i], def.name, line));
+    this.invoke({ name: def.name, params: ctor.params, body: ctor.body, line: ctor.line, ret: { base: 'void', ptr: 0 }, inits: ctor.inits, ctor: true }, binds, { self, thisObj, selfName }, line);
+  }
+
+  // ----- containers
+  cmpVal(a, b) {
+    if (a.k === 'num' && b.k === 'num') return a.v - b.v;
+    if (a.k === 'str' && b.k === 'str') return a.v < b.v ? -1 : a.v > b.v ? 1 : 0;
+    if (a.k === 'rec' && b.k === 'rec') { for (const f of a.order) { const d = this.cmpVal(a.cells[f].val, b.cells[f].val); if (d) return d; } return 0; }
+    throw new RtErr("These values can't be compared", 0);
+  }
+  contPush(c, v) {
+    const cell = { val: v, type: c.et, owner: null };
+    if (c.kind !== 'priority_queue') { c.items.push(cell); return; }
+    const it = c.items; it.push(cell); let i = it.length - 1;
+    const better = (x, y) => (c.min ? this.cmpVal(x.val, y.val) < 0 : this.cmpVal(x.val, y.val) > 0);
+    while (i > 0) { const p = (i - 1) >> 1; if (better(it[i], it[p])) { [it[i], it[p]] = [it[p], it[i]]; i = p; } else break; }
+  }
+  pqPop(c) {
+    const it = c.items; const top = it[0]; const last = it.pop();
+    if (it.length) {
+      it[0] = last; let i = 0;
+      const better = (x, y) => (c.min ? this.cmpVal(x.val, y.val) < 0 : this.cmpVal(x.val, y.val) > 0);
+      for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < it.length && better(it[l], it[m])) m = l; if (r < it.length && better(it[r], it[m])) m = r; if (m === i) break; [it[i], it[m]] = [it[m], it[i]]; i = m; }
+    }
+    return top;
+  }
+  contMethod(c, e, name) {
+    const n = e.name, items = c.items, line = e.line, kind = c.kind;
+    const empty = what => { if (!items.length) throw new RtErr(`${name}.${n}() on an empty ${kind} has nothing to ${what}. Check ${name}.empty() first`, line); };
+    const arg = i => this.eval(e.args[i]);
+    const mark = desc => { this.ev.conts.push(c.id); this.ev.desc.push(desc); this.stats.writes++; };
+    switch (n) {
+      case 'push': case 'push_back': case 'emplace': case 'emplace_back': {
+        let v = e.args.length === 1 ? this.evalItem(c.et, e.args[0], line) : this.fromList(c.et, e.args, line);
+        this.contPush(c, this.coerce(c.et, v, line)); mark(`${kind === 'stack' ? 'Pushed' : 'Added'} ${this.describe(v)} ${kind === 'stack' ? 'onto' : 'to'} ${name}`); return { k: 'void' };
+      }
+      case 'push_front': case 'emplace_front': { const v = this.coerce(c.et, arg(0), line); items.unshift({ val: v, type: c.et, owner: null }); mark(`Added ${this.describe(v)} to the front of ${name}`); return { k: 'void' }; }
+      case 'pop': {
+        empty('remove'); let removed;
+        if (kind === 'stack') removed = items.pop(); else if (kind === 'priority_queue') removed = this.pqPop(c); else removed = items.shift();
+        mark(`Removed ${this.describe(removed.val)} from ${name}`); return { k: 'void' };
+      }
+      case 'pop_back': { empty('remove'); const r = items.pop(); mark(`Removed ${this.describe(r.val)} from the back of ${name}`); return { k: 'void' }; }
+      case 'pop_front': { empty('remove'); const r = items.shift(); mark(`Removed ${this.describe(r.val)} from the front of ${name}`); return { k: 'void' }; }
+      case 'top': empty('read'); return kind === 'priority_queue' ? items[0].val : items[items.length - 1].val;
+      case 'front': empty('read'); return items[0].val;
+      case 'back': empty('read'); return items[items.length - 1].val;
+      case 'empty': return NUM(items.length ? 0 : 1, 'bool');
+      case 'size': case 'length': return NUM(items.length);
+      case 'clear': items.length = 0; mark(`Cleared ${name}`); return { k: 'void' };
+      case 'at': { const i = Math.trunc(arg(0).v); if (i < 0 || i >= items.length) throw new RtErr(`Index ${i} is outside ${name} (size ${items.length})`, line); return items[i].val; }
+      case 'begin': return { k: 'iter', cont: c, pos: 0 };
+      case 'end': return { k: 'iter', cont: c, pos: items.length };
+      case 'resize': { const k = Math.trunc(arg(0).v); while (items.length > k) items.pop(); while (items.length < k) items.push({ val: this.zero(c.et), type: c.et, owner: null }); mark(`Resized ${name}`); return { k: 'void' }; }
+    }
+    throw new RtErr(`.${n}() isn't supported on ${kind} yet`, line);
+  }
+
+  // ----- expressions
+  store(c, v, lhs) {
+    c.val = v; const o = c.owner; this.ev.sets.push(o);
+    if (o && o.arr != null) { this.ev.writes.push(o); this.stats.writes++; }
+    const name = lhs ? (lhs.src || exprStr(lhs)) : 'value';
+    this.ev.desc.push(v.k === 'ptr' ? (v.to == null ? `${name} = NULL` : `${name} now points to node ${this.heap.get(v.to).addr}`) : `${name} = ${this.describe(v)}`);
+  }
+  lvable(e) { return e.k === 'id' || e.k === 'arrow' || e.k === 'dot' || e.k === 'index' || (e.k === 'un' && e.op === '*'); }
+  lv(e) {
+    if (e.k === 'id') {
+      const c = this.lookup(e.name);
+      if (!c) throw new RtErr(`'${e.name}' isn't declared yet`, e.line);
+      return c;
+    }
+    if (e.k === 'arrow' || (e.k === 'dot' && e.a.k === 'un' && e.a.op === '*')) {
+      const pe = e.k === 'arrow' ? e.a : e.a.a; const label = exprStr(pe);
+      const o = this.deref(this.eval(pe), label, e.line);
+      const c = o.cells[e.f];
+      if (!c) throw new RtErr(`${o.type} has no field '${e.f}'. Its fields are: ${o.order.join(', ')}`, e.line);
+      return c;
+    }
+    if (e.k === 'dot') {
+      const v = this.lvable(e.a) ? this.lv(e.a).val : this.eval(e.a);
+      if (v.k === 'ptr') throw new RtErr(`${exprStr(e.a)} is a pointer. Write ${exprStr(e.a)}->${e.f}`, e.line);
+      if (v.k !== 'rec') throw new RtErr(`${exprStr(e.a)} has no fields`, e.line);
+      const c = v.cells[e.f]; if (!c) throw new RtErr(`${v.type} has no field '${e.f}'`, e.line);
+      return c;
+    }
+    if (e.k === 'index') {
+      const a = this.lvable(e.a) ? this.lv(e.a).val : this.eval(e.a);
+      const iv = this.eval(e.i); this.needNum(iv, e.line); const i = Math.trunc(iv.v);
+      if (a.k === 'arr') {
+        if (i < 0 || i >= a.elems.length) throw new RtErr(`Index ${i} is outside ${a.name}. Valid indexes are 0 to ${a.elems.length - 1}`, e.line);
+        return a.elems[i];
+      }
+      if (a.k === 'cont') {
+        if (a.kind !== 'vector' && a.kind !== 'deque') throw new RtErr(`A ${a.kind} can't be indexed with [ ]`, e.line);
+        if (i < 0 || i >= a.items.length) throw new RtErr(`Index ${i} is outside ${exprStr(e.a)} (size ${a.items.length})`, e.line);
+        return a.items[i];
+      }
+      if (a.k === 'str') {
+        if (i < 0 || i >= a.v.length) throw new RtErr(`Index ${i} is outside the string (length ${a.v.length})`, e.line);
+        const base = this.lv(e.a);
+        return { val: NUM(a.v.charCodeAt(i), 'char'), type: { base: 'char', ptr: 0 }, owner: null, strOf: base, strIdx: i };
+      }
+      throw new RtErr(`${exprStr(e.a)} is not an array`, e.line);
+    }
+    if (e.k === 'un' && e.op === '*') {
+      const p = this.eval(e.a);
+      throw new RtErr(p.k === 'ptr' ? `Use ${exprStr(e.a)}->field to reach the node's fields` : `${exprStr(e.a)} is not a pointer`, e.line);
+    }
+    throw new RtErr("This can't be assigned to", e.line);
+  }
+  deref(p, label, line) {
+    if (p.k !== 'ptr') throw new RtErr(`${label} is not a pointer`, line);
+    if (p.uninit) throw new RtErr(`${label} was never given an address`, line);
+    if (p.to == null) throw new RtErr(`${label} is NULL, so there is no node to access. Check for NULL before using ->`, line);
+    const o = this.heap.get(p.to);
+    if (!o.alive) throw new RtErr(`${label} points to a node that was already deleted (dangling pointer)`, line);
+    return o;
+  }
+  writeCell(c, v, lhs) {
+    if (c.strOf) { const s = c.strOf.val.v; c.strOf.val = { k: 'str', v: s.slice(0, c.strIdx) + String.fromCharCode(v.v) + s.slice(c.strIdx + 1) }; this.ev.desc.push(`${exprStr(lhs)} = ${this.describe(v)}`); return; }
+    this.store(c, v, lhs);
+  }
+  eval(e) {
+    switch (e.k) {
+      case 'num': return NUM(e.v, e.dbl ? 'double' : 'int');
+      case 'str': return { k: 'str', v: e.v };
+      case 'chr': return NUM(e.v, 'char');
+      case 'list': throw new RtErr('A { } list can only be used to set up a variable', e.line);
+      case 'seq': { let v; for (const x of e.es) v = this.eval(x); return v; }
+      case 'id': {
+        switch (e.name) {
+          case 'true': return NUM(1, 'bool');
+          case 'false': return NUM(0, 'bool');
+          case 'NULL': case 'nullptr': return { k: 'ptr', to: null };
+          case 'endl': return { k: 'endl' };
+          case 'cout': case 'cerr': return { k: 'stream', s: 'out' };
+          case 'cin': return { k: 'stream', s: 'in' };
+          case 'INT_MAX': return NUM(2147483647);
+          case 'INT_MIN': return NUM(-2147483648);
+          case 'boolalpha': case 'fixed': case 'setw': return { k: 'manip' };
+          case 'this': if (this.frame.thisObj != null) return { k: 'ptr', to: this.frame.thisObj }; break;
+        }
+        const c = this.lookup(e.name);
+        if (!c) {
+          if (this.p.funcs[e.name]) throw new RtErr(`${e.name} is a function. Call it with ( )`, e.line);
+          throw new RtErr(`'${e.name}' isn't declared. Declare it first, for example int ${e.name} = 0;`, e.line);
+        }
+        return this.readCell(c, e.name, e.line);
+      }
+      case 'arrow': case 'dot': case 'index': {
+        const c = this.lv(e); const v = this.readCell(c, exprStr(e), e.line);
+        if (e.k === 'index' && c.owner) this.ev.reads.push(c.owner);
+        return v;
+      }
+      case 'assign': {
+        const c = this.lv(e.l);
+        if (c.type && c.type.arr) throw new RtErr("Arrays can't be assigned all at once. Assign one element at a time", e.line);
+        let v = e.r.k === 'list' ? this.fromList(c.type, e.r.items, e.line) : this.eval(e.r);
+        if (e.op !== '=') {
+          const cur = this.readCell(c, exprStr(e.l), e.line);
+          v = (e.op === '+=' && cur.k === 'str') ? { k: 'str', v: cur.v + this.fmtOut(v) } : this.arith(e.op[0], cur, v, e.line);
+        }
+        v = this.coerce(c.type, v, e.line); this.writeCell(c, v, e.l); return v;
+      }
+      case 'bin': return this.evalBin(e);
+      case 'un': {
+        if (e.op === '*') { this.lv(e); break; }
+        if (e.op === '&') throw new RtErr("Taking addresses with & isn't drawn yet. Use a reference parameter (Node*& head) instead", e.line);
+        const v = this.eval(e.a);
+        if (e.op === '!') return NUM(this.truthy(v, e.a) ? 0 : 1, 'bool');
+        this.needNum(v, e.line);
+        if (e.op === '-') return NUM(-v.v, v.t === 'double' ? 'double' : 'int');
+        if (e.op === '~') return NUM(~v.v);
+        return v;
+      }
+      case 'pre': case 'post': {
+        const c = this.lv(e.a); const cur = this.readCell(c, exprStr(e.a), e.line); this.needNum(cur, e.line);
+        const nv = this.coerce(c.type, NUM(cur.v + (e.op === '++' ? 1 : -1), cur.t), e.line);
+        this.writeCell(c, nv, e.a); return e.k === 'pre' ? nv : cur;
+      }
+      case 'cond': return this.truthy(this.eval(e.c), e.c) ? this.eval(e.a) : this.eval(e.b);
+      case 'cast': {
+        const v = this.eval(e.a);
+        if (e.ptr) return v;
+        this.needNum(v, e.line); return this.coerce({ base: e.base, ptr: 0 }, v, e.line);
+      }
+      case 'new': return this.alloc(e.type, e.args, e.paren, e.line);
+      case 'newarr': throw new RtErr("Dynamic arrays (new int[n]) aren't drawn yet. Use int arr[n] instead", e.line);
+      case 'call': return this.call(e);
+      case 'mcall': return this.mcall(e);
+      case 'sizeT': { const def = this.p.structs[e.base]; if (def && !e.ptr) return { k: 'num', v: Math.max(1, def.fields.length) * 8, t: 'int', st: def.name }; return NUM(e.ptr ? 8 : ({ int: 4, double: 8, char: 1, bool: 1 }[e.base] || 8)); }
+      case 'sizeE': {
+        const v = e.a.k === 'id' ? (this.lookup(e.a.name) || {}).val : this.eval(e.a);
+        if (v && v.k === 'arr') return NUM(v.elems.length * (v.elems[0] && v.elems[0].val.k === 'arr' ? v.elems[0].val.elems.length * 4 : 4));
+        if (v && v.k === 'ptr') return NUM(8);
+        return NUM(v && v.t === 'double' ? 8 : v && v.t === 'char' ? 1 : 4);
+      }
+    }
+    throw new RtErr('This expression is not supported yet', e.line);
+  }
+  evalBin(e) {
+    const op = e.op;
+    if (op === '&&') return NUM(this.truthy(this.eval(e.l), e.l) && this.truthy(this.eval(e.r), e.r) ? 1 : 0, 'bool');
+    if (op === '||') return NUM(this.truthy(this.eval(e.l), e.l) || this.truthy(this.eval(e.r), e.r) ? 1 : 0, 'bool');
+    const l = this.eval(e.l);
+    if (l.k === 'stream') {
+      if (op === '<<') {
+        if (l.s !== 'out') throw new RtErr('Use >> with cin', e.line);
+        const r = this.eval(e.r); this.out += this.fmtOut(r); this.ev.desc.push('Printed to the output'); return l;
+      }
+      if (op === '>>') {
+        if (l.s !== 'in') throw new RtErr('Use << with cout', e.line);
+        this.readInput(this.lv(e.r), 'auto', e.r, e.line); return l;
+      }
+    }
+    const r = this.eval(e.r);
+    if (['==', '!=', '<', '>', '<=', '>='].includes(op)) {
+      this.stats.cmp++;
+      const cmp = (a, b) => ({ '==': a === b, '!=': a !== b, '<': a < b, '>': a > b, '<=': a <= b, '>=': a >= b }[op] ? 1 : 0);
+      if (l.k === 'ptr' || r.k === 'ptr') {
+        const a = this.ptrKey(l, e), b = this.ptrKey(r, e);
+        if (op !== '==' && op !== '!=') throw new RtErr('Pointers can only be compared with == or !=', e.line);
+        return NUM(cmp(a, b), 'bool');
+      }
+      if (l.k === 'str' && r.k === 'str') return NUM(cmp(l.v, r.v), 'bool');
+      if (l.k === 'rec' && r.k === 'rec') return NUM(cmp(this.cmpVal(l, r), 0), 'bool');
+      this.needNum(l, e.line); this.needNum(r, e.line); return NUM(cmp(l.v, r.v), 'bool');
+    }
+    if (op === '+' && (l.k === 'str' || r.k === 'str')) return { k: 'str', v: this.fmtOut(l) + this.fmtOut(r) };
+    if (op === '+' && l.k === 'arr' && r.k === 'num') return { k: 'iter', arr: l, pos: r.v };
+    if (op === '+' && l.k === 'iter' && r.k === 'num') return { ...l, pos: l.pos + r.v };
+    if (op === '-' && l.k === 'iter' && r.k === 'num') return { ...l, pos: l.pos - r.v };
+    if (op === '<<' || op === '>>') { this.needNum(l, e.line); this.needNum(r, e.line); return NUM(op === '<<' ? l.v << r.v : l.v >> r.v); }
+    return this.arith(op, l, r, e.line);
+  }
+  readInput(c, fmt, lhs, line) {
+    if (!this.input.length) { this.snapRaw(line, 'Waiting for input. Type values into the Input box (separate them with spaces)', { halt: true, needInput: true }); throw new HaltSig(); }
+    const tok = this.input.shift();
+    if (c.val && c.val.k === 'arr') { this.fillCharArr(c.val, tok, line); this.ev.desc.push(`Read "${tok}" into ${exprStr(lhs)}`); return; }
+    let v;
+    if (c.type.base === 'string') v = { k: 'str', v: tok };
+    else if (c.type.base === 'char' || fmt === 'c') v = NUM(tok.charCodeAt(0), 'char');
+    else { const x = parseFloat(tok); if (isNaN(x)) throw new RtErr(`The input "${tok}" is not a number`, line); v = NUM(x, 'double'); }
+    this.writeCell(c, this.coerce(c.type, v, line), lhs);
+  }
+  ptrKey(v, e) {
+    if (v.k === 'num' && v.v === 0) return null;
+    if (v.k !== 'ptr') throw new RtErr(`Can't compare a pointer with ${this.describe(v)}`, e.line);
+    if (v.uninit) throw new RtErr('Comparing a pointer that was never given an address', e.line);
+    return v.to;
+  }
+  arith(op, l, r, line) {
+    this.needNum(l, line); this.needNum(r, line);
+    const dbl = l.t === 'double' || r.t === 'double'; let x;
+    switch (op) {
+      case '+': x = l.v + r.v; break;
+      case '-': x = l.v - r.v; break;
+      case '*': x = l.v * r.v; break;
+      case '/': if (r.v === 0) throw new RtErr('Division by zero', line); x = dbl ? l.v / r.v : Math.trunc(l.v / r.v); break;
+      case '%': if (r.v === 0) throw new RtErr('Modulo by zero', line); x = l.v % r.v; break;
+      case '&': x = l.v & r.v; break;
+      case '|': x = l.v | r.v; break;
+      case '^': x = l.v ^ r.v; break;
+      default: throw new RtErr(`The operator ${op} isn't supported`, line);
+    }
+    if (!dbl) { x = Math.trunc(x); if (Math.abs(x) > 2147483647) x = x | 0; }
+    return NUM(x, dbl ? 'double' : 'int');
+  }
+  alloc(typeName, args, paren, line) {
+    const def = this.p.structs[typeName];
+    if (!def) throw new RtErr(BASE_TYPES.has(typeName) ? `new ${typeName} isn't drawn yet. Try a struct, like new Node(5)` : `Unknown type '${typeName}'`, line);
+    const ctor = def.ctors.find(c => c.params.length === args.length);
+    if (def.ctors.length && !ctor) throw new RtErr(`${def.name} has no constructor that takes ${args.length} value(s)`, line);
+    const id = ++this.seq; this.addr += 0x20 + ((id * 37) % 5) * 0x10;
+    const o = { id, type: def.name, addr: '0x' + this.addr.toString(16).toUpperCase(), cells: {}, order: [], alive: true };
+    this.heap.set(id, o);
+    const tpl = (!def.ctors.length && paren) ? this.zero({ base: def.name, ptr: 0 }) : this.newRec({ base: def.name, ptr: 0 }, line);
+    for (const f of tpl.order) { const c = tpl.cells[f]; o.cells[f] = { val: c.val, type: c.type, owner: { obj: id, f } }; o.order.push(f); }
+    this.ev.alloc.push(id); this.ev.desc.push(`new ${def.name} created at ${o.addr}`);
+    if (ctor) this.runCtor(def, ctor, args, o, id, line);
+    else if (args.length) {
+      if (args.length > o.order.length) throw new RtErr(`${def.name} has only ${o.order.length} field(s)`, line);
+      args.forEach((a, i) => { const c = o.cells[o.order[i]]; c.val = this.evalItem(c.type, a, line); });
+    }
+    return { k: 'ptr', to: id };
+  }
+  bindParam(p, a, fname, line) {
+    if (p.type.ref) {
+      if (!this.lvable(a)) { const v = this.eval(a); return { name: p.name, entry: { cell: { val: this.coerce(p.type, v, line), type: p.type, owner: { v: p.name } }, type: p.type } }; }
+      return { name: p.name, entry: { cell: this.lv(a), type: p.type, ref: true, alias: exprStr(a) } };
+    }
+    const v = a.k === 'list' ? this.fromList(p.type, a.items, line) : this.eval(a);
+    if (p.type.arr) {
+      if (v.k !== 'arr') throw new RtErr(`${fname} expects an array for ${p.name}`, line);
+      return { name: p.name, entry: { cell: { val: v, type: p.type, owner: { v: p.name } }, type: p.type, alias: exprStr(a) } };
+    }
+    return { name: p.name, entry: { cell: { val: this.coerce(p.type, v, line), type: p.type, owner: { v: p.name } }, type: p.type } };
+  }
+  call(e) {
+    const n = e.name; let fn = this.p.funcs[n];
+    if (!fn && this.frame.self) {
+      const def = this.p.structs[this.frame.self.type];
+      if (def && def.methods[n]) return this.callMethod(def.methods[n], e.args, this.frame.self, this.frame.thisObj, e.line, this.frame.selfName);
+    }
+    if (!fn) {
+      const b = this.builtin(e); if (b) return b;
+      throw new RtErr(`The function '${n}' isn't defined yet`, e.line);
+    }
+    if (!fn.body) throw new RtErr(`${n} has no body yet`, e.line);
+    if (fn.params.length !== e.args.length) throw new RtErr(`${n} expects ${fn.params.length} argument(s) but got ${e.args.length}`, e.line);
+    const binds = fn.params.map((p, i) => this.bindParam(p, e.args[i], n, e.line));
+    return this.invoke(fn, binds, null, e.line);
+  }
+  callMethod(fn, args, self, thisObj, line, selfName) {
+    if (!fn.body) throw new RtErr(`${fn.name} has no body yet`, line);
+    if (fn.params.length !== args.length) throw new RtErr(`${fn.name} expects ${fn.params.length} argument(s) but got ${args.length}`, line);
+    const binds = fn.params.map((p, i) => this.bindParam(p, args[i], fn.name, line));
+    return this.invoke({ ...fn, name: `${fn.owner || self.type}::${fn.name}` }, binds, { self, thisObj, selfName }, line);
+  }
+  mcall(e) {
+    let v, name = exprStr(e.obj);
+    if (e.arrow) {
+      const p = this.eval(e.obj); const o = this.deref(p, name, e.line); const def = this.p.structs[o.type];
+      if (def && def.methods[e.name]) return this.callMethod(def.methods[e.name], e.args, o, o.id, e.line, name);
+      throw new RtErr(`${o.type} has no function ${e.name}()`, e.line);
+    }
+    const cell = this.lvable(e.obj) ? this.lv(e.obj) : null;
+    v = cell ? cell.val : this.eval(e.obj);
+    if (v.k === 'cont') return this.contMethod(v, e, name);
+    if (v.k === 'rec') {
+      const def = this.p.structs[v.type];
+      if (def && def.methods[e.name]) return this.callMethod(def.methods[e.name], e.args, v, null, e.line, name);
+      throw new RtErr(`${v.type} has no function ${e.name}()`, e.line);
+    }
+    if (v.k === 'str') {
+      switch (e.name) {
+        case 'length': case 'size': return NUM(v.v.length);
+        case 'empty': return NUM(v.v.length ? 0 : 1, 'bool');
+        case 'push_back': { const c = this.eval(e.args[0]); cell.val = { k: 'str', v: v.v + this.fmtOut(c) }; this.ev.desc.push(`${name} = ${JSON.stringify(cell.val.v)}`); return { k: 'void' }; }
+        case 'pop_back': cell.val = { k: 'str', v: v.v.slice(0, -1) }; return { k: 'void' };
+        case 'back': return NUM(v.v.charCodeAt(v.v.length - 1), 'char');
+        case 'front': return NUM(v.v.charCodeAt(0), 'char');
+        case 'substr': { const a = this.eval(e.args[0]).v; const b = e.args[1] ? this.eval(e.args[1]).v : undefined; return { k: 'str', v: v.v.substr(a, b) }; }
+      }
+    }
+    throw new RtErr(`.${e.name}() isn't supported here yet`, e.line);
+  }
+  builtin(e) {
+    const n = e.name, A = e.args, line = e.line;
+    const num = i => { const v = this.eval(A[i]); this.needNum(v, line); return v; };
+    switch (n) {
+      case 'swap': {
+        if (A.length !== 2) return null;
+        const a = this.lv(A[0]), b = this.lv(A[1]); const t = a.val; a.val = b.val; b.val = t;
+        for (const c of [a, b]) { this.ev.sets.push(c.owner); if (c.owner && c.owner.arr != null) { this.ev.writes.push(c.owner); this.stats.writes++; } }
+        this.ev.desc.push(`Swapped ${exprStr(A[0])} and ${exprStr(A[1])}`); return { k: 'void' };
+      }
+      case 'max': case 'min': { const a = this.eval(A[0]), b = this.eval(A[1]); this.stats.cmp++; return (n === 'max' ? this.cmpVal(a, b) >= 0 : this.cmpVal(a, b) <= 0) ? a : b; }
+      case 'abs': case 'fabs': { const a = num(0); return NUM(Math.abs(a.v), a.t); }
+      case 'pow': return NUM(Math.pow(num(0).v, num(1).v), 'double');
+      case 'sqrt': return NUM(Math.sqrt(num(0).v), 'double');
+      case 'floor': return NUM(Math.floor(num(0).v), 'double');
+      case 'ceil': return NUM(Math.ceil(num(0).v), 'double');
+      case 'log2': return NUM(Math.log2(num(0).v), 'double');
+      case 'isdigit': { const c = num(0).v; return NUM(c >= 48 && c <= 57 ? 1 : 0, 'bool'); }
+      case 'isalpha': { const c = String.fromCharCode(num(0).v); return NUM(/[A-Za-z]/.test(c) ? 1 : 0, 'bool'); }
+      case 'isalnum': { const c = String.fromCharCode(num(0).v); return NUM(/[A-Za-z0-9]/.test(c) ? 1 : 0, 'bool'); }
+      case 'isspace': { const c = String.fromCharCode(num(0).v); return NUM(/\s/.test(c) ? 1 : 0, 'bool'); }
+      case 'isupper': { const c = String.fromCharCode(num(0).v); return NUM(/[A-Z]/.test(c) ? 1 : 0, 'bool'); }
+      case 'islower': { const c = String.fromCharCode(num(0).v); return NUM(/[a-z]/.test(c) ? 1 : 0, 'bool'); }
+      case 'toupper': return NUM(String.fromCharCode(num(0).v).toUpperCase().charCodeAt(0), 'char');
+      case 'tolower': return NUM(String.fromCharCode(num(0).v).toLowerCase().charCodeAt(0), 'char');
+      case 'to_string': { const v = this.eval(A[0]); return { k: 'str', v: this.fmtOut(v) }; }
+      case 'stoi': case 'atoi': { const v = this.eval(A[0]); return NUM(parseInt(v.k === 'arr' ? this.arrString(v) : v.v, 10) || 0); }
+      case 'strlen': { const v = this.eval(A[0]); return NUM(v.k === 'arr' ? this.arrString(v).length : v.v.length); }
+      case 'make_pair': { const a = this.eval(A[0]), b = this.eval(A[1]); const tOf = v => (v.k === 'num' ? { base: v.t, ptr: 0 } : v.k === 'str' ? { base: 'string', ptr: 0 } : { base: 'auto', ptr: 0 }); return { k: 'rec', type: 'pair', order: ['first', 'second'], cells: { first: { val: a, type: tOf(a), owner: { rec: 1 } }, second: { val: b, type: tOf(b), owner: { rec: 1 } } } }; }
+      case 'pair': { const t = { base: 'pair', ptr: 0, targs: e.targs }; return this.fromList(t, A, line); }
+      case 'greater': case 'less': return { k: 'cmp', min: n === 'greater' };
+      case 'exit': throw new ExitSig();
+      case 'malloc': case 'calloc': {
+        const v = this.eval(A[A.length - 1]);
+        if (!v.st) throw new RtErr('malloc is drawn for structs only, like malloc(sizeof(struct Node))', line);
+        return this.alloc(v.st, [], n === 'calloc', line);
+      }
+      case 'free': this.freeNode(this.eval(A[0]), line); return { k: 'void' };
+      case 'printf': {
+        const f = this.eval(A[0]); if (f.k !== 'str') throw new RtErr('printf needs a format text first', line);
+        const vals = A.slice(1).map(a => this.eval(a)); let ai = 0;
+        this.out += f.v.replace(/%([-+ 0#]*)(\d*)(?:\.(\d+))?(?:ll|l|h)?([diufcsxXe%])/g, (m, fl, w, p, c) => {
+          if (c === '%') return '%';
+          const v = vals[ai++]; if (!v) return m; let s;
+          switch (c) {
+            case 'd': case 'i': case 'u': s = String(Math.trunc(v.v)); break;
+            case 'f': case 'e': s = v.v.toFixed(p === undefined ? 6 : +p); break;
+            case 'c': s = String.fromCharCode(v.v); break;
+            case 's': s = v.k === 'str' ? v.v : v.k === 'arr' ? this.arrString(v) : ''; break;
+            case 'x': s = Math.trunc(v.v).toString(16); break;
+            case 'X': s = Math.trunc(v.v).toString(16).toUpperCase(); break;
+          }
+          if (w) s = fl.includes('-') ? s.padEnd(+w) : s.padStart(+w, fl.includes('0') ? '0' : ' ');
+          return s;
+        });
+        this.ev.desc.push('Printed to the output'); return NUM(0);
+      }
+      case 'scanf': {
+        const f = this.eval(A[0]); const specs = (f.v.match(/%[a-z]+/g) || []);
+        A.slice(1).forEach((a, i) => { const target = a.k === 'un' && a.op === '&' ? a.a : a; this.readInput(this.lv(target), (specs[i] || '%d').slice(-1), target, line); });
+        return NUM(A.length - 1);
+      }
+      case 'sort': case 'reverse': {
+        const a = this.eval(A[0]), b = this.eval(A[1]);
+        const arrOf = v => (v.k === 'arr' ? { cells: v.elems, pos: 0 } : v.k === 'iter' ? { cells: v.arr ? v.arr.elems : v.cont.items, pos: v.pos } : null);
+        const x = arrOf(a), y = arrOf(b); if (!x || !y) throw new RtErr(`${n} needs a range like (v.begin(), v.end()) or (arr, arr + n)`, line);
+        const cells = x.cells.slice(x.pos, y.pos); const vals = cells.map(c => c.val);
+        if (n === 'sort') { let desc = false; if (A[2]) { const cv = this.eval(A[2]); desc = cv.k === 'cmp' && cv.min; } vals.sort((p, q) => (desc ? -1 : 1) * this.cmpVal(p, q)); } else vals.reverse();
+        cells.forEach((c, i) => { c.val = vals[i]; if (c.owner && c.owner.arr != null) this.ev.writes.push(c.owner); });
+        this.ev.desc.push(n === 'sort' ? 'Sorted the range' : 'Reversed the range'); return { k: 'void' };
+      }
+    }
+    return null;
+  }
+  invoke(fn, binds, selfInfo, callLine) {
+    if (this.frames.length >= MAX_DEPTH) throw new RtErr('Too many nested calls. Make sure the recursion reaches a base case that stops it', callLine);
+    const fr = { fn: fn.name, scopes: [new Map()], line: fn.line, thisObj: selfInfo ? selfInfo.thisObj ?? null : null, self: selfInfo ? selfInfo.self : null, selfName: selfInfo && selfInfo.selfName, ctor: !!fn.ctor };
+    for (const b of binds) if (b.name) fr.scopes[0].set(b.name, b.entry);
+    this.frames.push(fr); this.stats.calls++; this.stats.maxDepth = Math.max(this.stats.maxDepth, this.frames.length - 1);
+    let ret = { k: 'void' };
+    try {
+      if (fn.inits) for (const it of fn.inits) {
+        const c = fr.self.cells[it.f];
+        if (!c) throw new RtErr(`${fn.name} has no field named ${it.f}`, it.line);
+        const v = it.args.length ? this.eval(it.args[0]) : this.zero(c.type);
+        this.store(c, this.coerce(c.type, v, it.line), { src: it.f });
+      }
+      const args = binds.map(b => this.describe(b.entry.cell.val)).join(', ');
+      this.snap(fn.line, fn.ctor ? `Constructor ${fn.name}(${args}) sets up the new ${fn.name}` : `Call ${fn.name}(${args})`, { call: true });
+      this.execBlock(fn.body, false);
+    } catch (x) { if (x instanceof RetSig) ret = x.v; else throw x; }
+    this.frames.pop();
+    if (fn.ret.base !== 'void' || fn.ret.ptr) {
+      if (ret.k === 'void') throw new RtErr(`${fn.name} ended without returning a value`, callLine);
+      ret = this.coerce(fn.ret, ret, callLine);
+    }
+    return ret;
+  }
+}
+
+function classifyStructs(structs) {
+  const kinds = {};
+  for (const key in structs) {
+    const d = structs[key]; const name = d.name;
+    if (kinds[name]) { kinds[key] = kinds[name]; continue; }
+    const selfNames = new Set(Object.keys(structs).filter(k => structs[k] === d));
+    const ps = d.fields.filter(f => f.type.ptr === 1 && !f.type.arr && selfNames.has(f.type.base)).map(f => f.name);
+    const has = (...ns) => ps.find(p => ns.includes(p.toLowerCase()));
+    let k = { kind: 'plain', ptrs: ps, label: Object.keys(d.methods).length ? 'class' : 'struct' };
+    if (ps.length === 1) k = { kind: 'singly', link: ps[0], ptrs: ps, label: 'linked list node' };
+    else if (ps.length >= 2) {
+      const L = has('left', 'l', 'lchild', 'leftchild', 'lc'), R = has('right', 'r', 'rchild', 'rightchild', 'rc');
+      if (L && R) k = { kind: 'tree', left: L, right: R, ptrs: ps, label: 'binary tree node' };
+      else {
+        const nx = has('next', 'nxt', 'forward', 'link', 'rlink', 'rptr') || ps[ps.length - 1];
+        const pv = has('prev', 'previous', 'back', 'prv', 'llink', 'lptr') || ps.find(p => p !== nx);
+        k = { kind: 'doubly', link: nx, back: pv, ptrs: ps, label: 'doubly linked list node' };
+      }
+    }
+    kinds[name] = k; kinds[key] = k;
+  }
+  return kinds;
+}
+
+function runProgram(src, stdin) {
+  const p = new Parser(src); const prog = p.parseProgram();
+  let steps;
+  try { steps = new Interp(prog, stdin).run(); }
+  catch (e) { steps = [{ line: 0, note: 'Visual Code hit an internal problem running this code: ' + (e && e.message), flags: { error: true }, frames: [], heap: [], out: '', ev: { alloc: [], free: [], sets: [], reads: [], writes: [], desc: [], conts: [] }, stats: { steps: 0, cmp: 0, writes: 0, calls: 0, maxDepth: 0 } }]; }
+  return { prog, steps, err: prog.err };
+}
+
+</script>
+<script>
+const EXAMPLES = [{"unit":"Unit I · Basics and arrays","items":[{"id":"01_array_ops","name":"Array insertion and deletion","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    int arr[10] = {12, 45, 7, 23, 56};\n    int n = 5;\n\n    // Insert 99 at index 2\n    int pos = 2;\n    for (int i = n; i > pos; i--) {\n        arr[i] = arr[i - 1];\n    }\n    arr[pos] = 99;\n    n++;\n\n    // Delete the element at index 4\n    pos = 4;\n    for (int i = pos; i < n - 1; i++) {\n        arr[i] = arr[i + 1];\n    }\n    n--;\n\n    // Traverse\n    for (int i = 0; i < n; i++) {\n        cout << arr[i] << \" \";\n    }\n    cout << endl;\n    return 0;\n}\n","stdin":""},{"id":"02_merge_arrays","name":"Merging two sorted arrays","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    int a[] = {1, 4, 7, 9};\n    int b[] = {2, 3, 8};\n    int c[7];\n    int i = 0, j = 0, k = 0;\n    while (i < 4 && j < 3) {\n        if (a[i] <= b[j]) c[k++] = a[i++];\n        else c[k++] = b[j++];\n    }\n    while (i < 4) c[k++] = a[i++];\n    while (j < 3) c[k++] = b[j++];\n    for (int x = 0; x < 7; x++) cout << c[x] << \" \";\n    cout << endl;\n    return 0;\n}\n","stdin":""},{"id":"38_complexity","name":"Counting work: O(n), O(n²), O(log n)","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    int n = 8;\n    int linear = 0, quadratic = 0, logarithmic = 0;\n    for (int i = 0; i < n; i++) linear++;\n    for (int i = 0; i < n; i++)\n        for (int j = 0; j < n; j++) quadratic++;\n    for (int i = 1; i < n; i *= 2) logarithmic++;\n    cout << \"O(n): \" << linear << \", O(n^2): \" << quadratic << \", O(log n): \" << logarithmic << endl;\n    return 0;\n}\n","stdin":""}]},{"unit":"Unit I · Sorting and searching","items":[{"id":"03_bubble","name":"Bubble sort","code":"#include <iostream>\nusing namespace std;\n\nvoid bubbleSort(int arr[], int n) {\n    for (int i = 0; i < n - 1; i++) {\n        for (int j = 0; j < n - i - 1; j++) {\n            if (arr[j] > arr[j + 1]) {\n                int temp = arr[j];\n                arr[j] = arr[j + 1];\n                arr[j + 1] = temp;\n            }\n        }\n    }\n}\n\nint main() {\n    int arr[] = {64, 34, 25, 12, 22};\n    int n = sizeof(arr) / sizeof(arr[0]);\n    bubbleSort(arr, n);\n    for (int i = 0; i < n; i++) cout << arr[i] << \" \";\n    cout << endl;\n    return 0;\n}\n","stdin":""},{"id":"04_insertion","name":"Insertion sort","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    int arr[] = {9, 5, 1, 4, 3};\n    int n = 5;\n    for (int i = 1; i < n; i++) {\n        int key = arr[i];\n        int j = i - 1;\n        while (j >= 0 && arr[j] > key) {\n            arr[j + 1] = arr[j];\n            j--;\n        }\n        arr[j + 1] = key;\n    }\n    for (int i = 0; i < n; i++) cout << arr[i] << \" \";\n    return 0;\n}\n","stdin":""},{"id":"05_selection","name":"Selection sort","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    int arr[] = {29, 10, 14, 37, 13};\n    int n = 5;\n    for (int i = 0; i < n - 1; i++) {\n        int minIdx = i;\n        for (int j = i + 1; j < n; j++) {\n            if (arr[j] < arr[minIdx]) minIdx = j;\n        }\n        swap(arr[i], arr[minIdx]);\n    }\n    for (int i = 0; i < n; i++) cout << arr[i] << \" \";\n    return 0;\n}\n","stdin":""},{"id":"06_linear_search","name":"Linear search","code":"#include <iostream>\nusing namespace std;\n\nint linearSearch(int arr[], int n, int key) {\n    for (int i = 0; i < n; i++) {\n        if (arr[i] == key) return i;\n    }\n    return -1;\n}\n\nint main() {\n    int arr[] = {10, 50, 30, 70, 80};\n    int idx = linearSearch(arr, 5, 70);\n    cout << \"Found at index \" << idx << endl;\n    return 0;\n}\n","stdin":""},{"id":"07_binary_search","name":"Binary search","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    int arr[] = {2, 5, 8, 12, 16, 23, 38, 56, 72, 91};\n    int n = 10, key = 23;\n    int low = 0, high = n - 1, mid;\n    while (low <= high) {\n        mid = (low + high) / 2;\n        if (arr[mid] == key) {\n            cout << \"Found at \" << mid << endl;\n            break;\n        } else if (arr[mid] < key) {\n            low = mid + 1;\n        } else {\n            high = mid - 1;\n        }\n    }\n    return 0;\n}\n","stdin":""}]},{"unit":"Unit II · Linked lists","items":[{"id":"00_by_hand","name":"Create nodes by hand","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n    Node(int value) {\n        data = value;\n        next = NULL;\n    }\n};\n\nint main() {\n    Node* head = new Node(10);\n    Node* second = new Node(20);\n    head->next = second;\n\n    Node* third = new Node(30);\n    second->next = third;\n\n    // Try it: type the next line yourself and watch the node appear\n    // third->next = new Node(40);\n\n    return 0;\n}\n","stdin":""},{"id":"08_singly","name":"Insert and delete (singly)","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n    Node(int value) : data(value), next(NULL) {}\n};\n\nvoid insertAtHead(Node*& head, int value) {\n    Node* newNode = new Node(value);\n    newNode->next = head;\n    head = newNode;\n}\n\nvoid insertAtTail(Node*& head, int value) {\n    Node* newNode = new Node(value);\n    if (head == NULL) {\n        head = newNode;\n        return;\n    }\n    Node* temp = head;\n    while (temp->next != NULL) {\n        temp = temp->next;\n    }\n    temp->next = newNode;\n}\n\nvoid deleteValue(Node*& head, int key) {\n    if (head == NULL) return;\n    if (head->data == key) {\n        Node* old = head;\n        head = head->next;\n        delete old;\n        return;\n    }\n    Node* prev = head;\n    Node* curr = head->next;\n    while (curr != NULL && curr->data != key) {\n        prev = curr;\n        curr = curr->next;\n    }\n    if (curr != NULL) {\n        prev->next = curr->next;\n        delete curr;\n    }\n}\n\nint main() {\n    Node* head = NULL;\n    insertAtTail(head, 10);\n    insertAtTail(head, 20);\n    insertAtHead(head, 5);\n    insertAtTail(head, 30);\n    deleteValue(head, 20);\n    for (Node* t = head; t != NULL; t = t->next) cout << t->data << \" -> \";\n    cout << \"NULL\" << endl;\n    return 0;\n}\n","stdin":""},{"id":"09_c_style_malloc","name":"C style: malloc and free","code":"#include <stdio.h>\n#include <stdlib.h>\n\ntypedef struct node {\n    int data;\n    struct node *next;\n} Node;\n\nNode* createNode(int data) {\n    Node* n = (Node*)malloc(sizeof(Node));\n    n->data = data;\n    n->next = NULL;\n    return n;\n}\n\nint main() {\n    Node* head = createNode(1);\n    head->next = createNode(2);\n    head->next->next = createNode(3);\n    Node* t = head;\n    while (t != NULL) {\n        printf(\"%d \", t->data);\n        t = t->next;\n    }\n    printf(\"\\n\");\n    free(head->next->next);\n    head->next->next = NULL;\n    return 0;\n}\n","stdin":""},{"id":"10_header_list","name":"Header linked list","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n};\n\nint main() {\n    // Grounded header list: the header node stores the count, the last node points to NULL\n    Node* header = new Node();\n    header->data = 0;\n    header->next = NULL;\n    for (int v = 10; v <= 30; v += 10) {\n        Node* n = new Node();\n        n->data = v;\n        n->next = header->next;\n        header->next = n;\n        header->data++;\n    }\n    cout << \"Nodes: \" << header->data << endl;\n    return 0;\n}\n","stdin":""},{"id":"11_circular","name":"Circular linked list","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n    Node(int v) : data(v), next(NULL) {}\n};\n\nint main() {\n    Node* head = new Node(1);\n    Node* second = new Node(2);\n    Node* third = new Node(3);\n    head->next = second;\n    second->next = third;\n    third->next = head;\n    Node* temp = head;\n    do {\n        cout << temp->data << \" \";\n        temp = temp->next;\n    } while (temp != head);\n    cout << endl;\n    return 0;\n}\n","stdin":""},{"id":"12_doubly","name":"Two-way (doubly) linked list","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* prev;\n    Node* next;\n    Node(int v) : data(v), prev(NULL), next(NULL) {}\n};\n\nvoid pushBack(Node*& head, Node*& tail, int v) {\n    Node* n = new Node(v);\n    if (tail == NULL) {\n        head = tail = n;\n        return;\n    }\n    tail->next = n;\n    n->prev = tail;\n    tail = n;\n}\n\nint main() {\n    Node* head = NULL;\n    Node* tail = NULL;\n    pushBack(head, tail, 10);\n    pushBack(head, tail, 20);\n    pushBack(head, tail, 30);\n    Node* mid = head->next;\n    mid->prev->next = mid->next;\n    mid->next->prev = mid->prev;\n    delete mid;\n    mid = NULL;\n    for (Node* t = tail; t != NULL; t = t->prev) cout << t->data << \" \";\n    return 0;\n}\n","stdin":""},{"id":"37_reverse","name":"Reverse a list","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n    Node(int v) : data(v), next(NULL) {}\n};\n\nint main() {\n    Node* head = NULL;\n    for (int i = 4; i >= 1; i--) {\n        Node* n = new Node(i * 10);\n        n->next = head;\n        head = n;\n    }\n    Node* prev = NULL;\n    Node* curr = head;\n    while (curr != NULL) {\n        Node* nextNode = curr->next;\n        curr->next = prev;\n        prev = curr;\n        curr = nextNode;\n    }\n    head = prev;\n    return 0;\n}\n","stdin":""},{"id":"41_scratch","name":"Start from scratch","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n};\n\nint main() {\n    // Type a line like:  Node* head = new Node();\n    \n    return 0;\n}\n","stdin":""}]},{"unit":"Unit III · Stacks and queues","items":[{"id":"13_stack_array","name":"Stack with an array","code":"#include <iostream>\nusing namespace std;\n#define MAX 5\n\nint stack[MAX];\nint top = -1;\n\nvoid push(int x) {\n    if (top == MAX - 1) {\n        cout << \"Stack overflow\" << endl;\n        return;\n    }\n    stack[++top] = x;\n}\n\nint pop() {\n    if (top == -1) {\n        cout << \"Stack underflow\" << endl;\n        return -1;\n    }\n    return stack[top--];\n}\n\nint main() {\n    push(10);\n    push(20);\n    push(30);\n    cout << pop() << \" popped\" << endl;\n    push(40);\n    for (int i = top; i >= 0; i--) cout << stack[i] << \" \";\n    return 0;\n}\n","stdin":""},{"id":"14_stack_list","name":"Stack with a linked list","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n};\n\nNode* top = NULL;\n\nvoid push(int x) {\n    Node* n = new Node;\n    n->data = x;\n    n->next = top;\n    top = n;\n}\n\nvoid pop() {\n    if (top == NULL) return;\n    Node* t = top;\n    top = top->next;\n    delete t;\n}\n\nint main() {\n    push(1);\n    push(2);\n    push(3);\n    pop();\n    cout << top->data << endl;\n    return 0;\n}\n","stdin":""},{"id":"15_infix_postfix","name":"Infix to postfix conversion","code":"#include <iostream>\n#include <stack>\n#include <string>\nusing namespace std;\n\nint prec(char c) {\n    if (c == '^') return 3;\n    if (c == '*' || c == '/') return 2;\n    if (c == '+' || c == '-') return 1;\n    return -1;\n}\n\nstring infixToPostfix(string s) {\n    stack<char> st;\n    string result = \"\";\n    for (int i = 0; i < s.length(); i++) {\n        char c = s[i];\n        if (isalnum(c)) {\n            result += c;\n        } else if (c == '(') {\n            st.push(c);\n        } else if (c == ')') {\n            while (st.top() != '(') {\n                result += st.top();\n                st.pop();\n            }\n            st.pop();\n        } else {\n            while (!st.empty() && prec(c) <= prec(st.top())) {\n                result += st.top();\n                st.pop();\n            }\n            st.push(c);\n        }\n    }\n    while (!st.empty()) {\n        result += st.top();\n        st.pop();\n    }\n    return result;\n}\n\nint main() {\n    string exp = \"a+b*(c^d-e)\";\n    cout << infixToPostfix(exp) << endl;\n    return 0;\n}\n","stdin":""},{"id":"16_postfix_eval","name":"Evaluate a postfix expression","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    char exp[] = \"231*+9-\";\n    int stack[20];\n    int top = -1;\n    for (int i = 0; exp[i] != '\\0'; i++) {\n        char c = exp[i];\n        if (isdigit(c)) {\n            stack[++top] = c - '0';\n        } else {\n            int b = stack[top--];\n            int a = stack[top--];\n            switch (c) {\n                case '+': stack[++top] = a + b; break;\n                case '-': stack[++top] = a - b; break;\n                case '*': stack[++top] = a * b; break;\n                case '/': stack[++top] = a / b; break;\n            }\n        }\n    }\n    cout << \"Result: \" << stack[top] << endl;\n    return 0;\n}\n","stdin":""},{"id":"17_queue_array","name":"Queue with an array","code":"#include <iostream>\nusing namespace std;\n#define SIZE 5\n\nint q[SIZE];\nint front = -1, rear = -1;\n\nvoid enqueue(int x) {\n    if (rear == SIZE - 1) { cout << \"Queue full\" << endl; return; }\n    if (front == -1) front = 0;\n    q[++rear] = x;\n}\n\nvoid dequeue() {\n    if (front == -1 || front > rear) { cout << \"Queue empty\" << endl; return; }\n    cout << q[front] << \" removed\" << endl;\n    front++;\n}\n\nint main() {\n    enqueue(5);\n    enqueue(10);\n    enqueue(15);\n    dequeue();\n    enqueue(20);\n    return 0;\n}\n","stdin":""},{"id":"18_circular_queue","name":"Circular queue (class)","code":"#include <iostream>\nusing namespace std;\n\nclass CircularQueue {\n    int arr[4];\n    int front, rear, count;\npublic:\n    CircularQueue() { front = 0; rear = -1; count = 0; }\n    bool isFull() { return count == 4; }\n    bool isEmpty() { return count == 0; }\n    void enqueue(int x) {\n        if (isFull()) { cout << \"Full\" << endl; return; }\n        rear = (rear + 1) % 4;\n        arr[rear] = x;\n        count++;\n    }\n    int dequeue() {\n        int x = arr[front];\n        front = (front + 1) % 4;\n        count--;\n        return x;\n    }\n};\n\nint main() {\n    CircularQueue q;\n    q.enqueue(1);\n    q.enqueue(2);\n    q.enqueue(3);\n    q.dequeue();\n    q.enqueue(4);\n    q.enqueue(5);\n    return 0;\n}\n","stdin":""},{"id":"19_queue_list","name":"Queue with a linked list","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n    Node(int d) : data(d), next(NULL) {}\n};\n\nstruct Queue {\n    Node* front;\n    Node* rear;\n};\n\nint main() {\n    Queue q;\n    q.front = q.rear = NULL;\n    for (int i = 1; i <= 3; i++) {\n        Node* n = new Node(i * 10);\n        if (q.rear == NULL) {\n            q.front = q.rear = n;\n        } else {\n            q.rear->next = n;\n            q.rear = n;\n        }\n    }\n    Node* t = q.front;\n    q.front = q.front->next;\n    delete t;\n    return 0;\n}\n","stdin":""},{"id":"20_priority_deque","name":"Priority queue and deque","code":"#include <iostream>\n#include <queue>\n#include <deque>\nusing namespace std;\n\nint main() {\n    priority_queue<int> pq;\n    pq.push(30);\n    pq.push(10);\n    pq.push(50);\n    pq.push(20);\n    cout << \"Highest: \" << pq.top() << endl;\n    pq.pop();\n\n    priority_queue<int, vector<int>, greater<int>> minq;\n    minq.push(5);\n    minq.push(1);\n    minq.push(3);\n\n    deque<int> dq;\n    dq.push_back(1);\n    dq.push_front(0);\n    dq.push_back(2);\n    dq.pop_front();\n    cout << dq.front() << \" \" << dq.back() << endl;\n    return 0;\n}\n","stdin":""},{"id":"36_menu_cin","name":"Menu-driven stack with cin","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    int stack[10], top = -1, choice, x;\n    while (true) {\n        cout << \"1.Push 2.Pop 3.Exit: \";\n        cin >> choice;\n        if (choice == 1) {\n            cin >> x;\n            stack[++top] = x;\n        } else if (choice == 2) {\n            if (top >= 0) top--;\n        } else {\n            break;\n        }\n    }\n    return 0;\n}\n","stdin":"1 5 1 7 2 1 9 3"}]},{"unit":"Unit IV · Recursion and trees","items":[{"id":"21_recursion_factorial","name":"Recursion: factorial and Fibonacci","code":"#include <iostream>\nusing namespace std;\n\nint factorial(int n) {\n    if (n <= 1) return 1;\n    return n * factorial(n - 1);\n}\n\nint fib(int n) {\n    if (n <= 1) return n;\n    return fib(n - 1) + fib(n - 2);\n}\n\nint main() {\n    cout << factorial(5) << endl;\n    cout << fib(5) << endl;\n    return 0;\n}\n","stdin":""},{"id":"22_hanoi","name":"Tower of Hanoi","code":"#include <iostream>\nusing namespace std;\n\nvoid towerOfHanoi(int n, char from, char to, char aux) {\n    if (n == 1) {\n        cout << \"Move disk 1 from \" << from << \" to \" << to << endl;\n        return;\n    }\n    towerOfHanoi(n - 1, from, aux, to);\n    cout << \"Move disk \" << n << \" from \" << from << \" to \" << to << endl;\n    towerOfHanoi(n - 1, aux, to, from);\n}\n\nint main() {\n    towerOfHanoi(3, 'A', 'C', 'B');\n    return 0;\n}\n","stdin":""},{"id":"23_bst","name":"Binary search tree: insert, search, delete, traversals","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* left;\n    Node* right;\n    Node(int v) : data(v), left(NULL), right(NULL) {}\n};\n\nNode* insert(Node* root, int key) {\n    if (root == NULL) return new Node(key);\n    if (key < root->data) root->left = insert(root->left, key);\n    else root->right = insert(root->right, key);\n    return root;\n}\n\nNode* minNode(Node* root) {\n    while (root->left != NULL) root = root->left;\n    return root;\n}\n\nNode* deleteNode(Node* root, int key) {\n    if (root == NULL) return root;\n    if (key < root->data) root->left = deleteNode(root->left, key);\n    else if (key > root->data) root->right = deleteNode(root->right, key);\n    else {\n        if (root->left == NULL) {\n            Node* t = root->right;\n            delete root;\n            return t;\n        } else if (root->right == NULL) {\n            Node* t = root->left;\n            delete root;\n            return t;\n        }\n        Node* t = minNode(root->right);\n        root->data = t->data;\n        root->right = deleteNode(root->right, t->data);\n    }\n    return root;\n}\n\nbool search(Node* root, int key) {\n    if (root == NULL) return false;\n    if (root->data == key) return true;\n    if (key < root->data) return search(root->left, key);\n    return search(root->right, key);\n}\n\nvoid inorder(Node* root) {\n    if (root == NULL) return;\n    inorder(root->left);\n    cout << root->data << \" \";\n    inorder(root->right);\n}\n\nvoid preorder(Node* root) {\n    if (root == NULL) return;\n    cout << root->data << \" \";\n    preorder(root->left);\n    preorder(root->right);\n}\n\nvoid postorder(Node* root) {\n    if (root == NULL) return;\n    postorder(root->left);\n    postorder(root->right);\n    cout << root->data << \" \";\n}\n\nint main() {\n    Node* root = NULL;\n    int keys[] = {50, 30, 70, 20, 40, 60, 80};\n    for (int i = 0; i < 7; i++) root = insert(root, keys[i]);\n    inorder(root); cout << endl;\n    preorder(root); cout << endl;\n    postorder(root); cout << endl;\n    cout << search(root, 60) << endl;\n    root = deleteNode(root, 30);\n    inorder(root); cout << endl;\n    return 0;\n}\n","stdin":""},{"id":"24_tree_sequential","name":"Tree in an array (sequential)","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    // Sequential (array) representation: children of i are at 2i+1 and 2i+2\n    char tree[7] = {'A', 'B', 'C', 'D', 'E', 'F', 'G'};\n    for (int i = 0; i < 3; i++) {\n        cout << tree[i] << \": \" << tree[2 * i + 1] << \" \" << tree[2 * i + 2] << endl;\n    }\n    return 0;\n}\n","stdin":""},{"id":"25_merge_sort","name":"Merge sort","code":"#include <iostream>\nusing namespace std;\n\nvoid merge(int arr[], int l, int m, int r) {\n    int n1 = m - l + 1;\n    int n2 = r - m;\n    int L[n1], R[n2];\n    for (int i = 0; i < n1; i++) L[i] = arr[l + i];\n    for (int j = 0; j < n2; j++) R[j] = arr[m + 1 + j];\n    int i = 0, j = 0, k = l;\n    while (i < n1 && j < n2) {\n        if (L[i] <= R[j]) arr[k++] = L[i++];\n        else arr[k++] = R[j++];\n    }\n    while (i < n1) arr[k++] = L[i++];\n    while (j < n2) arr[k++] = R[j++];\n}\n\nvoid mergeSort(int arr[], int l, int r) {\n    if (l < r) {\n        int m = l + (r - l) / 2;\n        mergeSort(arr, l, m);\n        mergeSort(arr, m + 1, r);\n        merge(arr, l, m, r);\n    }\n}\n\nint main() {\n    int arr[] = {38, 27, 43, 3, 9, 82, 10};\n    mergeSort(arr, 0, 6);\n    for (int i = 0; i < 7; i++) cout << arr[i] << \" \";\n    return 0;\n}\n","stdin":""},{"id":"26_quick_sort","name":"Quick sort","code":"#include <iostream>\nusing namespace std;\n\nint partition(int arr[], int low, int high) {\n    int pivot = arr[high];\n    int i = low - 1;\n    for (int j = low; j < high; j++) {\n        if (arr[j] < pivot) {\n            i++;\n            swap(arr[i], arr[j]);\n        }\n    }\n    swap(arr[i + 1], arr[high]);\n    return i + 1;\n}\n\nvoid quickSort(int arr[], int low, int high) {\n    if (low < high) {\n        int pi = partition(arr, low, high);\n        quickSort(arr, low, pi - 1);\n        quickSort(arr, pi + 1, high);\n    }\n}\n\nint main() {\n    int arr[] = {10, 7, 8, 9, 1, 5};\n    quickSort(arr, 0, 5);\n    for (int i = 0; i < 6; i++) cout << arr[i] << \" \";\n    return 0;\n}\n","stdin":""}]},{"unit":"Unit V · Heaps and hashing","items":[{"id":"27_heap","name":"Max heap: insert and delete","code":"#include <iostream>\nusing namespace std;\n\nint heap[20];\nint heapSize = 0;\n\nvoid insert(int val) {\n    heapSize++;\n    int i = heapSize - 1;\n    heap[i] = val;\n    while (i > 0 && heap[(i - 1) / 2] < heap[i]) {\n        swap(heap[i], heap[(i - 1) / 2]);\n        i = (i - 1) / 2;\n    }\n}\n\nvoid heapify(int i) {\n    int largest = i;\n    int l = 2 * i + 1;\n    int r = 2 * i + 2;\n    if (l < heapSize && heap[l] > heap[largest]) largest = l;\n    if (r < heapSize && heap[r] > heap[largest]) largest = r;\n    if (largest != i) {\n        swap(heap[i], heap[largest]);\n        heapify(largest);\n    }\n}\n\nint deleteMax() {\n    int root = heap[0];\n    heap[0] = heap[heapSize - 1];\n    heapSize--;\n    heapify(0);\n    return root;\n}\n\nint main() {\n    insert(10);\n    insert(40);\n    insert(20);\n    insert(50);\n    insert(30);\n    cout << deleteMax() << endl;\n    return 0;\n}\n","stdin":""},{"id":"28_heap_sort","name":"Heap sort","code":"#include <iostream>\nusing namespace std;\n\nvoid heapify(int arr[], int n, int i) {\n    int largest = i;\n    int l = 2 * i + 1;\n    int r = 2 * i + 2;\n    if (l < n && arr[l] > arr[largest]) largest = l;\n    if (r < n && arr[r] > arr[largest]) largest = r;\n    if (largest != i) {\n        swap(arr[i], arr[largest]);\n        heapify(arr, n, largest);\n    }\n}\n\nvoid heapSort(int arr[], int n) {\n    for (int i = n / 2 - 1; i >= 0; i--) heapify(arr, n, i);\n    for (int i = n - 1; i > 0; i--) {\n        swap(arr[0], arr[i]);\n        heapify(arr, i, 0);\n    }\n}\n\nint main() {\n    int arr[] = {12, 11, 13, 5, 6, 7};\n    heapSort(arr, 6);\n    for (int i = 0; i < 6; i++) cout << arr[i] << \" \";\n    return 0;\n}\n","stdin":""},{"id":"29_hash_chaining","name":"Hashing: separate chaining","code":"#include <iostream>\nusing namespace std;\n#define SIZE 7\n\nstruct Node {\n    int key;\n    Node* next;\n};\n\nNode* table[SIZE];\n\nvoid insert(int key) {\n    int idx = key % SIZE;\n    Node* n = new Node;\n    n->key = key;\n    n->next = table[idx];\n    table[idx] = n;\n}\n\nint main() {\n    for (int i = 0; i < SIZE; i++) table[i] = NULL;\n    int keys[] = {50, 700, 76, 85, 92, 73, 101};\n    for (int i = 0; i < 7; i++) insert(keys[i]);\n    return 0;\n}\n","stdin":""},{"id":"30_hash_probing","name":"Hashing: linear, quadratic, double","code":"#include <iostream>\nusing namespace std;\n#define SIZE 10\n\nint table[SIZE];\n\nint h1(int key) { return key % SIZE; }\nint h2(int key) { return 7 - (key % 7); }\n\nvoid insertLinear(int key) {\n    int idx = h1(key);\n    int i = 0;\n    while (table[(idx + i) % SIZE] != -1) i++;\n    table[(idx + i) % SIZE] = key;\n}\n\nvoid insertQuadratic(int key) {\n    int idx = h1(key);\n    int i = 0;\n    while (table[(idx + i * i) % SIZE] != -1) i++;\n    table[(idx + i * i) % SIZE] = key;\n}\n\nvoid insertDouble(int key) {\n    int idx = h1(key);\n    int step = h2(key);\n    int i = 0;\n    while (table[(idx + i * step) % SIZE] != -1) i++;\n    table[(idx + i * step) % SIZE] = key;\n}\n\nint main() {\n    for (int i = 0; i < SIZE; i++) table[i] = -1;\n    insertLinear(23);\n    insertLinear(43);\n    insertLinear(13);\n    insertQuadratic(33);\n    insertDouble(53);\n    for (int i = 0; i < SIZE; i++) cout << table[i] << \" \";\n    return 0;\n}\n","stdin":""}]},{"unit":"Unit VI · Graphs","items":[{"id":"31_bfs_dfs","name":"BFS and DFS (adjacency matrix)","code":"#include <iostream>\nusing namespace std;\n#define V 5\n\nint adj[V][V] = {\n    {0, 1, 1, 0, 0},\n    {1, 0, 0, 1, 0},\n    {1, 0, 0, 1, 1},\n    {0, 1, 1, 0, 1},\n    {0, 0, 1, 1, 0}\n};\nbool visited[V];\n\nvoid dfs(int u) {\n    visited[u] = true;\n    cout << u << \" \";\n    for (int v = 0; v < V; v++) {\n        if (adj[u][v] == 1 && !visited[v]) dfs(v);\n    }\n}\n\nvoid bfs(int start) {\n    int queue[V];\n    int front = 0, rear = 0;\n    for (int i = 0; i < V; i++) visited[i] = false;\n    visited[start] = true;\n    queue[rear++] = start;\n    while (front < rear) {\n        int u = queue[front++];\n        cout << u << \" \";\n        for (int v = 0; v < V; v++) {\n            if (adj[u][v] == 1 && !visited[v]) {\n                visited[v] = true;\n                queue[rear++] = v;\n            }\n        }\n    }\n}\n\nint main() {\n    dfs(0);\n    cout << endl;\n    bfs(0);\n    cout << endl;\n    return 0;\n}\n","stdin":""},{"id":"32_bfs_stl","name":"BFS with vector and queue","code":"#include <iostream>\n#include <vector>\n#include <queue>\nusing namespace std;\n\nint main() {\n    int n = 5;\n    vector<int> adj[5];\n    adj[0].push_back(1); adj[1].push_back(0);\n    adj[0].push_back(2); adj[2].push_back(0);\n    adj[1].push_back(3); adj[3].push_back(1);\n    adj[2].push_back(4); adj[4].push_back(2);\n    vector<bool> visited(n, false);\n    queue<int> q;\n    q.push(0);\n    visited[0] = true;\n    while (!q.empty()) {\n        int u = q.front();\n        q.pop();\n        cout << u << \" \";\n        for (int v : adj[u]) {\n            if (!visited[v]) {\n                visited[v] = true;\n                q.push(v);\n            }\n        }\n    }\n    return 0;\n}\n","stdin":""},{"id":"33_dijkstra","name":"Dijkstra's algorithm","code":"#include <iostream>\n#include <climits>\nusing namespace std;\n#define V 5\n\nint minDistance(int dist[], bool sptSet[]) {\n    int min = INT_MAX, minIndex = -1;\n    for (int v = 0; v < V; v++) {\n        if (!sptSet[v] && dist[v] <= min) {\n            min = dist[v];\n            minIndex = v;\n        }\n    }\n    return minIndex;\n}\n\nvoid dijkstra(int graph[V][V], int src) {\n    int dist[V];\n    bool sptSet[V];\n    for (int i = 0; i < V; i++) {\n        dist[i] = INT_MAX;\n        sptSet[i] = false;\n    }\n    dist[src] = 0;\n    for (int count = 0; count < V - 1; count++) {\n        int u = minDistance(dist, sptSet);\n        sptSet[u] = true;\n        for (int v = 0; v < V; v++) {\n            if (!sptSet[v] && graph[u][v] && dist[u] != INT_MAX && dist[u] + graph[u][v] < dist[v]) {\n                dist[v] = dist[u] + graph[u][v];\n            }\n        }\n    }\n    for (int i = 0; i < V; i++) cout << i << \": \" << dist[i] << endl;\n}\n\nint main() {\n    int graph[V][V] = {\n        {0, 4, 1, 0, 0},\n        {4, 0, 2, 5, 0},\n        {1, 2, 0, 8, 10},\n        {0, 5, 8, 0, 2},\n        {0, 0, 10, 2, 0}\n    };\n    dijkstra(graph, 0);\n    return 0;\n}\n","stdin":""},{"id":"34_bellman_ford","name":"Bellman–Ford algorithm","code":"#include <iostream>\nusing namespace std;\n#define INF 99999\n\nstruct Edge {\n    int u, v, w;\n};\n\nint main() {\n    int V = 5, E = 7;\n    Edge edges[] = {\n        {0, 1, 6}, {0, 2, 7}, {1, 3, 5}, {1, 2, 8},\n        {2, 3, -3}, {3, 4, 2}, {1, 4, -4}\n    };\n    int dist[5];\n    for (int i = 0; i < V; i++) dist[i] = INF;\n    dist[0] = 0;\n    for (int i = 1; i <= V - 1; i++) {\n        for (int j = 0; j < E; j++) {\n            int u = edges[j].u, v = edges[j].v, w = edges[j].w;\n            if (dist[u] != INF && dist[u] + w < dist[v]) dist[v] = dist[u] + w;\n        }\n    }\n    for (int j = 0; j < E; j++) {\n        if (dist[edges[j].u] != INF && dist[edges[j].u] + edges[j].w < dist[edges[j].v]) {\n            cout << \"Negative cycle found\" << endl;\n        }\n    }\n    for (int i = 0; i < V; i++) cout << i << \": \" << dist[i] << endl;\n    return 0;\n}\n","stdin":""},{"id":"35_floyd","name":"Floyd–Warshall algorithm","code":"#include <iostream>\nusing namespace std;\n#define V 4\n#define INF 99999\n\nint main() {\n    int dist[V][V] = {\n        {0, 5, INF, 10},\n        {INF, 0, 3, INF},\n        {INF, INF, 0, 1},\n        {INF, INF, INF, 0}\n    };\n    for (int k = 0; k < V; k++)\n        for (int i = 0; i < V; i++)\n            for (int j = 0; j < V; j++)\n                if (dist[i][k] + dist[k][j] < dist[i][j])\n                    dist[i][j] = dist[i][k] + dist[k][j];\n    for (int i = 0; i < V; i++) {\n        for (int j = 0; j < V; j++) {\n            if (dist[i][j] == INF) cout << \"INF \";\n            else cout << dist[i][j] << \" \";\n        }\n        cout << endl;\n    }\n    return 0;\n}\n","stdin":""}]},{"unit":"Common bugs","items":[{"id":"39_bug_lost_node","name":"Bug: a lost node (memory leak)","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n    Node(int v) : data(v), next(NULL) {}\n};\n\nvoid insertAtHead(Node*& head, int value) {\n    Node* newNode = new Node(value);\n    // Bug: we forgot  newNode->next = head;\n    head = newNode;\n}\n\nint main() {\n    Node* head = new Node(10);\n    head->next = new Node(20);\n    insertAtHead(head, 5);\n    return 0;\n}\n","stdin":""},{"id":"40_bug_null_crash","name":"Bug: using -> on NULL","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n};\n\nint main() {\n    Node* head = NULL;\n    Node* temp = head;\n    // Walking to the last node without checking for an empty list\n    while (temp->next != NULL) {\n        temp = temp->next;\n    }\n    return 0;\n}\n","stdin":""}]}];
+const DEFAULT_EXAMPLE = '00_by_hand';
+</script>
+<script>
+// Visual Code UI: editor, live runner, and the memory visualizer.
+(function () {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const svgEl = tag => document.createElementNS(SVGNS, tag);
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- state ----------
+  const state = { steps: [], idx: 0, live: true, lines: [], prog: null, kinds: {}, parseErr: null, playing: null, structNames: new Set(), funcNames: [] };
+  let kinds = {};
+
+  // ---------- editor ----------
+  const ta = $('#src'), hl = $('#hl'), gutter = $('#gutter'), hlStep = $('#hlStep');
+  const KW = new Set('if else while for do return break continue struct class public private protected using namespace const static typedef this sizeof true false switch case default template'.split(' '));
+  const TY = new Set('int long short unsigned signed double float bool char void string auto size_t vector stack queue deque priority_queue pair'.split(' '));
+  const IO = new Set(['cout', 'cin', 'endl', 'std', 'printf', 'scanf', 'malloc', 'free']);
+  function highlight(src) {
+    const re = /(\/\/[^\n]*|\/\*[\s\S]*?(?:\*\/|$))|("(?:\\.|[^"\\\n])*"?|'(?:\\.|[^'\\\n])*'?)|(^[ \t]*#[^\n]*)|(\b\d+(?:\.\d+)?\b)|([A-Za-z_]\w*)/gm;
+    let out = '', last = 0, m;
+    while ((m = re.exec(src))) {
+      out += esc(src.slice(last, m.index)); last = re.lastIndex;
+      const t = m[0]; let c = null;
+      if (m[1]) c = 'com'; else if (m[2]) c = 'str'; else if (m[3]) c = 'pre'; else if (m[4]) c = 'num';
+      else if (t === 'new' || t === 'delete' || t === 'malloc' || t === 'free') c = 'mem';
+      else if (t === 'NULL' || t === 'nullptr') c = 'null';
+      else if (KW.has(t)) c = 'kw'; else if (TY.has(t)) c = 'ty';
+      else if (state.structNames.has(t)) c = 'st'; else if (IO.has(t)) c = 'io';
+      out += c ? `<span class="s-${c}">${esc(t)}</span>` : esc(t);
+    }
+    return out + esc(src.slice(last));
+  }
+  let lineCount = 0;
+  function renderCode() {
+    hl.innerHTML = highlight(ta.value) + '\n';
+    const n = ta.value.split('\n').length;
+    if (n !== lineCount) {
+      lineCount = n; let g = '';
+      for (let i = 1; i <= n; i++) g += `<div class="ln" data-l="${i}">${i}</div>`;
+      gutter.innerHTML = g;
+    }
+    syncScroll();
+  }
+  function syncScroll() {
+    hl.style.transform = `translate(${-ta.scrollLeft}px,${-ta.scrollTop}px)`;
+    gutter.style.transform = `translateY(${-ta.scrollTop}px)`;
+    placeStepLine();
+  }
+  let stepLine = 0, stepKind = '';
+  function placeStepLine() {
+    if (!stepLine) { hlStep.hidden = true; return; }
+    hlStep.hidden = false;
+    hlStep.className = 'hl-line ' + stepKind;
+    hlStep.style.top = `${12 + (stepLine - 1) * 20 - ta.scrollTop}px`;
+  }
+  function markGutter(errLine, curLine) {
+    gutter.querySelectorAll('.ln').forEach(el => {
+      const l = +el.dataset.l;
+      el.classList.toggle('err', l === errLine);
+      el.classList.toggle('cur', l === curLine);
+    });
+  }
+  function insertText(text) {
+    ta.focus();
+    let ok = false;
+    try { ok = document.execCommand('insertText', false, text); } catch (e) { ok = false; }
+    if (!ok) { ta.setRangeText(text, ta.selectionStart, ta.selectionEnd, 'end'); onInput(); }
+  }
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); insertText('    '); return; }
+    if (e.key === 'Enter' && !e.isComposing) {
+      e.preventDefault();
+      const v = ta.value, s = ta.selectionStart;
+      const ls = v.lastIndexOf('\n', s - 1) + 1;
+      const ind = v.slice(ls).match(/^[ \t]*/)[0];
+      const before = v.slice(ls, s).trimEnd();
+      let ins = '\n' + ind;
+      if (before.endsWith('{')) {
+        ins += '    ';
+        if (v[s] === '}') { insertText(ins + '\n' + ind); const p = s + ins.length; ta.setSelectionRange(p, p); return; }
+      }
+      insertText(ins); return;
+    }
+    if (e.key === '}') {
+      const v = ta.value, s = ta.selectionStart;
+      const ls = v.lastIndexOf('\n', s - 1) + 1; const pre = v.slice(ls, s);
+      if (s === ta.selectionEnd && /^ +$/.test(pre) && pre.length >= 4) { e.preventDefault(); ta.setSelectionRange(s - 4, s); insertText('}'); }
+    }
+  });
+  ta.addEventListener('scroll', syncScroll);
+  ta.addEventListener('input', onInput);
+  ta.addEventListener('keyup', updateCursor);
+  ta.addEventListener('click', updateCursor);
+  let runTimer = null;
+  function onInput() {
+    renderCode(); stopPlay(); state.live = true;
+    clearTimeout(runTimer); runTimer = setTimeout(runNow, 90);
+    try { localStorage.setItem('vc-draft', ta.value); } catch (e) { /* storage unavailable */ }
+    updateCursor();
+  }
+  function updateCursor() {
+    const s = ta.selectionStart; const before = ta.value.slice(0, s);
+    const line = before.split('\n').length; const col = s - before.lastIndexOf('\n');
+    $('#cursor').textContent = `Ln ${line}, Col ${col}`;
+  }
+
+  // ---------- run ----------
+  function runNow() {
+    const src = ta.value; state.lines = src.split('\n');
+    let r;
+    try { r = runProgram(src, $('#stdin').value); }
+    catch (e) { r = { prog: { structs: {}, funcs: {} }, steps: [{ line: 0, note: 'Visual Code hit an internal problem: ' + e.message, flags: { error: true }, frames: [], heap: [], out: '', ev: { alloc: [], free: [], sets: [], reads: [], writes: [], desc: [], conts: [] }, stats: {} }], err: null }; }
+    state.prog = r.prog; state.parseErr = r.err; state.steps = r.steps;
+    kinds = classifyStructs(r.prog.structs); state.kinds = kinds;
+    const names = new Set(Object.keys(r.prog.structs));
+    const changed = names.size !== state.structNames.size || [...names].some(n => !state.structNames.has(n));
+    state.structNames = names; state.funcNames = Object.keys(r.prog.funcs);
+    if (changed) renderCode();
+    if (state.live) state.idx = state.steps.length - 1;
+    else state.idx = Math.min(state.idx, state.steps.length - 1);
+    render();
+  }
+
+  // ---------- step controls ----------
+  const scrub = $('#scrub');
+  function go(i, fromPlay) {
+    const last = state.steps.length - 1;
+    state.idx = Math.max(0, Math.min(last, i));
+    state.live = state.idx === last;
+    if (!fromPlay) stopPlay();
+    render(true);
+  }
+  function stopPlay() { if (state.playing) { clearInterval(state.playing); state.playing = null; } $('#play').classList.remove('on'); $('#play').setAttribute('aria-label', 'Play'); $('#play').title = 'Play (Space)'; }
+  function startPlay() {
+    if (state.idx >= state.steps.length - 1) go(0, true);
+    const ms = +$('#speed').value;
+    state.playing = setInterval(() => { if (state.idx >= state.steps.length - 1) { stopPlay(); render(); return; } go(state.idx + 1, true); }, ms);
+    $('#play').classList.add('on'); $('#play').setAttribute('aria-label', 'Pause'); $('#play').title = 'Pause (Space)';
+  }
+  $('#first').onclick = () => go(0);
+  $('#back').onclick = () => go(state.idx - 1);
+  $('#fwd').onclick = () => go(state.idx + 1);
+  $('#live').onclick = () => go(state.steps.length - 1);
+  $('#play').onclick = () => (state.playing ? stopPlay() : startPlay());
+  $('#speed').onchange = () => { if (state.playing) { stopPlay(); startPlay(); } };
+  scrub.oninput = () => go(+scrub.value);
+  document.addEventListener('keydown', e => {
+    if (e.target === ta || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(state.idx + 1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); go(state.idx - 1); }
+    else if (e.key === ' ') { e.preventDefault(); state.playing ? stopPlay() : startPlay(); }
+    else if (e.key === 'Home') go(0); else if (e.key === 'End') go(state.steps.length - 1);
+  });
+  $('#stdin').addEventListener('input', () => { clearTimeout(runTimer); runTimer = setTimeout(runNow, 200); });
+
+  // ---------- value helpers ----------
+  const INFS = v => v >= 99999 || v === 2147483647;
+  function valText(v, short) {
+    if (!v) return '';
+    switch (v.k) {
+      case 'num':
+        if (v.t === 'bool') return v.v ? 'true' : 'false';
+        if (v.t === 'char') return v.v === 0 ? '\\0' : `'${String.fromCharCode(v.v)}'`;
+        if (INFS(v.v)) return '∞';
+        if (v.t === 'double') return String(+v.v.toFixed(3));
+        return String(v.v);
+      case 'str': { const s = v.v.length > 12 && short ? v.v.slice(0, 11) + '…' : v.v; return `"${s}"`; }
+      case 'uninit': return '?';
+      case 'ptr': return v.uninit ? '?' : v.to == null ? 'NULL' : '•';
+      case 'arr': return `[${v.vals.slice(0, 6).map(x => valText(x, true)).join(', ')}${v.vals.length > 6 ? ', …' : ''}]`;
+      case 'rec': return `{${v.fields.map(f => valText(f.val, true)).join(', ')}}`;
+      case 'cont': return `${v.kind}(${v.vals.length})`;
+      case 'ph': return '…';
+      default: return '…';
+    }
+  }
+  const tgtOf = (v, byId) => (v && v.k === 'ptr' && !v.uninit && v.to != null && byId.has(v.to) ? v.to : null);
+
+  // ---------- layout constants ----------
+  const G = { H: 52, VAL: 52, PTR: 34, GAP: 66, ROWH: 150, PADX: 36, CW: 44, CH: 38, ROWB: 84 };
+  const IDX = new Set(['i', 'j', 'k', 'l', 'r', 'lo', 'hi', 'low', 'high', 'mid', 'left', 'right', 'start', 'end', 'minIdx', 'min_idx', 'minIndex', 'maxIdx', 'pos', 'idx', 'index', 'top', 'front', 'rear', 'largest', 'smallest', 'pi', 'p', 'q', 'u', 'v', 'x', 'pivotIdx', 'key_idx', 'tail', 'head', 'last', 'first']);
+  const VISITED = /^(visited|vis|visit|sptset|spt|done|included|inmst|mstset|finalized|seen|explored)$/i;
+  const DIST = /^(dist|distance|d|key|cost)$/i;
+
+  function slotsFor(type, fields) {
+    const k = kinds[type] || { kind: 'plain' };
+    const vals = fields.filter(f => !f.ptr), ptrs = fields.filter(f => f.ptr);
+    let ord;
+    if (k.kind === 'doubly') ord = [...ptrs.filter(f => f.name === k.back), ...vals, ...ptrs.filter(f => f.name === k.link), ...ptrs.filter(f => f.name !== k.back && f.name !== k.link)];
+    else if (k.kind === 'tree') ord = [...ptrs.filter(f => f.name === k.left), ...vals, ...ptrs.filter(f => f.name === k.right), ...ptrs.filter(f => f.name !== k.left && f.name !== k.right)];
+    else ord = [...vals, ...ptrs];
+    let x = 0;
+    const slots = ord.map(f => { const w = f.ptr ? G.PTR : Math.min(120, Math.max(G.VAL, valText(f.val, true).length * 8.6 + 18, f.name.length * 6 + 14)); const s = { ...f, x, w, cx: x + w / 2 }; x += w; return s; });
+    return { slots, w: Math.max(x, G.VAL) };
+  }
+  const dotY = (k, name) => (k.kind === 'doubly' ? (name === k.back ? 40 : 26) : 33);
+
+  // ---------- collect arrays / containers / strings ----------
+  function collectData(step) {
+    const items = new Map(), order = []; const lastFi = step.frames.length - 1;
+    const add = (val, name, fi, recInts) => {
+      const key = val.k + ':' + val.id; let it = items.get(key);
+      if (!it) { it = { key, val, name, fis: new Set(), recInts: [] }; items.set(key, it); order.push(it); }
+      it.fis.add(fi); if (recInts) it.recInts.push(...recInts);
+    };
+    const walk = (val, name, fi, recInts) => {
+      if (!val) return;
+      if (val.k === 'arr' || val.k === 'cont') add(val, name, fi, recInts);
+      else if (val.k === 'rec') {
+        const ints = val.fields.filter(f => f.val.k === 'num').map(f => ({ name: f.name, v: f.val.v }));
+        for (const f of val.fields) walk(f.val, name === '*this' ? f.name : `${name}.${f.name}`, fi, ints);
+      } else if (val.k === 'str' && val.v.length && val.v.length <= 48 && (fi === lastFi || step.frames[fi].global)) add({ ...val, id: fi + ':' + name }, name, fi, null);
+    };
+    step.frames.forEach((fr, fi) => fr.vars.forEach(v => walk(v.val, v.name, fi, null)));
+    return order;
+  }
+  function indexChips(it, step, len) {
+    const chips = []; const seen = new Set(); const lastFi = step.frames.length - 1;
+    const push = (name, v, cur) => { if (!IDX.has(name) || v < -1 || v > len) return; const key = name + '@' + v; if (seen.has(key)) return; seen.add(key); chips.push({ name, i: v, cur }); };
+    [...it.fis].sort((a, b) => b - a).forEach(fi => {
+      for (const v of step.frames[fi].vars) if (v.val.k === 'num' && v.val.t === 'int') {
+        if (chips.some(c => c.name === v.name)) continue;
+        push(v.name, v.val.v, fi === lastFi);
+      }
+    });
+    for (const r of it.recInts) if (!chips.some(c => c.name === r.name)) push(r.name, r.v, true);
+    return chips;
+  }
+  function intVar(step, fis, names) {
+    for (const fi of [...fis].sort((a, b) => b - a)) for (const v of step.frames[fi].vars) if (names.includes(v.name) && v.val.k === 'num') return v.val.v;
+    return null;
+  }
+  function boolArrays(step, items) {
+    const vis = items.find(it => it.val.k === 'arr' && VISITED.test(it.name.split('.').pop()) && it.val.dims === 1) || items.find(it => it.val.k === 'cont' && it.val.kind === 'vector' && VISITED.test(it.name));
+    const dist = items.find(it => it.val.k === 'arr' && DIST.test(it.name.split('.').pop()) && it.val.dims === 1) || items.find(it => it.val.k === 'cont' && it.val.kind === 'vector' && DIST.test(it.name));
+    return { vis: vis ? vis.val.vals : null, dist: dist ? dist.val.vals : null };
+  }
+
+  // ---------- panels ----------
+  function hiSets(step, id) {
+    const r = new Set(), w = new Set();
+    for (const o of step.ev.reads) if (o && o.arr === id) r.add(o.idx);
+    for (const o of step.ev.writes) if (o && o.arr === id) w.add(o.idx);
+    return { r, w };
+  }
+  function cellSVG(x, y, w, h, v, cls, extra = '') {
+    let s = `<g class="cell ${cls}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4"/>`;
+    if (v && v.k === 'ptr' && !v.uninit && v.to != null) s += `<circle class="dot" cx="${x + w / 2}" cy="${y + h / 2}" r="4"/>`;
+    else if (v && v.k === 'ptr' && !v.uninit) s += `<line class="slash" x1="${x + 8}" y1="${y + h - 8}" x2="${x + w - 8}" y2="${y + 8}"/>`;
+    else s += `<text x="${x + w / 2}" y="${y + h / 2 + 5}" text-anchor="middle" class="${v && v.k === 'uninit' ? 'garb' : ''}">${esc(valText(v, true))}</text>`;
+    return s + extra + '</g>';
+  }
+  function chipsSVG(chips, xOf, y) {
+    const lanes = []; let s = '';
+    const sorted = [...chips].sort((a, b) => a.i - b.i);
+    for (const c of sorted) {
+      let lane = 0; while ((lanes[lane] || []).some(o => o === c.i)) lane++;
+      (lanes[lane] = lanes[lane] || []).push(c.i);
+      const w = c.name.length * 7.2 + 14; const cx = xOf(c.i); const cy = y + lane * 20;
+      s += `<g class="ichip${c.cur ? '' : ' dim'}"><path d="M${cx} ${cy - 2} l-4 6 h8 z"/><rect x="${cx - w / 2}" y="${cy + 4}" width="${w}" height="16" rx="8"/><text x="${cx}" y="${cy + 15.5}" text-anchor="middle">${esc(c.name)}</text></g>`;
+    }
+    return { svg: s, h: lanes.length * 20 };
+  }
+  function labelSVG(x, y, title, sub) {
+    return `<text class="plabel" x="${x}" y="${y}">${esc(title)}${sub ? `<tspan class="psub" dx="8">${esc(sub)}</tspan>` : ''}</text>`;
+  }
+
+  function heapTreeSVG(vals, n, x0, y0, hi, kindLabel) {
+    if (n <= 0) return { svg: '', h: 0 };
+    const depth = Math.floor(Math.log2(n)); const leaves = Math.pow(2, depth);
+    const width = Math.max(leaves * 46, 220);
+    const pos = i => { const d = Math.floor(Math.log2(i + 1)); const k = i - (Math.pow(2, d) - 1); const span = width / Math.pow(2, d); return { x: x0 + span * (k + 0.5), y: y0 + 26 + d * 58 }; };
+    let s = `<text class="psub" x="${x0}" y="${y0 + 8}">${esc(kindLabel)}: index i has children 2i+1 and 2i+2</text>`;
+    for (let i = 1; i < n; i++) { const a = pos(i), b = pos((i - 1) >> 1); s += `<line class="tedge" x1="${b.x}" y1="${b.y}" x2="${a.x}" y2="${a.y}"/>`; }
+    for (let i = 0; i < n; i++) {
+      const p = pos(i); const cls = hi.w.has(i) ? 'write' : hi.r.has(i) ? 'read' : '';
+      s += `<g class="tnode ${cls}"><circle cx="${p.x}" cy="${p.y}" r="17"/><text x="${p.x}" y="${p.y + 5}" text-anchor="middle">${esc(valText(vals[i], true))}</text><text class="tidx" x="${p.x + 20}" y="${p.y - 12}">${i}</text></g>`;
+    }
+    return { svg: s, h: 26 + depth * 58 + 34, w: width };
+  }
+
+  function graphSVG(n, edges, x0, y0, st) {
+    const R = Math.min(130, 40 + n * 13); const cx = x0 + R + 30, cy = y0 + R + 26;
+    const P = i => ({ x: cx + R * Math.cos(-Math.PI / 2 + (2 * Math.PI * i) / n), y: cy + R * Math.sin(-Math.PI / 2 + (2 * Math.PI * i) / n) });
+    const directed = edges.some(e => !edges.some(f => f.a === e.b && f.b === e.a));
+    const weighted = edges.some(e => e.w !== 1 && e.w !== true);
+    let s = `<text class="psub" x="${x0}" y="${y0 + 8}">Graph view${directed ? ' (directed)' : ''}</text>`;
+    const drawn = new Set();
+    for (const e of edges) {
+      const key = directed ? e.a + '>' + e.b : Math.min(e.a, e.b) + '-' + Math.max(e.a, e.b);
+      if (drawn.has(key) || e.a === e.b) continue; drawn.add(key);
+      const a = P(e.a), b = P(e.b); const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1;
+      const ax = a.x + dx / L * 19, ay = a.y + dy / L * 19, bx = b.x - dx / L * 21, by = b.y - dy / L * 21;
+      const active = st.u === e.a || st.u === e.b;
+      s += `<line class="gedge${active ? ' act' : ''}" x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}"${directed ? ' marker-end="url(#mh-g)"' : ''}/>`;
+      if (weighted) { const mx = (a.x + b.x) / 2 + (-dy / L) * 10, my = (a.y + b.y) / 2 + (dx / L) * 10; s += `<text class="gw" x="${mx}" y="${my + 4}" text-anchor="middle">${esc(INFS(e.w) ? '∞' : e.w)}</text>`; }
+    }
+    for (let i = 0; i < n; i++) {
+      const p = P(i); const vis = st.vis && st.vis[i] && st.vis[i].k === 'num' && st.vis[i].v;
+      s += `<g class="gnode${vis ? ' vis' : ''}${st.u === i ? ' cur' : ''}"><circle cx="${p.x}" cy="${p.y}" r="18"/><text x="${p.x}" y="${p.y + 5}" text-anchor="middle">${i}</text>`;
+      if (st.dist && st.dist[i]) s += `<text class="gd" x="${p.x}" y="${p.y + 34}" text-anchor="middle">d=${esc(valText(st.dist[i], true))}</text>`;
+      s += '</g>';
+    }
+    return { svg: s, h: 2 * R + 70, w: 2 * R + 70 };
+  }
+
+  function hanoiState(step) {
+    if (!state.funcNames.some(f => /hanoi|toh|tower/i.test(f))) return null;
+    const re = /disk\s*(\d+)\D*?from\s*(?:rod|peg|tower|pole)?\s*['"]?([A-Za-z0-9])['"]?\s*to\s*(?:rod|peg|tower|pole)?\s*['"]?([A-Za-z0-9])/ig;
+    const final = state.steps[state.steps.length - 1].out; const all = [...final.matchAll(re)];
+    if (!all.length) return null;
+    const n = Math.max(...all.map(m => +m[1]));
+    const pegs = [...new Set(all.flatMap(m => [m[2], m[3]]))].sort().slice(0, 3);
+    if (pegs.length < 3) return null;
+    const towers = Object.fromEntries(pegs.map(p => [p, []]));
+    towers[all[0][2]] = Array.from({ length: n }, (_, i) => n - i);
+    const done = [...step.out.matchAll(re)]; let lastMove = null;
+    for (const m of done) { const t = towers[m[2]]; if (t && t.length) { const d = t.pop(); towers[m[3]].push(d); lastMove = { d, from: m[2], to: m[3] }; } }
+    return { n, pegs, towers, lastMove, moves: done.length, total: all.length };
+  }
+  function hanoiSVG(h, x0, y0) {
+    const pw = Math.max(150, h.n * 22 + 40), baseY = y0 + 30 + h.n * 20 + 24;
+    let s = `<text class="plabel" x="${x0}" y="${y0 + 12}">Tower of Hanoi<tspan class="psub" dx="8">${h.moves} of ${h.total} moves</tspan></text>`;
+    h.pegs.forEach((p, pi) => {
+      const cx = x0 + pi * (pw + 20) + pw / 2;
+      s += `<rect class="hpeg" x="${cx - 3}" y="${y0 + 26}" width="6" height="${baseY - y0 - 26}" rx="3"/><rect class="hbase" x="${cx - pw / 2}" y="${baseY}" width="${pw}" height="6" rx="3"/><text class="psub" x="${cx}" y="${baseY + 22}" text-anchor="middle">${esc(p)}</text>`;
+      h.towers[p].forEach((d, di) => {
+        const w = 30 + (d / h.n) * (pw - 40); const y = baseY - (di + 1) * 20;
+        const moved = h.lastMove && h.lastMove.d === d && h.lastMove.to === p;
+        s += `<g class="hdisk${moved ? ' moved' : ''}"><rect x="${cx - w / 2}" y="${y + 2}" width="${w}" height="17" rx="8"/><text x="${cx}" y="${y + 15}" text-anchor="middle">${d}</text></g>`;
+      });
+    });
+    return { svg: s, h: baseY - y0 + 34, w: 3 * pw + 40 };
+  }
+
+  // ---------- full layout ----------
+  function computeLayout(step) {
+    const heap = step.heap; const byId = new Map(heap.map(o => [o.id, o]));
+    const geo = new Map(heap.map(o => [o.id, slotsFor(o.type, o.fields)]));
+    const fv = (o, n) => { const f = o.fields.find(f => f.name === n); return f && f.val; };
+    const kindOf = o => kinds[o.type] || { kind: 'plain' };
+    const linkTo = o => { if (!o.alive) return null; const k = kindOf(o); return k.link ? tgtOf(fv(o, k.link), byId) : null; };
+    const lastFi = step.frames.length - 1;
+    let svg = ''; const anchors = []; let y = 22; let maxX = 300;
+    const items = collectData(step);
+
+    // roots and reachability (vars, rec fields, array and container cells)
+    const roots = []; const varPtrs = [];
+    const walkPtr = (val, label, fi, depth) => {
+      if (!val || depth > 2) return;
+      if (val.k === 'ptr') { const t = tgtOf(val, byId); if (t != null) { roots.push(t); varPtrs.push({ label, fi, to: t }); } else if (!val.uninit || true) varPtrs.push({ label, fi, to: null, uninit: val.uninit }); }
+      else if (val.k === 'rec') val.fields.forEach(f => walkPtr(f.val, `${label}.${f.name}`, fi, depth + 1));
+      else if (val.k === 'arr' || val.k === 'cont') val.vals.forEach(v => { if (v.k === 'arr') v.vals.forEach(w => { const t = tgtOf(w, byId); if (t != null) roots.push(t); }); const t = tgtOf(v, byId); if (t != null) roots.push(t); });
+    };
+    step.frames.forEach((fr, fi) => fr.vars.forEach(v => { if (!v.ref || v.name === '*this') walkPtr(v.val, v.name === '*this' ? 'this' : v.name, fi, 0); else { const t = tgtOf(v.val, byId); if (t != null) roots.push(t); } }));
+    const reach = new Set(), stk = [...roots];
+    while (stk.length) { const id = stk.pop(); if (reach.has(id)) continue; reach.add(id); const o = byId.get(id); if (!o.alive) continue; for (const f of o.fields) { const t = tgtOf(f.val, byId); if (t != null) stk.push(t); } }
+    const fresh = new Set(step.ev.alloc);
+    const isLost = id => { const o = byId.get(id); return o.alive && !reach.has(id) && !fresh.has(id); };
+
+    // Tower of Hanoi
+    const han = hanoiState(step);
+    if (han) { const r = hanoiSVG(han, G.PADX, y); svg += r.svg; y += r.h + 26; maxX = Math.max(maxX, G.PADX + r.w); }
+
+    const isHeapProg = state.funcNames.some(f => /heap/i.test(f));
+    const pos = new Map(); const rows = [];
+    const preds = new Map();
+    for (const o of heap) { if (kindOf(o).kind === 'tree') continue; const t = linkTo(o); if (t != null) { if (!preds.has(t)) preds.set(t, []); preds.get(t).push(o.id); } }
+    const inCycle = id => { let c = linkTo(byId.get(id)), n = 0; while (c != null && n < 500) { if (c === id) return true; c = linkTo(byId.get(c)); n++; } return false; };
+    const placeChain = (start, x0, yRow) => {
+      if (pos.has(start) || kindOf(byId.get(start)).kind === 'tree') return null;
+      let head = start;
+      if (!inCycle(start) && yRow == null) { const seen = new Set([head]); for (;;) { const ps = (preds.get(head) || []).filter(p => !pos.has(p) && !seen.has(p)); if (!ps.length) break; head = ps[0]; seen.add(head); } }
+      if (pos.has(head)) return null;
+      const row = { ids: [], x0, y: yRow }; let c = head;
+      while (c != null && !pos.has(c)) { pos.set(c, row); row.ids.push(c); c = linkTo(byId.get(c)); }
+      rows.push(row); return row;
+    };
+
+    // arrays, containers, strings
+    for (const it of items) {
+      const v = it.val;
+      if (v.k === 'str') {
+        const chars = [...v.v]; const cw = 26; const lx = G.PADX; const cx0 = lx + Math.max(56, it.name.length * 8 + 18);
+        svg += labelSVG(lx, y + 14, it.name, 'string');
+        chars.forEach((ch, i) => { svg += cellSVG(cx0 + i * cw, y + 22, cw, 30, { k: 'num', t: 'char', v: ch.charCodeAt(0) }, 'small'); svg += `<text class="cidx" x="${cx0 + i * cw + cw / 2}" y="${y + 66}" text-anchor="middle">${i}</text>`; });
+        const ch = chipsSVG(indexChips(it, step, chars.length), i => cx0 + i * cw + cw / 2, y + 72);
+        svg += ch.svg; y += 76 + ch.h + 14; maxX = Math.max(maxX, cx0 + chars.length * cw + 40);
+        continue;
+      }
+      if (v.k === 'arr' && v.dims > 1) {
+        const rowsN = v.vals.length, cols = v.vals[0] ? v.vals[0].vals.length : 0;
+        const cw = 40, chh = 28, lx = G.PADX, mx = lx + 34, my = y + 40;
+        svg += labelSVG(lx, y + 14, it.name, `${rowsN} × ${cols}`);
+        for (let j = 0; j < cols; j++) svg += `<text class="cidx" x="${mx + j * cw + cw / 2}" y="${my - 8}" text-anchor="middle">${j}</text>`;
+        v.vals.forEach((row, i) => {
+          svg += `<text class="cidx" x="${mx - 10}" y="${my + i * chh + 19}" text-anchor="end">${i}</text>`;
+          const hs = hiSets(step, row.id);
+          row.vals.forEach((c, j) => { svg += cellSVG(mx + j * cw, my + i * chh, cw, chh, c, 'mat ' + (hs.w.has(j) ? 'write' : hs.r.has(j) ? 'read' : '')); });
+        });
+        let h = 40 + rowsN * chh + 16; let w = 34 + cols * cw + 40;
+        const nm = it.name.split('.').pop();
+        if (rowsN === cols && rowsN <= 14 && /adj|graph|cost|weight|matrix|^g$|edge|^w$/i.test(nm)) {
+          const edges = []; v.vals.forEach((row, i) => row.vals.forEach((c, j) => { if (c.k === 'num' && c.v !== 0 && !INFS(c.v)) edges.push({ a: i, b: j, w: c.t === 'bool' ? 1 : c.v }); }));
+          const ba = boolArrays(step, items); const u = intVar(step, it.fis.size ? new Set([...Array(step.frames.length).keys()]) : it.fis, ['u', 'curr', 'current', 'node']);
+          const g = graphSVG(rowsN, edges, mx + cols * cw + 50, y, { vis: ba.vis, dist: ba.dist, u });
+          svg += g.svg; h = Math.max(h, g.h); w += g.w + 30;
+        }
+        y += h + 18; maxX = Math.max(maxX, lx + w + 40);
+        continue;
+      }
+      // 1D array or container
+      const isCont = v.k === 'cont'; const vals = v.vals; const n = vals.length;
+      const ptrCells = vals.some(c => c.k === 'ptr');
+      const listTargets = ptrCells && vals.every(c => c.k !== 'ptr' || c.to == null || c.uninit || (byId.has(c.to) && kindOf(byId.get(c.to)).kind !== 'tree'));
+      if (!isCont && ptrCells && listTargets) {
+        // bucket column with chains (hash table with chaining, adjacency lists of nodes)
+        const lx = G.PADX; const colX = lx + 34;
+        svg += labelSVG(lx, y + 14, it.name, `${n} buckets`);
+        const top = y + 30;
+        vals.forEach((c, i) => {
+          const cy = top + i * G.ROWB;
+          svg += `<text class="cidx" x="${colX - 10}" y="${cy + 25}" text-anchor="end">${i}</text>`;
+          svg += cellSVG(colX, cy, G.CW, 40, c, hiSets(step, v.id).w.has(i) ? 'write' : '');
+          const t = tgtOf(c, byId);
+          if (t != null) { const row = placeChain(t, colX + G.CW + G.GAP, cy - 13); anchors.push({ key: `a${v.id}.${i}`, x: colX + G.CW / 2, y: cy + 20, to: t, row: !!row }); }
+        });
+        y = top + n * G.ROWB + 10;
+        continue;
+      }
+      if (!isCont && vals.some(c => c.k === 'cont')) {
+        // array of containers: adjacency list
+        const lx = G.PADX; const colX = lx + 34; const top = y + 30; const pitch = 40;
+        svg += labelSVG(lx, y + 14, it.name, 'adjacency list');
+        let w = 0;
+        vals.forEach((c, i) => {
+          const cy = top + i * pitch;
+          svg += `<text class="cidx" x="${colX - 10}" y="${cy + 21}" text-anchor="end">${i}</text>`;
+          svg += `<rect class="bucket" x="${colX}" y="${cy}" width="${G.CW}" height="32" rx="4"/><text class="cidx" x="${colX + G.CW / 2}" y="${cy + 21}" text-anchor="middle">${i}</text>`;
+          const items2 = c.k === 'cont' ? c.vals : [];
+          items2.forEach((x, j) => { const ix = colX + G.CW + 26 + j * 46; svg += `<line class="adj-link" x1="${ix - 22 + (j ? 0 : -4)}" y1="${cy + 16}" x2="${ix}" y2="${cy + 16}"/>`; svg += cellSVG(ix, cy + 2, 38, 28, x, step.ev.conts.includes(c.id) ? 'write small' : 'small'); });
+          w = Math.max(w, G.CW + 26 + items2.length * 46);
+        });
+        let h = 30 + n * pitch + 10;
+        if (/adj|graph|^g$/i.test(it.name.split('.').pop()) && n <= 14) {
+          const edges = []; vals.forEach((c, i) => c.k === 'cont' && c.vals.forEach(x => { if (x.k === 'num') edges.push({ a: i, b: x.v, w: 1 }); else if (x.k === 'rec') edges.push({ a: i, b: x.fields[0].val.v, w: x.fields[1] ? x.fields[1].val.v : 1 }); }));
+          const ba = boolArrays(step, items); const u = intVar(step, new Set([...Array(step.frames.length).keys()]), ['u', 'curr', 'node']);
+          const g = graphSVG(n, edges.filter(e => e.b >= 0 && e.b < n), colX + w + 60, y, { vis: ba.vis, dist: ba.dist, u });
+          svg += g.svg; h = Math.max(h, g.h); w += g.w + 60;
+        }
+        y += h + 12; maxX = Math.max(maxX, colX + w + 40);
+        continue;
+      }
+      const label = isCont ? `${v.kind.replace('_', ' ')} ${it.name}` : it.name;
+      const sub = isCont ? (v.kind === 'priority_queue' ? (v.min ? 'min-heap' : 'max-heap') : `${n} item${n === 1 ? '' : 's'}`) : `[${n}]`;
+      const cw = Math.min(110, Math.max(G.CW, ...vals.map(c => valText(c, true).length * 8 + 14)));
+      const lx = G.PADX; const cx0 = lx + Math.max(70, label.length * 7.6 + 22);
+      const chips = isCont ? [] : indexChips(it, step, n);
+      let show = n;
+      if (n > 24) { let last = -1; vals.forEach((c, i) => { if (c.k !== 'uninit' && !(c.k === 'ptr' && c.uninit)) last = i; }); const mc = Math.max(-1, ...chips.map(c => c.i)); show = Math.min(n, Math.max(last + 2, mc + 2, 8)); }
+      svg += labelSVG(lx, y + 14, label, sub);
+      const hs = isCont ? { r: new Set(), w: new Set() } : hiSets(step, v.id);
+      const contHot = isCont && step.ev.conts.includes(v.id);
+      if (isCont && !n) svg += `<text class="psub" x="${cx0}" y="${y + 46}">empty</text>`;
+      let heapN = null;
+      if (!isCont && v.dims === 1 && (/heap/i.test(it.name) || isHeapProg) && vals.some(c => c.k === 'num')) heapN = intVar(step, it.fis, ['heapSize', 'heap_size', 'size', 'n', 'count', 'len']);
+      for (let i = 0; i < show; i++) {
+        const x = cx0 + i * cw; let cls = hs.w.has(i) ? 'write' : hs.r.has(i) ? 'read' : '';
+        if (heapN != null && i >= heapN && heapN >= 0 && heapN < n) cls += ' outside';
+        if (contHot && ((v.kind === 'stack' && i === n - 1) || (v.kind !== 'stack' && (i === n - 1 || i === 0)))) cls += ' hot';
+        svg += cellSVG(x, y + 22, cw, G.CH, vals[i], cls);
+        if (!isCont || v.kind === 'vector' || v.kind === 'deque' || v.kind === 'priority_queue') svg += `<text class="cidx" x="${x + cw / 2}" y="${y + 22 + G.CH + 14}" text-anchor="middle">${i}</text>`;
+        const t = tgtOf(vals[i], byId); if (t != null) anchors.push({ key: `a${v.k}${v.id}.${i}`, x: x + cw / 2, y: y + 22 + G.CH / 2, to: t, down: true });
+      }
+      if (show < n) svg += `<text class="psub" x="${cx0 + show * cw + 10}" y="${y + 46}">… ${n - show} more unused slots</text>`;
+      let h = 22 + G.CH + 18;
+      if (isCont && n) {
+        const mk = (i, text) => { const x = cx0 + i * cw + cw / 2; return `<g class="ichip"><path d="M${x} ${y + 22 + G.CH + 2} l-4 6 h8 z"/><rect x="${x - text.length * 3.6 - 7}" y="${y + 22 + G.CH + 8}" width="${text.length * 7.2 + 14}" height="16" rx="8"/><text x="${x}" y="${y + 22 + G.CH + 19.5}" text-anchor="middle">${text}</text></g>`; };
+        if (v.kind === 'stack') svg += mk(n - 1, 'top');
+        else if (v.kind === 'queue') { svg += mk(0, 'front'); if (n > 1) svg += mk(n - 1, 'back'); }
+        else if (v.kind === 'deque' && n > 1) { /* indices already shown */ }
+        if (v.kind === 'stack' || v.kind === 'queue') h += 26;
+      }
+      const ch = chipsSVG(chips, i => cx0 + (i < 0 ? -0.5 : i + 0.5) * cw, y + 22 + G.CH + 20);
+      svg += ch.svg; h += ch.h + (ch.h ? 6 : 0);
+      let w = cx0 - lx + show * cw + 60;
+      if ((v.kind === 'priority_queue' && n) || (heapN != null)) {
+        const hn = v.kind === 'priority_queue' ? n : Math.max(0, Math.min(heapN >= 0 && heapN <= n ? heapN : n, n));
+        const tr = heapTreeSVG(vals, hn, cx0, y + h + 4, hs, v.kind === 'priority_queue' ? 'Heap inside the priority queue' : 'Heap view');
+        svg += tr.svg; h += tr.h + 8; w = Math.max(w, cx0 - lx + (tr.w || 0) + 40);
+      }
+      if (!isCont && vals.some(c => c.k === 'rec')) {
+        const nm = it.name.split('.').pop();
+        const f0 = vals[0] && vals[0].k === 'rec' ? vals[0].fields.map(f => f.name) : [];
+        const fa = f0.find(f => /^(u|src|from|s)$/i.test(f)), fb = f0.find(f => /^(v|dest|dst|to|d)$/i.test(f)), fw = f0.find(f => /^(w|wt|weight|cost)$/i.test(f));
+        if (fa && fb && /edge/i.test(nm + (vals[0].type || ''))) {
+          const edges = vals.filter(c => c.k === 'rec').map(c => { const g = n2 => { const f = c.fields.find(x => x.name === n2); return f && f.val.k === 'num' ? f.val.v : null; }; return { a: g(fa), b: g(fb), w: fw ? g(fw) : 1 }; }).filter(e => e.a != null && e.b != null);
+          const nodes = Math.max(...edges.flatMap(e => [e.a, e.b])) + 1;
+          if (nodes > 0 && nodes <= 14) { const ba = boolArrays(step, items); const g = graphSVG(nodes, edges, cx0, y + h + 6, { vis: ba.vis, dist: ba.dist, u: null }); svg += g.svg; h += g.h + 8; w = Math.max(w, cx0 - lx + g.w + 40); }
+        }
+      }
+      y += h + 22; maxX = Math.max(maxX, lx + w);
+    }
+
+    // linked nodes: chains from variables, then leftovers
+    const listStart = y + 56;
+    roots.forEach(r => placeChain(r, G.PADX, null));
+    heap.forEach(o => placeChain(o.id, G.PADX, null));
+    const freeRows = rows.filter(r => r.y == null);
+    const lostRow = r => r.ids.every(isLost);
+    const ordered = [...freeRows.filter(r => !lostRow(r)), ...freeRows.filter(lostRow)];
+    let yy = listStart; const lanes = [];
+    ordered.forEach(r => { if (lostRow(r) && !lanes.length) lanes.push({ y: yy - 24 }); r.y = yy; yy += G.ROWH; });
+    const P = new Map();
+    for (const r of rows) { let x = r.x0; for (const id of r.ids) { P.set(id, { x, y: r.y }); x += geo.get(id).w + G.GAP; } maxX = Math.max(maxX, x + 40); }
+    if (!ordered.length) yy = listStart - 30;
+
+    // trees
+    const treeObjs = heap.filter(o => kindOf(o).kind === 'tree');
+    let treeTop = yy + (ordered.length ? 0 : 20);
+    if (treeObjs.length) {
+      const kid = (o, side) => { if (!o.alive) return null; const k = kindOf(o); const t = tgtOf(fv(o, k[side]), byId); return t != null && kindOf(byId.get(t)).kind === 'tree' ? t : null; };
+      const parent = new Map(); for (const o of treeObjs) for (const s of ['left', 'right']) { const c = kid(o, s); if (c != null && !parent.has(c)) parent.set(c, o.id); }
+      let idx = 0; const tp = new Map();
+      const lay = (id, d) => { if (id == null || tp.has(id)) return; tp.set(id, { d, i: -1 }); lay(kid(byId.get(id), 'left'), d + 1); tp.get(id).i = idx++; lay(kid(byId.get(id), 'right'), d + 1); };
+      const top = id => { const seen = new Set([id]); while (parent.has(id) && !seen.has(parent.get(id))) { id = parent.get(id); seen.add(id); } return id; };
+      for (const r of roots) { const o = byId.get(r); if (kindOf(o).kind === 'tree') lay(top(r), 0); }
+      for (const o of treeObjs) if (!tp.has(o.id)) lay(top(o.id), 0);
+      const cw = Math.max(...treeObjs.map(o => geo.get(o.id).w)) + 22; let maxD = 0;
+      for (const [id, t] of tp) { P.set(id, { x: 96 + t.i * cw, y: treeTop + t.d * 112 }); maxD = Math.max(maxD, t.d); maxX = Math.max(maxX, 96 + t.i * cw + cw + 40); }
+      yy = treeTop + (maxD + 1) * 112 + 30;
+    }
+
+    // ghost / blueprint
+    let ghost = null, blueprint = null;
+    const phGeo = type => { const def = state.prog.structs[type]; if (!def) return null; return slotsFor(def.name, def.fields.map(f => ({ name: f.name, ptr: f.type.ptr > 0 && !f.dims.length, val: { k: 'ph' } }))); };
+    if (step.flags.ghost) {
+      const g = phGeo(step.flags.ghost.type);
+      if (g) {
+        const r0 = ordered[0]; let gx = G.PADX, gy = listStart;
+        if (r0) { const last = r0.ids[r0.ids.length - 1]; const p = P.get(last); gx = p.x + geo.get(last).w + G.GAP + 30; gy = p.y; }
+        else if (treeObjs.length) { gx = maxX; gy = treeTop; }
+        ghost = { x: gx, y: gy, geo: g, type: step.flags.ghost.type }; maxX = Math.max(maxX, gx + g.w + 60); yy = Math.max(yy, gy + G.ROWH);
+      }
+    }
+    if (!heap.length && !ghost && state.prog) {
+      const def = Object.values(state.prog.structs).find(d => d.fields.length && kinds[d.name] && kinds[d.name].kind !== 'plain') || (!items.length && Object.values(state.prog.structs).find(d => d.fields.length));
+      if (def) { const g = phGeo(def.name); blueprint = { x: G.PADX, y: listStart, geo: g, def }; yy = Math.max(yy, listStart + G.ROWH); maxX = Math.max(maxX, G.PADX + g.w + 200); }
+    }
+
+    // nodes
+    const nodes = [];
+    for (const o of heap) { const p = P.get(o.id); if (!p) continue; let cls = o.alive ? '' : 'dead'; if (isLost(o.id)) cls += ' lost'; nodes.push({ key: 'n' + o.id, id: o.id, x: p.x, y: p.y, geo: geo.get(o.id), o, cls, kind: kindOf(o) }); }
+
+    // edges
+    const edges = [];
+    for (const n of nodes) {
+      if (!n.o.alive) continue;
+      const k = n.kind;
+      for (const sl of n.geo.slots) {
+        if (!sl.ptr) continue; const t = tgtOf(sl.val, byId); if (t == null || !P.has(t)) continue;
+        const S = P.get(n.id), T = P.get(t), tw = geo.get(t).w; const sx = S.x + sl.cx; let d, cls = '';
+        if (k.kind === 'tree' && kindOf(byId.get(t)).kind === 'tree') { const sy = S.y + 33, tx = T.x + tw / 2, ty = T.y; d = `M${sx} ${sy} C${sx} ${sy + 44} ${tx} ${ty - 50} ${tx} ${ty - 3}`; }
+        else if (k.kind === 'doubly' && sl.name === k.back) { const sy = S.y + 40, tx = T.x + tw, ty = T.y + 40; d = Math.abs(ty - sy) < 1 && tx < sx ? `M${sx} ${sy} L${tx + 3} ${ty}` : `M${sx} ${sy} C${sx - 60} ${sy + 30} ${tx + 60} ${ty + 30} ${tx + 3} ${ty}`; cls = 'back'; }
+        else {
+          const dy = k.kind === 'doubly' ? 26 : 33; const sy = S.y + dy, tx = T.x, ty = T.y + dy;
+          if (Math.abs(ty - sy) < 1 && tx > sx) d = `M${sx} ${sy} L${tx - 3} ${ty}`;
+          else if (Math.abs(ty - sy) < 1) { const dip = G.H + 40; d = `M${sx} ${sy} C${sx + 80} ${sy + dip} ${tx - 80} ${ty + dip} ${tx - 3} ${ty}`; cls = 'loop'; }
+          else d = `M${sx} ${sy} C${sx + 80} ${sy} ${tx - 80} ${ty} ${tx - 3} ${ty}`;
+        }
+        if (!byId.get(t).alive) cls += ' dang';
+        edges.push({ key: `${n.id}.${sl.name}`, d, cls, to: t });
+      }
+    }
+    for (const a of anchors) {
+      if (!P.has(a.to)) continue; const T = P.get(a.to); const tk = kindOf(byId.get(a.to)); const tw = geo.get(a.to).w;
+      let d; const tdy = tk.kind === 'doubly' ? 26 : 33;
+      if (a.down) { const tx = T.x + tw / 2, ty = T.y; d = `M${a.x} ${a.y} C${a.x} ${a.y + 70} ${tx} ${ty - 70} ${tx} ${ty - 3}`; }
+      else if (Math.abs(T.y + tdy - a.y) < 30 && T.x > a.x) d = `M${a.x} ${a.y} L${T.x - 3} ${T.y + tdy}`;
+      else d = `M${a.x} ${a.y} C${a.x + 70} ${a.y} ${T.x - 70} ${T.y + tdy} ${T.x - 3} ${T.y + tdy}`;
+      edges.push({ key: a.key, d, cls: byId.get(a.to).alive ? 'cellp' : 'cellp dang', to: a.to });
+    }
+
+    // tags
+    const tags = []; const perNode = new Map();
+    for (const vp of varPtrs) {
+      if (vp.to == null || !P.has(vp.to)) continue;
+      if (!perNode.has(vp.to)) perNode.set(vp.to, []);
+      const list = perNode.get(vp.to); if (list.some(t => t.label === vp.label && t.fi === vp.fi)) continue;
+      list.push({ label: vp.label, fi: vp.fi, cur: vp.fi === lastFi || step.frames[vp.fi].global, fn: step.frames[vp.fi].fn });
+    }
+    for (const [id, list] of perNode) {
+      list.sort((a, b) => (b.cur - a.cur) || (b.fi - a.fi));
+      const p = P.get(id), w = geo.get(id).w, tree = kindOf(byId.get(id)).kind === 'tree';
+      const shown = list.slice(0, tree ? 3 : 4);
+      shown.forEach((t, i) => {
+        const tw = t.label.length * 7.2 + 16;
+        const x = tree ? p.x - tw - 10 : p.x + w / 2 - tw / 2; const ty = tree ? p.y + 4 + i * 21 : p.y - 28 - i * 21;
+        tags.push({ key: `t${t.fi}:${t.label}`, x, y: ty, w: tw, label: t.label, cur: t.cur, stem: i === 0, tree, fn: t.fn });
+      });
+      if (list.length > shown.length) tags.push({ key: `t+${id}`, x: tree ? p.x - 40 : p.x + w / 2 - 14, y: tree ? p.y + 4 + shown.length * 21 : p.y - 28 - shown.length * 21, w: 28, label: `+${list.length - shown.length}`, cur: false, stem: false, tree });
+    }
+    const nullChips = varPtrs.filter(v => v.to == null && (v.fi === lastFi || step.frames[v.fi].global) && !/\./.test(v.label));
+
+    if (lanes.length) svg += `<text class="lane" x="${G.PADX}" y="${lanes[0].y}">Lost in memory: no pointer reaches these nodes</text>`;
+    const h = Math.max(yy, y) + 40;
+    return { svg, nodes, edges, tags, ghost, blueprint, w: maxX + 40, h, byId, isLost, linkTo, rows: ordered, nullChips, items, reach, han };
+  }
+
+  // ---------- node drawing ----------
+  function nodeBody(n, sets) {
+    const { geo, o } = n; const H = G.H; const k = n.kind || { kind: 'plain' };
+    let s = `<rect class="box" x="0" y="0" width="${geo.w}" height="${H}" rx="7"/>`;
+    geo.slots.forEach((sl, i) => {
+      if (i > 0) s += `<line class="div" x1="${sl.x}" y1="0" x2="${sl.x}" y2="${H}"/>`;
+      if (sets.has(o.id + '.' + sl.name)) s += `<rect class="slot-flash" x="${sl.x + 2}" y="2" width="${sl.w - 4}" height="${H - 4}" rx="5"/>`;
+      s += `<text class="fname" x="${sl.cx}" y="13" text-anchor="middle">${esc(sl.name)}</text>`;
+      const v = sl.val;
+      if (sl.ptr) {
+        const dy = dotY(k, sl.name);
+        if (v.k === 'ph') { /* ghost */ }
+        else if (v.k === 'ptr' && v.uninit) s += `<text class="garb" x="${sl.cx}" y="39" text-anchor="middle">?</text>`;
+        else if (v.k === 'ptr' && v.to == null) {
+          if (k.link === sl.name && k.kind !== 'tree') s += `<circle class="dot null" cx="${sl.cx}" cy="${dy}" r="3.5"/><line class="null-a" x1="${sl.cx}" y1="${dy}" x2="${geo.w + 22}" y2="${dy}"/><text class="null-t" x="${geo.w + 27}" y="${dy + 3.5}">NULL</text>`;
+          else s += `<line class="slash" x1="${sl.x + 8}" y1="${H - 8}" x2="${sl.x + sl.w - 8}" y2="21"/>`;
+        } else if (v.k === 'ptr') s += `<circle class="dot" cx="${sl.cx}" cy="${dy}" r="4"/>`;
+        else s += `<text class="fval" x="${sl.cx}" y="38" text-anchor="middle">${esc(valText(v, true))}</text>`;
+      } else s += `<text class="fval${v.k === 'uninit' ? ' garb' : ''}" x="${sl.cx}" y="38" text-anchor="middle">${esc(valText(v, true))}</text>`;
+    });
+    if (o.addr) s += `<text class="addr" x="0" y="${H + 15}">${o.addr}${o.alive === false ? ' · deleted' : ''}</text>`;
+    return s;
+  }
+
+  // ---------- render ----------
+  const L = { misc: $('#L-misc'), edges: $('#L-edges'), nodes: $('#L-nodes'), tags: $('#L-tags') };
+  const nodeEls = new Map(), edgeEls = new Map(), tagEls = new Map();
+  let lastLayout = null;
+  function renderViz(step) {
+    const Lay = computeLayout(step); lastLayout = Lay;
+    const svg = $('#viz'); const wrap = $('#canvasWrap');
+    svg.setAttribute('width', Math.max(wrap.clientWidth, Lay.w)); svg.setAttribute('height', Math.max(wrap.clientHeight - 4, Lay.h));
+    let misc = Lay.svg;
+    if (Lay.ghost) {
+      const g = Lay.ghost;
+      misc += `<g class="nd ghost" transform="translate(${g.x},${g.y})">${nodeBody({ geo: g.geo, o: { id: 'g', addr: '' }, kind: kinds[g.type] }, new Set())}<text class="ghost-t" x="0" y="-12">new ${esc(g.type)}(…) · finish the line to allocate it</text></g>`;
+    }
+    if (Lay.blueprint) {
+      const b = Lay.blueprint; const k = kinds[b.def.name] || {};
+      misc += `<g class="nd blue" transform="translate(${b.x},${b.y})">${nodeBody({ geo: b.geo, o: { id: 'b', addr: '' }, kind: k }, new Set())}<text class="ghost-t" x="0" y="-12">Blueprint of struct ${esc(b.def.name)}${k.label && k.kind !== 'plain' ? ' · recognized as a ' + esc(k.label) : ''}</text><text class="psub" x="0" y="${G.H + 22}">No ${esc(b.def.name)} exists in memory yet. Create one with new.</text></g>`;
+    }
+    L.misc.innerHTML = misc;
+
+    const sets = new Set(step.ev.sets.filter(o => o && o.obj != null).map(o => o.obj + '.' + o.f));
+    const now = Date.now(); const seen = new Set();
+    for (const n of Lay.nodes) {
+      let el = nodeEls.get(n.key);
+      if (!el) { el = svgEl('g'); el.appendChild(svgEl('g')).setAttribute('class', 'nd-body'); L.nodes.appendChild(el); nodeEls.set(n.key, el); el.style.transform = `translate(${n.x}px,${n.y}px)`; el._born = now; }
+      el.setAttribute('class', 'nd ' + n.cls + (now - el._born < 700 && !reduceMotion ? ' born' : '') + (step.ev.free.includes(n.id) ? ' dying' : ''));
+      el.style.transform = `translate(${n.x}px,${n.y}px)`;
+      el.firstChild.innerHTML = nodeBody(n, sets);
+      seen.add(n.key);
+    }
+    for (const [k, el] of nodeEls) if (!seen.has(k)) { nodeEls.delete(k); el.classList.add('leave'); setTimeout(() => el.remove(), 320); }
+
+    const eseen = new Set();
+    for (const e of Lay.edges) {
+      let p = edgeEls.get(e.key); let drawing = false;
+      if (!p) { p = svgEl('path'); L.edges.appendChild(p); edgeEls.set(e.key, p); if (!reduceMotion) { p.setAttribute('pathLength', '1'); drawing = true; setTimeout(() => { p.removeAttribute('pathLength'); p.classList.remove('drawing'); }, 650); } }
+      const retarget = p._to != null && p._to !== e.to; p._to = e.to;
+      p.setAttribute('class', 'edge ' + e.cls + (drawing || p.classList.contains('drawing') ? ' drawing' : '') + (retarget ? ' retarget' : ''));
+      p.setAttribute('d', e.d); p.style.d = `path("${e.d}")`;
+      eseen.add(e.key);
+    }
+    for (const [k, p] of edgeEls) if (!eseen.has(k)) { edgeEls.delete(k); p.remove(); }
+
+    const tseen = new Set();
+    for (const t of Lay.tags) {
+      let g = tagEls.get(t.key);
+      if (!g) { g = svgEl('g'); L.tags.appendChild(g); tagEls.set(t.key, g); g.style.transform = `translate(${t.x}px,${t.y}px)`; }
+      g.setAttribute('class', 'tag' + (t.cur ? '' : ' other'));
+      g.style.transform = `translate(${t.x}px,${t.y}px)`;
+      g.innerHTML = `<title>${esc(t.label)}${t.fn ? ' in ' + esc(t.fn) + '()' : ''}</title><rect width="${t.w}" height="18" rx="9"/><text x="${t.w / 2}" y="12.6" text-anchor="middle">${esc(t.label)}</text>` + (t.stem ? (t.tree ? `<path class="stem" d="M${t.w} 9 h8"/>` : `<path class="stem" d="M${t.w / 2} 18 v9"/>`) : '');
+      tseen.add(t.key);
+    }
+    for (const [k, g] of tagEls) if (!tseen.has(k)) { tagEls.delete(k); g.remove(); }
+
+    // null pointer chips
+    $('#chips').innerHTML = Lay.nullChips.slice(0, 8).map(c => `<span class="nchip"><b>${esc(c.label)}</b> → ${c.uninit ? '? (not set)' : 'NULL'}</span>`).join('');
+    const empty = !Lay.nodes.length && !Lay.svg && !Lay.ghost && !Lay.blueprint;
+    const em = $('#empty'); em.hidden = !empty;
+    if (empty) em.innerHTML = step.flags.nomain && !Object.keys(state.prog.structs).length
+      ? '<b>Start writing C++.</b><span>Declare a struct with a pointer to itself, an array, or a stack, and it appears here as you type.</span>'
+      : '<b>Nothing in memory yet.</b><span>Create something, for example <code>Node* head = new Node(10);</code> or <code>int arr[5] = {4, 2, 7, 1, 9};</code></span>';
+    return Lay;
+  }
+
+  function stackPanel(step) {
+    const addr = id => { const o = step.heap.find(o => o.id === id); return o ? o.addr : 'freed'; };
+    const vt = v => v.k === 'ptr' ? (v.uninit ? '? not set' : v.to == null ? 'NULL' : '→ ' + addr(v.to)) : valText(v, true);
+    if (!step.frames.length) return '<p class="muted">No function is running.</p>';
+    return step.frames.map((f, i) => ({ f, i })).reverse().map(({ f, i }) => {
+      const cur = i === step.frames.length - 1;
+      const rows = f.vars.map(v => `<div class="var${v.ref ? ' ref' : ''}"><span class="vn">${esc(v.name)}</span><span class="vt">${esc(v.type)}</span><span class="vv">${esc(v.ref && v.name !== '*this' ? `${vt(v.val)} (alias of ${v.alias})` : vt(v.val))}</span></div>`).join('') || '<div class="var muted">no variables yet</div>';
+      return `<div class="frame${cur ? ' cur' : ''}"><div class="fn">${esc(f.global ? 'Global variables' : f.fn + '()')}${cur && !f.global ? '<span class="fbadge">running</span>' : ''}</div>${rows}</div>`;
+    }).join('');
+  }
+
+  function checks(step, Lay) {
+    const out = []; const byId = Lay.byId;
+    if (step.flags.error) out.push({ sev: 'err', t: step.note, line: step.line });
+    if (state.parseErr && !state.parseErr.soft) out.push({ sev: 'warn', t: `Line ${state.parseErr.line}: ${state.parseErr.msg}. Everything above that line still runs.`, line: state.parseErr.line });
+    const lost = step.heap.filter(o => Lay.isLost(o.id));
+    if (lost.length) out.push({ sev: 'warn', t: `${lost.length === 1 ? 'A node is' : lost.length + ' nodes are'} lost (${lost.map(o => o.addr).join(', ')}). No pointer reaches ${lost.length === 1 ? 'it' : 'them'} anymore, so ${lost.length === 1 ? 'it' : 'they'} can never be deleted. This is a memory leak.` });
+    const ctorObjs = new Set(); step.frames.forEach(f => f.vars.forEach(v => { if (v.name === 'this' && v.val.k === 'ptr') ctorObjs.add(v.val.to); }));
+    step.frames.forEach((f, fi) => f.vars.forEach(v => { if (v.val.k === 'ptr' && v.val.to != null && byId.has(v.val.to) && !byId.get(v.val.to).alive && !step.ev.free.includes(v.val.to)) out.push({ sev: 'warn', t: `${v.name} still points to a deleted node (${byId.get(v.val.to).addr}). Set ${v.name} = NULL after deleting.` }); }));
+    for (const o of step.heap) if (o.alive) for (const f of o.fields) {
+      if (f.val.k === 'ptr' && f.val.to != null && byId.has(f.val.to) && !byId.get(f.val.to).alive && !step.ev.free.includes(f.val.to)) out.push({ sev: 'warn', t: `Node ${o.addr} → ${f.name} points to a deleted node. Relink it before deleting.` });
+      if (f.ptr && f.val.k === 'ptr' && f.val.uninit && !ctorObjs.has(o.id) && !step.ev.alloc.includes(o.id)) out.push({ sev: 'warn', t: `Node ${o.addr} has a ${f.name} pointer that was never set (garbage). Set it to NULL so the end of the list is marked.` });
+    }
+    for (const r of Lay.rows) {
+      const last = r.ids[r.ids.length - 1]; const t = Lay.linkTo(byId.get(last));
+      if (t != null && r.ids.includes(t)) out.push(t === r.ids[0] ? { sev: 'info', t: 'Circular list: the last node links back to the first. A traversal needs a stop condition such as temp != head.' } : { sev: 'warn', t: `Cycle: node ${byId.get(last).addr} links back into the middle of the list, so following the links never reaches NULL.` });
+    }
+    if (!out.length) out.push({ sev: 'ok', t: step.flags.done ? 'Program finished with no memory problems.' : 'No problems at this step.' });
+    return out.slice(0, 6);
+  }
+
+  function detected(step, Lay) {
+    const labels = new Set();
+    for (const name of Object.keys(state.prog.structs)) { const k = kinds[name]; if (k && k.kind !== 'plain') labels.add(k.kind === 'tree' ? (state.funcNames.some(f => /insert|search|delete/i.test(f)) ? 'Binary search tree' : 'Binary tree') : k.kind === 'doubly' ? 'Doubly linked list' : 'Linked list'); }
+    for (const it of Lay.items) {
+      const v = it.val;
+      if (v.k === 'cont') labels.add({ stack: 'Stack', queue: 'Queue', deque: 'Deque', priority_queue: 'Priority queue', vector: 'Vector' }[v.kind]);
+      else if (v.k === 'arr') {
+        if (v.vals.some(c => c.k === 'ptr')) labels.add(/hash|table|bucket/i.test(it.name) ? 'Hash table (chaining)' : 'Array of pointers');
+        else if (v.dims > 1) labels.add(/adj|graph|cost|weight/i.test(it.name) ? 'Graph (adjacency matrix)' : 'Matrix');
+        else if (/stack|stk/i.test(it.name) || it.recInts.some(r => r.name === 'top') || [...it.fis].some(fi => step.frames[fi].vars.some(x => x.name === 'top' && x.val.k === 'num'))) labels.add('Stack (array)');
+        else if (/^q$|queue/i.test(it.name.split('.').pop()) || it.recInts.some(r => r.name === 'rear') || [...it.fis].some(fi => step.frames[fi].vars.some(x => x.name === 'rear' && x.val.k === 'num'))) labels.add('Queue (array)');
+        else if (/hash|table/i.test(it.name)) labels.add('Hash table (open addressing)');
+        else if (/heap/i.test(it.name) || state.funcNames.some(f => /heap/i.test(f))) labels.add('Heap');
+        else if (v.vals.some(c => c.k === 'cont')) labels.add('Graph (adjacency list)');
+        else labels.add('Array');
+      }
+    }
+    if (Lay.han) labels.add('Tower of Hanoi');
+    if (state.steps.some(s => { const fs = s.frames.map(f => f.fn); return fs.some((f, i) => f !== 'globals' && fs.indexOf(f) !== i); })) labels.add('Recursion');
+    return [...labels].filter(Boolean);
+  }
+
+  function render(stepping) {
+    const steps = state.steps; if (!steps.length) return;
+    const step = steps[state.idx]; const prev = state.idx > 0 ? steps[state.idx - 1] : null;
+    scrub.max = steps.length - 1; scrub.value = state.idx;
+    $('#count').textContent = `Step ${state.idx + 1} of ${steps.length}`;
+    const mode = $('#mode');
+    mode.textContent = state.live ? 'Live' : 'Stepping'; mode.className = 'pill' + (state.live ? ' live' : '');
+    const Lay = renderViz(step, prev);
+
+    // explanation
+    const lineText = step.line ? (state.lines[step.line - 1] || '').trim() : '';
+    let note = step.note || '';
+    const f = step.flags;
+    if (f.halt && !f.needInput) {
+      const pe = state.parseErr;
+      if (f.ghost) note = `Finish line ${step.line} to create the new ${f.ghost.type}. The dashed box shows where it will appear.`;
+      else if (f.end) note = 'Reached the end of what you have written so far.';
+      else note = pe ? `Line ${pe.line} isn't finished yet: ${pe.msg}. Everything above it has run.` : 'Paused here.';
+    }
+    if (f.nomain) note = Object.keys(state.prog.structs).length ? 'Your struct is drawn as a blueprint. Write int main() { … } to run the code.' : 'Write a struct and an int main() function to see your data structure.';
+    const cls = f.error ? 'err' : f.halt ? 'warn' : f.done ? 'ok' : '';
+    $('#explain').innerHTML = `<span class="lnchip ${cls}">${step.line ? 'Line ' + step.line : 'Ready'}</span>${lineText ? `<code>${esc(lineText)}</code>` : ''}<span class="note">${esc(note)}</span>`;
+
+    // editor marks
+    stepLine = state.live ? (f.error || f.halt ? step.line : 0) : step.line;
+    stepKind = f.error ? 'err' : f.halt ? 'warn' : '';
+    placeStepLine();
+    markGutter(f.error ? step.line : state.parseErr && !state.parseErr.soft ? state.parseErr.line : 0, stepLine);
+    if (stepping && stepLine) {
+      const top = 12 + (stepLine - 1) * 20;
+      if (top < ta.scrollTop + 10 || top > ta.scrollTop + ta.clientHeight - 40) ta.scrollTop = top - ta.clientHeight / 3;
+    }
+
+    // status
+    const st = $('#status-msg');
+    if (f.error) { st.textContent = `Runtime error on line ${step.line}`; st.className = 'st err'; }
+    else if (state.parseErr && !state.parseErr.soft) { st.textContent = `Line ${state.parseErr.line}: ${state.parseErr.msg}`; st.className = 'st warn'; }
+    else if (steps[steps.length - 1].flags.needInput) { st.textContent = 'Waiting for input'; st.className = 'st warn'; }
+    else if (steps[steps.length - 1].flags.halt) { st.textContent = 'Running everything written so far'; st.className = 'st'; }
+    else { st.textContent = `Ran ${steps.length} steps`; st.className = 'st ok'; }
+
+    $('#stack').innerHTML = stackPanel(step);
+    $('#issues').innerHTML = checks(step, Lay).map(c => `<div class="issue ${c.sev}">${esc(c.t)}</div>`).join('');
+    $('#out').textContent = step.out || '';
+    $('#out').classList.toggle('muted', !step.out);
+    if (!step.out) $('#out').textContent = 'Nothing printed yet.';
+    const s = step.stats || {};
+    $('#stats').innerHTML = `<span><b>${state.idx + 1}</b> steps</span><span><b>${s.cmp || 0}</b> comparisons</span><span><b>${s.writes || 0}</b> writes</span><span><b>${s.calls || 0}</b> calls</span>${s.maxDepth > 1 ? `<span>depth <b>${s.maxDepth}</b></span>` : ''}`;
+    const dl = detected(step, Lay);
+    $('#detect').innerHTML = dl.length ? dl.map(d => `<span class="dchip">${esc(d)}</span>`).join('') : '<span class="dchip dim">Nothing recognized yet</span>';
+  }
+
+  // ---------- examples ----------
+  const sel = $('#ex');
+  let html = '<option value="">Load an example…</option>';
+  for (const g of EXAMPLES) html += `<optgroup label="${esc(g.unit)}">` + g.items.map(it => `<option value="${esc(it.id)}">${esc(it.name)}</option>`).join('') + '</optgroup>';
+  sel.innerHTML = html;
+  const byId = {}; EXAMPLES.forEach(g => g.items.forEach(it => { byId[it.id] = it; }));
+  sel.onchange = () => {
+    const it = byId[sel.value]; if (!it) return;
+    ta.value = it.code; $('#stdin').value = it.stdin || '';
+    ta.scrollTop = 0; ta.scrollLeft = 0;
+    nodeEls.forEach(el => el.remove()); nodeEls.clear(); edgeEls.forEach(p => p.remove()); edgeEls.clear(); tagEls.forEach(g => g.remove()); tagEls.clear();
+    onInput(); sel.value = '';
+  };
+
+  // ---------- boot ----------
+  let start = null;
+  try { start = localStorage.getItem('vc-draft'); } catch (e) { start = null; }
+  ta.value = start || byId[DEFAULT_EXAMPLE].code;
+  renderCode(); updateCursor(); runNow();
+  window.addEventListener('resize', () => render());
+})();
+
+</script>
+</body>
+</html>

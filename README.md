@@ -15,8 +15,16 @@ Static HTML, no build step, no dependencies. Edit and push to `main`; Pages rede
 | FAQs | `faq/index.html` | Question chips; each answer opens in a side panel |
 | Contact | `contact/index.html` | WhatsApp, email, partnerships, Instagram |
 | Links | `links/index.html` | The Instagram bio link page |
+| Products | `products/index.html` | Unlisted. Free tools we built; reached only by direct link |
+| Visual Code | `visual-code/index.html` | Unlisted. The Visual Code app (C++ data structure visualizer) |
 
 Every page except Contact ends with a "Let's talk →" band linking to `/contact/`.
+
+## Unlisted pages
+
+`/products/` and `/visual-code/` are deliberately left out of the menu, footer and home page, and carry `<meta name="robots" content="noindex">` so search engines skip them. Share them by link. Don't add them to the navigation unless we decide to list products publicly.
+
+`visual-code/index.html` is a built file. Its source lives in the Visual Code repository; rebuild there (`node build.js`) and copy `site.html` over this file to update it. The app runs entirely in the visitor's browser, so it adds no server load beyond serving one file of about 190 KB.
 
 ## Shared parts
 
