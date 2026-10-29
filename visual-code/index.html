@@ -302,6 +302,11 @@ button, select, input { font: inherit; color: inherit; }
 .bug .note { margin: 0; font-size: 12px; color: var(--faint); line-height: 1.45; }
 @media (max-width: 960px) { .bugbtn { margin-left: auto; } }
 .brand .by { color: var(--accent); text-decoration: none; font-weight: 500; } .brand .by:hover { text-decoration: underline; }
+.dlbtn { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font: 500 12px/1 var(--f-ui); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); cursor: pointer; white-space: nowrap; transition: border-color .15s, transform .1s; }
+.dlbtn:hover { border-color: var(--faint); } .dlbtn:active { transform: scale(.96); }
+.dlbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dlbtn kbd { font: 500 10.5px/1 var(--f-code); color: var(--faint); }
+@media (max-width: 560px) { .pane-head .hint, .dlbtn kbd { display: none; } }
 </style>
 
 <div class="toast" id="toast" role="status" hidden><span id="toast-msg"></span><button type="button" id="toast-undo">Undo</button></div>
@@ -320,7 +325,7 @@ button, select, input { font: inherit; color: inherit; }
   </header>
   <div class="main">
     <section class="pane editor-pane" aria-label="Code editor">
-      <div class="pane-head"><span class="file">main.cpp</span><span>Type C++. The drawing updates as you write.</span></div>
+      <div class="pane-head"><span class="file">main.cpp</span><span class="hint">Type C++. The drawing updates as you write.</span><button class="dlbtn" id="dlcode" type="button" title="Download your code as main.cpp (Ctrl+S)"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 2v7M4 6.5 7 9.5l3-3M2.5 12h9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Download .cpp <kbd id="dlkey">Ctrl+S</kbd></button></div>
       <div class="editor">
         <div class="gutter"><div id="gutter"></div></div>
         <div class="code">
@@ -2686,12 +2691,30 @@ const DEFAULT_EXAMPLE = '00_by_hand';
   }
   function showToast(message, before) {
     undoCode = before; const t = $('#toast');
-    $('#toast-msg').textContent = message; t.hidden = false;
+    $('#toast-msg').textContent = message; $('#toast-undo').hidden = false; t.hidden = false;
     clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; undoCode = null; }, 7000);
   }
   $('#toast-undo').onclick = () => { if (undoCode == null) return; const c = undoCode; $('#toast').hidden = true; undoCode = null; loadCode(c, '', null); };
   const newFile = () => loadCode(BLANK, '', 'Started a new file.', BLANK.indexOf('    \n') + 4);
   $('#newfile').onclick = newFile;
+
+  // ---------- download code ----------
+  const downloadCode = () => {
+    let code = ta.value;
+    if (!code.endsWith('\n')) code += '\n';
+    const url = URL.createObjectURL(new Blob([code], { type: 'text/x-c++src;charset=utf-8' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'main.cpp';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const t = $('#toast');
+    $('#toast-msg').textContent = 'Saved main.cpp. Compile it with g++ main.cpp -o main'; $('#toast-undo').hidden = true; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; $('#toast-undo').hidden = false; }, 5000);
+  };
+  $('#dlcode').onclick = downloadCode;
+  if (/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)) { $('#dlkey').textContent = '⌘S'; $('#dlcode').title = 'Download your code as main.cpp (⌘S)'; }
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 's') { e.preventDefault(); downloadCode(); }
+  });
   sel.onchange = () => {
     const it = byId[sel.value]; if (!it) return;
     loadCode(it.code, it.stdin, `Loaded "${it.name}".`); sel.value = '';
