@@ -302,6 +302,16 @@ button, select, input { font: inherit; color: inherit; }
 .bug .note { margin: 0; font-size: 12px; color: var(--faint); line-height: 1.45; }
 @media (max-width: 960px) { .bugbtn { margin-left: auto; } }
 .brand .by { color: var(--accent); text-decoration: none; font-weight: 500; } .brand .by:hover { text-decoration: underline; }
+.kbbtn { margin-left: auto; display: inline-grid; place-items: center; width: 28px; height: 26px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer; transition: border-color .15s, color .15s, transform .1s; }
+.kbbtn:hover { border-color: var(--faint); color: var(--fg); } .kbbtn:active { transform: scale(.96); }
+.kbbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.kbbtn + .dlbtn { margin-left: 6px; }
+.keys { width: 100%; border-collapse: collapse; font-size: 13px; }
+.keys td { padding: 7px 0; border-top: 1px solid var(--line-2); vertical-align: middle; }
+.keys tr:first-child td { border-top: 0; }
+.keys td:last-child { text-align: right; white-space: nowrap; }
+.keys kbd { font: 500 11.5px/1 var(--f-code); color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 3px 6px; margin-left: 3px; }
+.bug .actions.end { justify-content: flex-end; }
 .dlbtn { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font: 500 12px/1 var(--f-ui); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); cursor: pointer; white-space: nowrap; transition: border-color .15s, transform .1s; }
 .dlbtn:hover { border-color: var(--faint); } .dlbtn:active { transform: scale(.96); }
 .dlbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -325,7 +335,7 @@ button, select, input { font: inherit; color: inherit; }
   </header>
   <div class="main">
     <section class="pane editor-pane" aria-label="Code editor">
-      <div class="pane-head"><span class="file">main.cpp</span><span class="hint">Type C++. The drawing updates as you write.</span><button class="dlbtn" id="dlcode" type="button" title="Download your code as main.cpp (Ctrl+S)"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 2v7M4 6.5 7 9.5l3-3M2.5 12h9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Download .cpp <kbd id="dlkey">Ctrl+S</kbd></button></div>
+      <div class="pane-head"><span class="file">main.cpp</span><span class="hint">Type C++. The drawing updates as you write.</span><button class="kbbtn" id="kbbtn" type="button" aria-haspopup="dialog" title="Keyboard shortcuts" aria-label="Keyboard shortcuts"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="4" width="13" height="8.5" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M4 6.6h.01M6.3 6.6h.01M8.6 6.6h.01M10.9 6.6h.01M4.6 10h6.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button><button class="dlbtn" id="dlcode" type="button" title="Download your code as main.cpp (Ctrl+S)"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 2v7M4 6.5 7 9.5l3-3M2.5 12h9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Download .cpp <kbd id="dlkey">Ctrl+S</kbd></button></div>
       <div class="editor">
         <div class="gutter"><div id="gutter"></div></div>
         <div class="code">
@@ -1911,7 +1921,124 @@ const DEFAULT_EXAMPLE = '00_by_hand';
     if (k === '{' && /^\s*(template\s*<[^>]*>\s*)?(class|struct|union|enum(\s+class)?)\b[^;(){}]*$/.test(line) && next !== ';') tail = '};';
     insertText(k + tail); ta.setSelectionRange(s + 1, s + 1); return true;
   }
+  // VS Code-style line shortcuts. Every edit goes through insertText so Ctrl+Z undoes it in one step.
+  function lineBounds(v, s, end) {
+    const a = v.lastIndexOf('\n', s - 1) + 1;
+    let e2 = end;
+    if (end > s && v[end - 1] === '\n') e2 = end - 1; // selection ending at a line start doesn't include that line
+    let b = v.indexOf('\n', Math.max(e2, a)); if (b === -1) b = v.length;
+    return [a, b];
+  }
+  function replaceRange(a, b, text, selA, selB) {
+    ta.setSelectionRange(a, b);
+    if (text === '') { deleteRange(a, b); } else insertText(text);
+    ta.setSelectionRange(selA, selB === undefined ? selA : selB);
+    updateCursor();
+  }
+  function shiftIndent(out) {
+    const v = ta.value, s = ta.selectionStart, end = ta.selectionEnd;
+    const [a, b] = lineBounds(v, s, end);
+    const lines = v.slice(a, b).split('\n');
+    let firstDelta = 0, total = 0;
+    const next = lines.map((ln, i) => {
+      let d;
+      if (out) { const n = ln.match(/^ {0,4}/)[0].length || (ln[0] === '\t' ? 1 : 0); d = -n; ln = ln.slice(n); }
+      else { d = ln.trim() || lines.length === 1 ? 4 : 0; ln = ' '.repeat(d) + ln; }
+      if (i === 0) firstDelta = d; total += d; return ln;
+    });
+    const lead = (lines[0].match(/^[ \t]*/) || [''])[0].length;
+    const s2 = out ? Math.max(a, s + firstDelta) : (s - a <= 0 && s !== end ? s : s + firstDelta);
+    replaceRange(a, b, next.join('\n'), Math.max(a, s2), Math.max(a, end + total));
+  }
+  function toggleComment() {
+    const v = ta.value, s = ta.selectionStart, end = ta.selectionEnd;
+    const [a, b] = lineBounds(v, s, end);
+    const lines = v.slice(a, b).split('\n');
+    const used = lines.filter(l => l.trim());
+    if (!used.length) return;
+    const allOn = used.every(l => /^\s*\/\//.test(l));
+    const minInd = Math.min(...used.map(l => l.match(/^\s*/)[0].length));
+    let firstDelta = 0, total = 0;
+    const next = lines.map((ln, i) => {
+      let d = 0;
+      if (allOn) { const m = ln.match(/^(\s*)\/\/ ?/); if (m) { d = -(m[0].length - m[1].length); ln = m[1] + ln.slice(m[0].length); } }
+      else if (ln.trim()) { ln = ln.slice(0, minInd) + '// ' + ln.slice(minInd); d = 3; }
+      if (i === 0) firstDelta = d; total += d; return ln;
+    });
+    const txt = next.join('\n');
+    const at = allOn ? (lines[0].match(/^\s*/)[0].length) : minInd; // column where // is added or removed
+    const s2 = (s - a) < at || (s - a === at && s !== end && !allOn) ? s : Math.max(a + at, s + firstDelta);
+    if (s === end) replaceRange(a, b, txt, s2);
+    else replaceRange(a, b, txt, s2, Math.max(a, end + total));
+  }
+  function lineShortcut(e) {
+    if (e.isComposing) return false;
+    const mod = e.ctrlKey || e.metaKey, k = e.key;
+    const v = ta.value, s = ta.selectionStart, end = ta.selectionEnd;
+    const [a, b] = lineBounds(v, s, end);
+    const block = v.slice(a, b);
+    // Alt+Shift+Down / Up: copy line(s)
+    if (e.altKey && e.shiftKey && !mod && (k === 'ArrowDown' || k === 'ArrowUp')) {
+      if (k === 'ArrowDown') { const d = block.length + 1; replaceRange(b, b, '\n' + block, s + d, end + d); }
+      else replaceRange(a, a, block + '\n', s, end);
+      return true;
+    }
+    // Alt+Down / Up: move line(s)
+    if (e.altKey && !e.shiftKey && !mod && (k === 'ArrowDown' || k === 'ArrowUp')) {
+      if (k === 'ArrowDown') {
+        if (b >= v.length) return true;
+        let nb = v.indexOf('\n', b + 1); if (nb === -1) nb = v.length;
+        const nxt = v.slice(b + 1, nb), d = nxt.length + 1;
+        replaceRange(a, nb, nxt + '\n' + block, s + d, end + d);
+      } else {
+        if (a === 0) return true;
+        const pa = v.lastIndexOf('\n', a - 2) + 1, prv = v.slice(pa, a - 1), d = prv.length + 1;
+        replaceRange(pa, b, block + '\n' + prv, s - d, end - d);
+      }
+      return true;
+    }
+    // Ctrl+Shift+K: delete line(s)
+    if (mod && e.shiftKey && !e.altKey && k.toLowerCase() === 'k') {
+      if (b < v.length) replaceRange(a, b + 1, '', a);
+      else if (a > 0) { const pa = v.lastIndexOf('\n', a - 2) + 1; replaceRange(a - 1, b, '', pa + Math.min(s - a, a - 1 - pa)); }
+      else replaceRange(a, b, '', 0);
+      return true;
+    }
+    // Ctrl+/: toggle // comment
+    if (mod && !e.altKey && (k === '/' || e.code === 'Slash')) { toggleComment(); return true; }
+    // Ctrl+Enter: new line below; Ctrl+Shift+Enter: new line above
+    if (mod && !e.altKey && k === 'Enter') {
+      const ind = v.slice(a).match(/^[ \t]*/)[0];
+      if (e.shiftKey) replaceRange(a, a, ind + '\n', a + ind.length);
+      else { let eol = v.indexOf('\n', end); if (eol === -1) eol = v.length; const extra = /\{\s*$/.test(v.slice(a, eol)) ? '    ' : ''; replaceRange(eol, eol, '\n' + ind + extra, eol + 1 + ind.length + extra.length); }
+      return true;
+    }
+    // Ctrl+] / Ctrl+[: indent / outdent
+    if (mod && !e.altKey && !e.shiftKey && (k === ']' || k === '[')) { shiftIndent(k === '['); return true; }
+    // Tab / Shift+Tab with a multi-line selection; Shift+Tab always outdents
+    if (k === 'Tab' && !mod && !e.altKey) {
+      if (e.shiftKey) { shiftIndent(true); return true; }
+      if (s !== end && v.slice(s, end).includes('\n')) { shiftIndent(false); return true; }
+      return false;
+    }
+    // Ctrl+L: select line (press again to extend)
+    if (mod && !e.altKey && !e.shiftKey && k.toLowerCase() === 'l') {
+      const full = s === a && (end === b + 1 || end === b);
+      if (full && end < v.length) { let nb = v.indexOf('\n', end); nb = nb === -1 ? v.length : nb + 1; ta.setSelectionRange(a, nb); }
+      else ta.setSelectionRange(a, Math.min(b + 1, v.length));
+      updateCursor(); return true;
+    }
+    // Home: jump to first character, then to column 0
+    if (k === 'Home' && !mod && !e.altKey && s === end) {
+      const first = a + v.slice(a).match(/^[ \t]*/)[0].length;
+      const to = s === first ? a : first;
+      if (e.shiftKey) ta.setSelectionRange(Math.min(to, s), Math.max(to, s), to < s ? 'backward' : 'forward'); else ta.setSelectionRange(to, to);
+      updateCursor(); return true;
+    }
+    return false;
+  }
   ta.addEventListener('keydown', e => {
+    if (lineShortcut(e)) { e.preventDefault(); return; }
     if (autoPair(e)) { e.preventDefault(); return; }
     if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); insertText('    '); return; }
     if (e.key === 'Enter' && !e.isComposing) {
@@ -2767,6 +2894,16 @@ const DEFAULT_EXAMPLE = '00_by_hand';
     loadCode(it.code, it.stdin, `Loaded "${it.name}".`); sel.value = '';
   };
 
+  // ---------- shortcuts list ----------
+  document.addEventListener('DOMContentLoaded', () => {
+    const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+    const names = mac ? { Mod: '⌘', Alt: '⌥', Shift: '⇧', Enter: '↩' } : { Mod: 'Ctrl' };
+    document.querySelectorAll('#keys kbd').forEach(el => { const n = names[el.dataset.k]; if (n) el.textContent = n; });
+    const kd = $('#keys');
+    $('#kbbtn').onclick = () => kd.showModal();
+    kd.addEventListener('close', () => ta.focus());
+    kd.addEventListener('click', e => { if (e.target === kd) kd.close(); });
+  });
   // ---------- queue style toggle ----------
   try { const q = localStorage.getItem('vc-queue-style'); if (q === 'people' || q === 'boxes') state.queueStyle = q; } catch (e) { /* storage unavailable */ }
   const qBtns = document.querySelectorAll('#qstyle button');
@@ -2784,6 +2921,14 @@ const DEFAULT_EXAMPLE = '00_by_hand';
 
 </script>
 
+<dialog class="bug" id="keys" aria-labelledby="keys-title">
+  <form method="dialog">
+    <h2 id="keys-title">Keyboard shortcuts</h2>
+    <p class="lede">The same keys as VS Code. Brackets and quotes close on their own.</p>
+    <table class="keys"><tr><td>Copy line down / up</td><td><kbd data-k="Alt">Alt</kbd><kbd data-k="Shift">Shift</kbd><kbd data-k="↓">↓</kbd> <span style="color:var(--faint)">·</span> <kbd data-k="Alt">Alt</kbd><kbd data-k="Shift">Shift</kbd><kbd data-k="↑">↑</kbd></td></tr><tr><td>Move line down / up</td><td><kbd data-k="Alt">Alt</kbd><kbd data-k="↓">↓</kbd> <span style="color:var(--faint)">·</span> <kbd data-k="Alt">Alt</kbd><kbd data-k="↑">↑</kbd></td></tr><tr><td>Delete line</td><td><kbd data-k="Mod">Mod</kbd><kbd data-k="Shift">Shift</kbd><kbd data-k="K">K</kbd></td></tr><tr><td>Comment / uncomment</td><td><kbd data-k="Mod">Mod</kbd><kbd data-k="/">/</kbd></td></tr><tr><td>New line below</td><td><kbd data-k="Mod">Mod</kbd><kbd data-k="Enter">Enter</kbd></td></tr><tr><td>New line above</td><td><kbd data-k="Mod">Mod</kbd><kbd data-k="Shift">Shift</kbd><kbd data-k="Enter">Enter</kbd></td></tr><tr><td>Indent / outdent</td><td><kbd data-k="Tab">Tab</kbd> <span style="color:var(--faint)">·</span> <kbd data-k="Shift">Shift</kbd><kbd data-k="Tab">Tab</kbd></td></tr><tr><td>Indent / outdent lines</td><td><kbd data-k="Mod">Mod</kbd><kbd data-k="]">]</kbd> <span style="color:var(--faint)">·</span> <kbd data-k="Mod">Mod</kbd><kbd data-k="[">[</kbd></td></tr><tr><td>Select line</td><td><kbd data-k="Mod">Mod</kbd><kbd data-k="L">L</kbd></td></tr><tr><td>Start of line</td><td><kbd data-k="Home">Home</kbd></td></tr><tr><td>Undo / redo</td><td><kbd data-k="Mod">Mod</kbd><kbd data-k="Z">Z</kbd> <span style="color:var(--faint)">·</span> <kbd data-k="Mod">Mod</kbd><kbd data-k="Shift">Shift</kbd><kbd data-k="Z">Z</kbd></td></tr><tr><td>Download main.cpp</td><td><kbd data-k="Mod">Mod</kbd><kbd data-k="S">S</kbd></td></tr></table>
+    <div class="actions end"><button type="submit" class="close">Close</button></div>
+  </form>
+</dialog>
 <dialog class="bug" id="bug" aria-labelledby="bug-title">
   <form id="bug-form" novalidate>
     <h2 id="bug-title">Report a bug</h2>
