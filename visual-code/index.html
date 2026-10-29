@@ -281,6 +281,26 @@ button, select, input { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before { animation: none !important; transition: none !important; }
 }
+.bugbtn { display: inline-flex; align-items: center; gap: 6px; font: 500 12.5px/1 var(--f-ui); padding: 7px 11px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer; transition: color .15s, border-color .15s, transform .1s; }
+.bugbtn:hover { color: var(--fg); border-color: var(--faint); } .bugbtn:active { transform: scale(.96); }
+.bugbtn:focus-visible, .bug button:focus-visible, .bug textarea:focus-visible, .bug input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bug { width: min(520px, calc(100% - 32px)); max-height: calc(100% - 32px); border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--fg); padding: 0; box-shadow: 0 30px 80px -30px rgba(0,0,0,.5); }
+.bug::backdrop { background: rgba(10, 16, 25, .45); }
+.bug form { display: grid; gap: 14px; padding: 20px 20px 18px; }
+.bug h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+.bug .lede { margin: -6px 0 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
+.bug label { display: grid; gap: 6px; font-size: 12.5px; font-weight: 500; }
+.bug label .opt { color: var(--faint); font-weight: 400; }
+.bug textarea, .bug input[type=email] { font: 400 13.5px/1.45 var(--f-ui); color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; resize: vertical; }
+.bug textarea { min-height: 84px; }
+.bug .check { display: flex; align-items: center; gap: 8px; font-weight: 400; color: var(--muted); }
+.bug .err { color: var(--err); font-size: 12.5px; margin: -6px 0 0; }
+.bug .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 4px; }
+.bug .actions .send { font: 600 13px/1 var(--f-ui); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: var(--tag-ink); cursor: pointer; }
+.bug .actions .copy, .bug .actions .close { font: 500 13px/1 var(--f-ui); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; }
+.bug .actions .close { margin-left: auto; color: var(--muted); }
+.bug .note { margin: 0; font-size: 12px; color: var(--faint); line-height: 1.45; }
+@media (max-width: 960px) { .bugbtn { margin-left: auto; } }
 .brand .by { color: var(--accent); text-decoration: none; font-weight: 500; } .brand .by:hover { text-decoration: underline; }
 </style>
 
@@ -296,6 +316,7 @@ button, select, input { font: inherit; color: inherit; }
     <button class="newbtn" id="newfile" type="button" title="Start a blank C++ file"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>New file</button>
     <label class="pick" for="ex">Examples <select id="ex"></select></label>
     <div class="detect" id="detect" aria-label="Recognized structures"></div>
+    <button class="bugbtn" id="bugbtn" type="button" aria-haspopup="dialog" title="Tell us when the drawing or output looks wrong"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 4.2c1.7 0 3 1.4 3 3.3v1.3c0 1.8-1.3 3.2-3 3.2s-3-1.4-3-3.2V7.5c0-1.9 1.3-3.3 3-3.3zM5.2 4.6 4 3M8.8 4.6 10 3M4 7.6H2M12 7.6h-2M4.2 10.4 2.6 11.6M9.8 10.4l1.6 1.2M7 6.6v4.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Report a bug</button>
   </header>
   <div class="main">
     <section class="pane editor-pane" aria-label="Code editor">
@@ -2691,6 +2712,68 @@ const DEFAULT_EXAMPLE = '00_by_hand';
   window.addEventListener('resize', () => render());
 })();
 
+</script>
+
+<dialog class="bug" id="bug" aria-labelledby="bug-title">
+  <form id="bug-form" novalidate>
+    <h2 id="bug-title">Report a bug</h2>
+    <p class="lede">Did the drawing, the steps or the output look wrong? Tell us what happened and we'll fix it.</p>
+    <label>What went wrong?<textarea id="bug-what" required placeholder="e.g. after line 14 the new node isn't linked to head"></textarea></label>
+    <p class="err" id="bug-err" hidden>Add a line about what went wrong so we can find it.</p>
+    <label><span>What did you expect? <span class="opt">Optional</span></span><textarea id="bug-expect" style="min-height:56px"></textarea></label>
+    <label><span>Your email <span class="opt">Optional, if you'd like a reply</span></span><input type="email" id="bug-email" autocomplete="email" placeholder="name@example.com"></label>
+    <label class="check"><input type="checkbox" id="bug-code" checked> Attach the code that's in the editor</label>
+    <div class="actions">
+      <button type="submit" class="send">Email the report</button>
+      <button type="button" class="copy" id="bug-copy">Copy report</button>
+      <button type="button" class="close" id="bug-close">Cancel</button>
+    </div>
+    <p class="note">The report goes to hello@saffronlabs.in from your own email app. No email app on this device? Use Copy report and send it from anywhere.</p>
+  </form>
+</dialog>
+<script>
+(() => {
+  const $ = (q) => document.querySelector(q);
+  const dlg = $('#bug'), what = $('#bug-what'), err = $('#bug-err');
+  const TO = 'hello@saffronlabs.in';
+  const MAILTO_CODE_LIMIT = 1400;
+  const exampleName = () => { const e = $('#ex'); const o = e && e.selectedOptions && e.selectedOptions[0]; return o && o.value ? o.textContent.trim() : ''; };
+  const buildReport = (codeLimit) => {
+    const lines = ['What went wrong:', what.value.trim()];
+    const exp = $('#bug-expect').value.trim(); if (exp) lines.push('', 'Expected:', exp);
+    const mail = $('#bug-email').value.trim(); if (mail) lines.push('', 'Reply to: ' + mail);
+    const st = ($('#status-msg') && $('#status-msg').textContent.trim()) || '';
+    lines.push('', 'Example: ' + (exampleName() || 'none'), 'Status bar: ' + (st || 'none'), 'Browser: ' + navigator.userAgent, 'Screen: ' + innerWidth + 'x' + innerHeight, 'Page: ' + location.href);
+    if ($('#bug-code').checked) {
+      let code = $('#src').value; const stdin = $('#stdin') ? $('#stdin').value : '';
+      if (codeLimit && code.length > codeLimit) code = code.slice(0, codeLimit) + '\n... (cut short for email; use Copy report for the full code)';
+      lines.push('', '--- code ---', code);
+      if (stdin.trim()) lines.push('--- input ---', stdin);
+    }
+    return lines.join('\n');
+  };
+  const valid = () => { const ok = what.value.trim().length > 0; err.hidden = ok; if (!ok) what.focus(); return ok; };
+  const flash = (msg) => { const t = $('#toast'); if (!t) return; $('#toast-msg').textContent = msg; $('#toast-undo').hidden = true; t.hidden = false; clearTimeout(flash.t); flash.t = setTimeout(() => { t.hidden = true; $('#toast-undo').hidden = false; }, 4000); };
+  $('#bugbtn').onclick = () => { err.hidden = true; dlg.showModal(); what.focus(); };
+  const openFromHash = () => { if (location.hash === '#bug') setTimeout(() => { if (!dlg.open) $('#bugbtn').click(); }, 300); };
+  openFromHash(); addEventListener('hashchange', openFromHash);
+  $('#bug-close').onclick = () => dlg.close();
+  what.addEventListener('input', () => { if (what.value.trim()) err.hidden = true; });
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  $('#bug-form').addEventListener('submit', (e) => {
+    e.preventDefault(); if (!valid()) return;
+    const subject = 'Visual Code bug: ' + what.value.trim().split('\n')[0].slice(0, 60);
+    location.href = 'mailto:' + TO + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(buildReport(MAILTO_CODE_LIMIT));
+    dlg.close(); flash('Opening your email app. Thanks for the report.');
+  });
+  $('#bug-copy').onclick = async () => {
+    if (!valid()) return;
+    const text = 'To: ' + TO + '\n\n' + buildReport(0);
+    try { await navigator.clipboard.writeText(text); }
+    catch { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+    dlg.close(); flash('Report copied. Paste it into an email to ' + TO + '.');
+  };
+})();
 </script>
 </body>
 </html>

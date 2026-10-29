@@ -38,6 +38,17 @@
   .product-actions .note{flex-basis:100%;font-size:14px;color:var(--quiet)}
   @media (max-width:860px){.product{grid-template-columns:minmax(0,1fr)}}
   @media (prefers-reduced-motion:reduce){.product-shot{transition:none}.product-shot:hover{transform:none}}
+  .report{border-top:1px solid var(--line)}
+  .report .wrap{padding-block:clamp(56px,8vw,112px);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:clamp(28px,4vw,64px);align-items:start}
+  .report h2{font-size:clamp(36px,4.6vw,60px);line-height:1;font-weight:740;font-variation-settings:"wdth" 110;letter-spacing:-.03em}
+  .report .lead{color:var(--quiet);font-size:18px;max-width:44ch;margin-top:18px}
+  .report ol{margin:0;padding:0;list-style:none;display:grid;gap:22px;counter-reset:r}
+  .report li{counter-increment:r;display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px 14px}
+  .report li::before{content:counter(r,decimal-leading-zero);font:600 13px/1.9 var(--text);letter-spacing:.08em;color:var(--saffron);grid-row:span 2}
+  .report li strong{font-weight:650}
+  .report li span{color:var(--quiet)}
+  .report .product-actions{grid-column:2}
+  @media (max-width:860px){.report .wrap{grid-template-columns:minmax(0,1fr)}.report .product-actions{grid-column:auto}}
 </style>
 </head>
 <body>
@@ -108,6 +119,25 @@
           </div>
         </div>
       </article>
+    </div>
+  </section>
+
+  <section class="report band" id="report">
+    <div class="wrap">
+      <div>
+        <p class="product-tag">Help us improve it</p>
+        <h2>Found a bug?</h2>
+        <p class="lead">Visual Code is new and students write code we never thought of. If a drawing, a step or the output looks wrong, tell us. Every report gets read, and fixes go straight to this site.</p>
+      </div>
+      <ol>
+        <li><strong>Open the report form from the app</strong><span>Press <em>Report a bug</em> at the top of Visual Code. It attaches the code in your editor for you.</span></li>
+        <li><strong>Say what went wrong in a line or two</strong><span>"After line 14 the new node isn't linked to head" is all we need. What you expected helps too.</span></li>
+        <li><strong>Send it from your email, or copy it</strong><span>It goes to hello@saffronlabs.in. Add your email if you'd like to hear when it's fixed.</span></li>
+      </ol>
+      <div class="product-actions">
+        <a class="btn btn-ink" href="/visual-code/#bug">Report a bug<span aria-hidden="true"> →</span></a>
+        <a class="btn-link" href="mailto:hello@saffronlabs.in?subject=Visual%20Code%20bug">Or email us directly</a>
+      </div>
     </div>
   </section>
 
