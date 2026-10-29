@@ -1865,7 +1865,54 @@ const DEFAULT_EXAMPLE = '00_by_hand';
     try { ok = document.execCommand('insertText', false, text); } catch (e) { ok = false; }
     if (!ok) { ta.setRangeText(text, ta.selectionStart, ta.selectionEnd, 'end'); onInput(); }
   }
+  function deleteRange(a, b) {
+    ta.setSelectionRange(a, b);
+    let ok = false;
+    try { ok = document.execCommand('delete'); } catch (e) { ok = false; }
+    if (!ok) { ta.setRangeText('', a, b, 'end'); onInput(); }
+  }
+  // VS Code-style bracket and quote pairs
+  const PAIRS = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'" };
+  const CLOSERS = new Set([')', ']', '}', '"', "'", '>', ';']);
+  function autoPair(e) {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return false;
+    const v = ta.value, s = ta.selectionStart, end = ta.selectionEnd;
+    const next = v[s] || '', prev = v[s - 1] || '';
+    const line = v.slice(v.lastIndexOf('\n', s - 1) + 1, s);
+    const k = e.key;
+    // Typing a closer that's already there: step over it
+    if ((k === ')' || k === ']' || k === '}' || k === '"' || k === "'" || k === '>') && s === end && next === k) {
+      if (k === '>' && !/^\s*#\s*include\s*<[^>]*$/.test(line)) return false;
+      ta.setSelectionRange(s + 1, s + 1); updateCursor(); return true;
+    }
+    // Backspace inside an empty pair removes both halves
+    if (k === 'Backspace' && s === end && s > 0) {
+      if (prev === '{' && v.slice(s, s + 2) === '};') { deleteRange(s - 1, s + 2); return true; }
+      if ((PAIRS[prev] && PAIRS[prev] === next) || (prev === '<' && next === '>' && /#\s*include\s*<$/.test(line))) { deleteRange(s - 1, s + 1); return true; }
+      return false;
+    }
+    // #include <  ->  #include <>
+    if (k === '<' && s === end && /^\s*#\s*include\s*$/.test(line)) { insertText('<>'); ta.setSelectionRange(s + 1, s + 1); return true; }
+    if (!PAIRS[k]) return false;
+    const close = PAIRS[k];
+    // Selection: wrap it, keep it selected
+    if (s !== end) {
+      const sel = v.slice(s, end);
+      insertText(k + sel + close); ta.setSelectionRange(s + 1, s + 1 + sel.length); return true;
+    }
+    const isQuote = k === '"' || k === "'";
+    if (isQuote) {
+      if (/[\w\\]/.test(prev)) return false;          // don't, it's an apostrophe or escape
+      if (((line.split(k).length - 1) % 2) === 1) return false; // already inside an open string
+    }
+    if (next && !/\s/.test(next) && !CLOSERS.has(next) && next !== ',') return false; // only before space/closer/EOL
+    // class / struct / union / enum bodies need a trailing semicolon
+    let tail = close;
+    if (k === '{' && /^\s*(template\s*<[^>]*>\s*)?(class|struct|union|enum(\s+class)?)\b[^;(){}]*$/.test(line) && next !== ';') tail = '};';
+    insertText(k + tail); ta.setSelectionRange(s + 1, s + 1); return true;
+  }
   ta.addEventListener('keydown', e => {
+    if (autoPair(e)) { e.preventDefault(); return; }
     if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); insertText('    '); return; }
     if (e.key === 'Enter' && !e.isComposing) {
       e.preventDefault();
