@@ -23,6 +23,7 @@
   --code-bg: #FBFCFE; --gutter: #9AA4B5; --step: rgba(34, 117, 134, .13); --sel: rgba(34, 117, 134, .24);
   --s-kw: #8A3DA6; --s-ty: #1D69AD; --s-str: #2B7A3D; --s-num: #AE461D; --s-com: #8A95A7; --s-pre: #87570E; --s-mem: #C46A12; --s-null: #AE461D; --s-io: #11788A; --s-st: #0E7586;
   --skin: #F2C9A0; --skin-line: #C99A6E; --trousers: #3B4A63;
+  --k0: #227586; --k1: #6B4FBB; --k2: #B5541C; --k3: #2B7A3D; --k4: #A8456B; --k5: #1D69AD;
   --shirt-0: #E0793A; --shirt-1: #3F8FD2; --shirt-2: #4FAE7A; --shirt-3: #C65A8E; --shirt-4: #E3B53B; --shirt-5: #7B67C9;
   --f-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --f-code: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
@@ -36,6 +37,7 @@
   --code-bg: #0D1520; --gutter: #4D5B71; --step: rgba(90, 193, 211, .13); --sel: rgba(90, 193, 211, .26);
   --s-kw: #C792EA; --s-ty: #7AB8FF; --s-str: #A5D98B; --s-num: #F7A072; --s-com: #5E6C84; --s-pre: #DFB76F; --s-mem: #F0A443; --s-null: #F7A072; --s-io: #6FD2DD; --s-st: #5AC1D3;
   --skin: #E2B48A; --skin-line: #A97E58; --trousers: #2A3650;
+  --k0: #5AC1D3; --k1: #B39DFF; --k2: #F7A072; --k3: #8BD27A; --k4: #F08FB4; --k5: #7AB8FF;
   --shirt-0: #E8874A; --shirt-1: #4F9BDB; --shirt-2: #5CBB86; --shirt-3: #D16A9B; --shirt-4: #E9BF4C; --shirt-5: #8C79D6;
   color-scheme: dark;
 } }
@@ -48,6 +50,7 @@
   --code-bg: #0D1520; --gutter: #4D5B71; --step: rgba(90, 193, 211, .13); --sel: rgba(90, 193, 211, .26);
   --s-kw: #C792EA; --s-ty: #7AB8FF; --s-str: #A5D98B; --s-num: #F7A072; --s-com: #5E6C84; --s-pre: #DFB76F; --s-mem: #F0A443; --s-null: #F7A072; --s-io: #6FD2DD; --s-st: #5AC1D3;
   --skin: #E2B48A; --skin-line: #A97E58; --trousers: #2A3650;
+  --k0: #5AC1D3; --k1: #B39DFF; --k2: #F7A072; --k3: #8BD27A; --k4: #F08FB4; --k5: #7AB8FF;
   --shirt-0: #E8874A; --shirt-1: #4F9BDB; --shirt-2: #5CBB86; --shirt-3: #D16A9B; --shirt-4: #E9BF4C; --shirt-5: #8C79D6;
   color-scheme: dark;
 }
@@ -236,7 +239,9 @@ button, select, input { font: inherit; color: inherit; }
 .lane { font-size: 11.5px; fill: var(--err); font-family: var(--f-ui) !important; font-weight: 600; }
 
 
-.qstyle { position: absolute; top: 8px; right: 10px; display: flex; align-items: center; gap: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 3px; font-size: 12px; }
+.toggles { position: absolute; bottom: 8px; left: 10px; display: flex; gap: 6px; flex-wrap: wrap; max-width: calc(100% - 20px); }
+.qstyle[hidden] { display: none; }
+.qstyle { display: flex; align-items: center; gap: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 3px; font-size: 12px; }
 .qstyle span { color: var(--muted); padding: 0 8px 0 6px; }
 .qstyle button { border: 0; background: transparent; padding: 5px 10px; border-radius: 6px; cursor: pointer; color: var(--muted); font-weight: 500; }
 .qstyle button:hover { color: var(--fg); }
@@ -317,6 +322,56 @@ button, select, input { font: inherit; color: inherit; }
 .dlbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .dlbtn kbd { font: 500 10.5px/1 var(--f-code); color: var(--faint); }
 @media (max-width: 560px) { .pane-head .hint, .dlbtn kbd { display: none; } }
+
+/* classes and objects */
+.k0 { --k: var(--k0); } .k1 { --k: var(--k1); } .k2 { --k: var(--k2); } .k3 { --k: var(--k3); } .k4 { --k: var(--k4); } .k5 { --k: var(--k5); }
+.cls .cbox { fill: var(--panel); stroke: var(--k); stroke-width: 1.4; }
+.cls.on .cbox { stroke-width: 2.4; }
+.cls .chead { fill: color-mix(in srgb, var(--k) 16%, var(--panel)); }
+.cls .cname { font-size: 12.5px; font-weight: 700; fill: var(--fg); }
+.cls .cabs { font-style: italic; font-weight: 500; fill: var(--muted); }
+.cls .cmem { font-size: 11px; fill: var(--fg); }
+.cls .cmem.dim { fill: var(--faint); font-style: italic; }
+.cls .cmem.a-private { fill: var(--muted); }
+.cls .cmem.st { text-decoration: underline; text-decoration-color: var(--faint); }
+.cls .cmem.pure { font-style: italic; }
+.cls .cmem.skip { text-decoration: line-through; fill: var(--faint); }
+.cls .cover { font-size: 9.5px; fill: var(--k); font-family: var(--f-ui) !important; font-weight: 600; letter-spacing: .02em; }
+.cls .csep { stroke: var(--line); }
+.cls .cvt { font-size: 9.5px; fill: var(--muted); font-family: var(--f-ui) !important; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.cls .vimpl { fill: var(--k); font-weight: 600; }
+.cls .crow.run { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1; }
+.cls .crow.via { fill: none; stroke: var(--accent); stroke-dasharray: 3 3; }
+.cls .crow.skip { fill: var(--panel-2); }
+.inh { fill: none; stroke: var(--muted); stroke-width: 1.4; }
+.inh.virt { stroke-dasharray: 6 4; }
+.inh-h { fill: var(--panel); stroke: var(--muted); stroke-width: 1.4; stroke-linejoin: round; }
+.inh-l rect { fill: var(--panel-2); stroke: var(--line); }
+.inh-l text { font-size: 10px; fill: var(--muted); font-family: var(--f-ui) !important; }
+.ptint { fill: color-mix(in srgb, var(--k) 13%, transparent); }
+.ptint.pending, .ptint.gone { fill: var(--panel-2); }
+.ptint.building, .ptint.tearing { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+.pbr path { fill: none; stroke: var(--k); stroke-width: 1.4; }
+.pbr text { font-size: 10.5px; fill: var(--k); font-weight: 600; font-family: var(--f-ui) !important; }
+.pbr.pending, .pbr.gone { opacity: .45; }
+.pbr.building text, .pbr.tearing text { fill: var(--accent-ink); }
+.pempty { font-size: 10px; fill: var(--faint); font-family: var(--f-ui) !important; }
+.nd .vptrv { font-size: 11px; font-weight: 600; fill: var(--muted); }
+.obj .olabel { font-size: 12px; font-weight: 700; fill: var(--fg); }
+.obj .otype { font-weight: 400; fill: var(--muted); }
+.flow rect { fill: var(--panel-2); stroke: var(--line); }
+.flow text { font-size: 11px; fill: var(--fg); }
+.flow.code text { font-weight: 600; }
+.flow.lead rect { fill: none; stroke: none; } .flow.lead text { fill: var(--muted); font-family: var(--f-ui) !important; }
+.flow.hit rect { fill: var(--accent-soft); stroke: var(--accent); } .flow.hit text { fill: var(--accent-ink); font-weight: 600; }
+.flow.done text { fill: var(--muted); }
+.flow.pend rect { fill: none; stroke-dasharray: 3 3; } .flow.pend text { fill: var(--faint); }
+.flow.bad rect { fill: var(--err-soft); stroke: var(--err); } .flow.bad text { fill: var(--err); }
+.flow.x text { text-decoration: line-through; }
+.flow-a { stroke: var(--faint); stroke-width: 1.3; fill: none; }
+.cchip rect { fill: color-mix(in srgb, var(--k) 14%, var(--panel)); stroke: var(--k); }
+.cchip.on rect { stroke-width: 2.2; }
+.cchip text { font-size: 11px; font-weight: 600; fill: var(--fg); }
 </style>
 
 <div class="toast" id="toast" role="status" hidden><span id="toast-msg"></span><button type="button" id="toast-undo">Undo</button></div>
@@ -376,7 +431,7 @@ button, select, input { font: inherit; color: inherit; }
         </div>
         <div class="chips" id="chips"></div>
         <div class="empty" id="empty" hidden></div>
-        <div class="qstyle" id="qstyle" role="group" aria-label="How to draw queues" hidden><span>Queue view</span><button type="button" data-style="boxes" aria-pressed="true">Boxes</button><button type="button" data-style="people" aria-pressed="false">People</button></div>
+        <div class="toggles"><div class="qstyle" id="cview" role="group" aria-label="How to draw classes" hidden><span>Classes</span><button type="button" data-cv="full" aria-pressed="true">Diagram</button><button type="button" data-cv="compact" aria-pressed="false">Compact</button></div><div class="qstyle" id="qstyle" role="group" aria-label="How to draw queues" hidden><span>Queue view</span><button type="button" data-style="boxes" aria-pressed="true">Boxes</button><button type="button" data-style="people" aria-pressed="false">People</button></div></div>
         <div class="legend"><span><i></i>in memory</span><span><i class="g"></i>still typing</span><span><i class="l"></i>lost</span></div>
       </div>
       <div class="bottom">
@@ -440,6 +495,7 @@ class ParseError { constructor(msg, tok) { this.msg = msg; this.tok = tok; this.
 const BASE_TYPES = new Set(['int', 'long', 'short', 'unsigned', 'signed', 'double', 'float', 'bool', 'char', 'void', 'string', 'auto', 'size_t']);
 const CONT_KINDS = new Set(['vector', 'stack', 'queue', 'deque', 'priority_queue']);
 const TEMPLATE_TYPES = new Set([...CONT_KINDS, 'pair', 'greater', 'less']);
+const STREAM_TYPES = new Set(['ostream', 'istream']);
 const PREC = { '||': 1, '&&': 2, '|': 3, '^': 4, '&': 5, '==': 6, '!=': 6, '<': 7, '>': 7, '<=': 7, '>=': 7, '<<': 8, '>>': 8, '+': 9, '-': 9, '*': 10, '/': 10, '%': 10 };
 const ASSIGN_OPS = new Set(['=', '+=', '-=', '*=', '/=', '%=']);
 const normBase = b => (['long', 'short', 'unsigned', 'signed', 'size_t'].includes(b) ? 'int' : b === 'float' ? 'double' : b);
@@ -464,7 +520,7 @@ class Parser {
   isTypeAt(k) {
     const t = this.peek(k); if (t.t !== 'id') return false;
     if (CONT_KINDS.has(t.v) || t.v === 'pair') return this.is('<', k + 1);
-    return BASE_TYPES.has(t.v) || t.v in this.structs || t.v === 'const' || t.v === 'static' || t.v === 'struct' || t.v === 'unsigned' ||
+    return BASE_TYPES.has(t.v) || STREAM_TYPES.has(t.v) || t.v in this.structs || t.v === 'const' || t.v === 'static' || t.v === 'struct' || t.v === 'unsigned' ||
       (t.v === 'std' && this.is('::', k + 1) && (this.peek(k + 2).v === 'string' || CONT_KINDS.has(this.peek(k + 2).v) || this.peek(k + 2).v === 'pair'));
   }
   isDeclStart() {
@@ -519,13 +575,13 @@ class Parser {
         if (this.is('typedef')) { this.parseTypedef(); continue; }
         if (this.is('using') || this.is('template')) { while (!this.is(';') && this.peek().t !== 'eof') this.next(); this.expect(';'); continue; }
         if (this.is(';')) { this.next(); continue; }
-        if ((this.is('struct') || this.is('class')) && this.peek(1).t === 'id' && this.is('{', 2)) { this.parseStruct(false); continue; }
+        if ((this.is('struct') || this.is('class')) && this.peek(1).t === 'id' && (this.is('{', 2) || (this.is(':', 2) && !this.is('::', 2)))) { this.parseStruct(false); continue; }
         if ((this.is('struct') || this.is('class')) && this.peek(1).t === 'id' && this.is(';', 2)) { this.next(); this.next(); this.next(); continue; }
         if (this.peek().t === 'id' && this.peek().v in this.structs && this.is('::', 1)) { this.parseFunction(null); continue; }
         if (this.isTypeAt(0)) {
           const save = this.i; const base = this.parseBaseType(); const targs = this._targs;
           let ptr = 0; while (this.is('*') || this.is('&')) { if (this.is('*')) ptr++; this.next(); }
-          if (this.peek().t === 'id' && (this.is('(', 1) || this.is('::', 1))) { this.parseFunction({ base, ptr, targs }); continue; }
+          if (this.peek().t === 'id' && (this.is('(', 1) || this.is('::', 1) || this.peek().v === 'operator')) { this.parseFunction({ base, ptr, targs }); continue; }
           this.i = save; this.globals.push(this.parseDecl(true)); continue;
         }
         const t = this.peek();
@@ -556,43 +612,81 @@ class Parser {
   }
 
   parseStruct(typedef) {
-    this.next();
+    const kw = this.next().v;
     let name;
     if (this.is('{')) name = '__anon' + (++this.anon); else name = this.next().v;
-    const def = { name, fields: [], ctors: [], methods: Object.create(null), line: this.prevTok().line, complete: false, anon: name.startsWith('__anon') };
+    const def = { name, kw, fields: [], ctors: [], methods: Object.create(null), bases: [], friends: [], statics: [], dtor: null, line: this.prevTok().line, complete: false, anon: name.startsWith('__anon') };
     this.structs[name] = def;
     if (this.pendingAlias && this.pendingAlias.orig === name) { this.structs[this.pendingAlias.alias] = def; this.pendingAlias = null; }
-    this.expect('{');
-    while (!this.is('}')) {
-      if (this.peek().t === 'eof') throw new ParseError(`struct ${name} is missing its closing '}'`, this.prevTok());
-      if (this.is('public') || this.is('private') || this.is('protected')) { this.next(); this.expect(':'); continue; }
-      if (this.is(';')) { this.next(); continue; }
-      if (this.is(def.name) && this.is('(', 1)) {
-        this.next(); const line = this.prevTok().line; const params = this.parseParams(); const inits = [];
-        if (this.is(':')) {
-          this.next();
-          do {
-            const f = this.next(); if (f.t !== 'id') throw new ParseError('Expected a field name in the initializer list', f);
-            this.expect('('); const args = [];
-            if (!this.is(')')) { do { args.push(this.parseAssign()); } while (this.is(',') && this.next()); }
-            this.expect(')'); inits.push({ f: f.v, args, line: f.line });
-          } while (this.is(',') && this.next());
+    if (this.is(':') && !def.anon) {
+      this.next();
+      do {
+        let access = kw === 'class' ? 'private' : 'public', virt = false;
+        for (;;) {
+          if (this.is('virtual')) { this.next(); virt = true; continue; }
+          if (this.is('public') || this.is('private') || this.is('protected')) { access = this.next().v; continue; }
+          break;
         }
-        const ctor = { params, inits, body: null, line }; def.ctors.push(ctor);
-        if (this.is(';')) { this.next(); ctor.body = { k: 'block', stmts: [] }; continue; }
+        const b = this.next();
+        if (b.t !== 'id') throw new ParseError(b.t === 'eof' ? 'Name the class to inherit from' : `Expected a base class name before '${b.v}'`, b.t === 'eof' ? this.prevTok() : b);
+        const bd = this.structs[b.v];
+        if (!bd) throw new ParseError(`Base class ${b.v} isn't declared yet. Write class ${b.v} { … }; above ${name}`, b);
+        if (bd === def) throw new ParseError(`${name} can't inherit from itself`, b);
+        def.bases.push({ name: bd.name, access, virtual: virt, line: b.line });
+      } while (this.is(',') && this.next());
+    }
+    this.expect('{');
+    let access = kw === 'class' ? 'private' : 'public';
+    while (!this.is('}')) {
+      if (this.peek().t === 'eof') throw new ParseError(`${kw} ${name} is missing its closing '}'`, this.prevTok());
+      if (this.is('public') || this.is('private') || this.is('protected')) { access = this.next().v; this.expect(':'); continue; }
+      if (this.is(';')) { this.next(); continue; }
+      let virt = false, isStatic = false;
+      for (;;) {
+        if (this.is('virtual')) { this.next(); virt = true; continue; }
+        if (this.is('static')) { this.next(); isStatic = true; continue; }
+        if (this.is('explicit') || this.is('inline') || this.is('mutable')) { this.next(); continue; }
+        break;
+      }
+      if (this.is('friend')) { this.parseFriend(def); if (this.halted) return def; continue; }
+      if (this.is(def.name) && this.is('(', 1)) {
+        this.next(); const line = this.prevTok().line; const params = this.parseParams();
+        while (this.is('noexcept')) this.next();
+        const ctor = { params, inits: [], baseInits: [], body: null, line, access, owner: def.name };
+        if (this.is('=')) { this.next(); const w = this.next(); this.expect(';'); if (w.v !== 'delete') { ctor.body = { k: 'block', stmts: [] }; def.ctors.push(ctor); } continue; }
+        this.parseInitList(def, ctor);
+        def.ctors.push(ctor);
+        if (this.is(';')) { this.next(); ctor.body = { k: 'block', stmts: [] }; ctor.declOnly = true; continue; }
         ctor.body = this.parseBlock(); if (this.halted) return def;
         continue;
       }
-      if (this.is('~')) { this.next(); this.next(); this.parseParams(); if (this.is('{')) this.parseBlock(); else this.expect(';'); if (this.halted) return def; continue; }
+      if (this.is('~')) {
+        this.next(); const n = this.next(); this.parseParams();
+        while (this.is('noexcept') || this.is('override')) this.next();
+        const d = { body: null, line: n.line, virtual: virt, access, owner: def.name };
+        def.dtor = d;
+        if (this.is('=')) { this.next(); this.next(); this.expect(';'); continue; }
+        if (this.is('{')) { d.body = this.parseBlock(); if (this.halted) return def; } else this.expect(';');
+        continue;
+      }
       const base = this.parseBaseType(); const targs = this._targs;
       let first = true;
       do {
-        let ptr = 0; while (this.is('*') || this.is('&')) { if (this.is('*')) ptr++; this.next(); }
-        const f = this.next(); if (f.t !== 'id') throw new ParseError('Expected a field name', f);
+        let ptr = 0, ref = false; while (this.is('*') || this.is('&')) { if (this.is('*')) ptr++; else ref = true; this.next(); }
+        const f = this.next(); if (f.t !== 'id') throw new ParseError('Expected a member name', f.t === 'eof' ? this.prevTok() : f);
+        let mname = f.v;
+        if (mname === 'operator') mname = this.parseOpName();
         if (first && this.is('(')) {
-          const params = this.parseParams(); while (this.is('const')) this.next();
-          const fn = { name: f.v, ret: { base, ptr, targs }, params, line: f.line, body: null, owner: def.name };
-          def.methods[f.v] = fn;
+          const params = this.parseParams();
+          const fn = { name: mname, ret: { base, ptr, targs, ref }, params, line: f.line, body: null, owner: def.name, access, virtual: virt, static: isStatic };
+          for (;;) {
+            if (this.is('const')) { this.next(); fn.isConst = true; continue; }
+            if (this.is('override')) { this.next(); fn.override = true; continue; }
+            if (this.is('final') || this.is('noexcept')) { this.next(); continue; }
+            break;
+          }
+          def.methods[mname] = fn;
+          if (this.is('=')) { this.next(); const z = this.next(); if (z.v === '0') fn.pure = true; this.expect(';'); break; }
           if (this.is(';')) { this.next(); break; }
           fn.body = this.parseBlock(); if (this.halted) return def;
           first = null; break;
@@ -602,14 +696,52 @@ class Parser {
         let init = null;
         if (this.is('=')) { this.next(); init = this.is('{') ? { k: 'list', items: this.parseList() } : this.parseAssign(); }
         else if (this.is('{')) { init = { k: 'list', items: this.parseList() }; }
-        def.fields.push({ name: f.v, type: { base, ptr, targs, arr: dims.length > 0 }, dims, init, line: f.line });
+        const fld = { name: f.v, type: { base, ptr, targs, arr: dims.length > 0 }, dims, init, line: f.line, access };
+        if (isStatic) def.statics.push(fld); else def.fields.push(fld);
       } while (this.is(',') && this.next());
       if (first !== null && this.prevTok().v !== ';') this.expect(';');
     }
     this.next();
     if (typedef) { def.complete = true; return def; }
-    if (!this.is(';')) throw new ParseError(`Add ';' after the closing '}' of struct ${name}`, this.prevTok());
+    if (!this.is(';')) throw new ParseError(`Add ';' after the closing '}' of ${kw} ${name}`, this.prevTok());
     this.next(); def.complete = true; return def;
+  }
+  parseOpName() {
+    const t = this.next();
+    if (t.v === '(') { this.expect(')'); return 'operator()'; }
+    if (t.v === '[') { this.expect(']'); return 'operator[]'; }
+    if (t.t !== 'op') throw new ParseError("Expected an operator after 'operator', like operator+", t);
+    return 'operator' + t.v;
+  }
+  parseInitList(def, ctor) {
+    if (!this.is(':')) return;
+    this.next();
+    do {
+      const f = this.next(); if (f.t !== 'id') throw new ParseError('Expected a member or base class name in the initializer list', f.t === 'eof' ? this.prevTok() : f);
+      const close = this.is('{') ? '}' : ')';
+      if (close === '}') this.next(); else this.expect('(');
+      const args = [];
+      if (!this.is(close)) { do { args.push(this.parseAssign()); } while (this.is(',') && this.next()); }
+      this.expect(close);
+      const bd = this.structs[f.v];
+      if (def && bd && def.bases.some(b => b.name === bd.name)) ctor.baseInits.push({ base: bd.name, args, line: f.line });
+      else ctor.inits.push({ f: f.v, args, line: f.line });
+    } while (this.is(',') && this.next());
+  }
+  parseFriend(def) {
+    this.next();
+    if (this.is('class') || this.is('struct')) { this.next(); const n = this.next(); def.friends.push(n.v); this.expect(';'); return; }
+    const base = this.parseBaseType(); const targs = this._targs;
+    let ptr = 0; while (this.is('*') || this.is('&')) { if (this.is('*')) ptr++; this.next(); }
+    const nameT = this.next(); let name = nameT.v;
+    if (name === 'operator') name = this.parseOpName();
+    const params = this.parseParams();
+    while (this.is('const') || this.is('noexcept')) this.next();
+    def.friends.push(name);
+    if (this.is(';')) { this.next(); return; }
+    const fn = { name, ret: { base, ptr, targs }, params, line: nameT.line, body: null, owner: null, friendOf: def.name };
+    this.funcs[name] = fn;
+    fn.body = this.parseBlock();
   }
 
   parseParams() {
@@ -623,28 +755,53 @@ class Parser {
       while (this.is('*')) { this.next(); ptr++; }
       let name = null; if (this.peek().t === 'id') name = this.next().v;
       const dims = this.parseDims();
-      if (this.is('=')) { this.next(); this.parseAssign(); }
-      ps.push({ name, type: { base, ptr, ref, arr: dims.length > 0, targs } });
+      let dflt = null; if (this.is('=')) { this.next(); dflt = this.parseAssign(); }
+      ps.push({ name, type: { base, ptr, ref, arr: dims.length > 0, targs }, def: dflt });
     } while (this.is(',') && this.next());
     this.expect(')'); return ps;
   }
 
   parseFunction(ret) {
-    let owner = null;
-    if (!ret) { owner = this.next().v; ret = { base: 'void', ptr: 0 }; this.next(); }
+    let owner = null, isDtor = false;
+    if (!ret) { owner = this.next().v; ret = { base: 'void', ptr: 0 }; this.next(); if (this.is('~')) { this.next(); isDtor = true; } }
     const nameT = this.next();
     let name = nameT.v;
-    if (this.is('::')) { owner = name; this.next(); if (this.is('~')) { this.next(); } name = this.next().v; }
-    const params = this.parseParams();
-    while (this.is('const')) this.next();
-    if (this.is(';')) { this.next(); return; }
-    if (owner && this.structs[owner] && name === owner) {
-      const ctor = { params, inits: [], body: null, line: nameT.line };
-      if (this.is(':')) { this.next(); do { const f = this.next(); this.expect('('); const args = []; if (!this.is(')')) { do { args.push(this.parseAssign()); } while (this.is(',') && this.next()); } this.expect(')'); ctor.inits.push({ f: f.v, args, line: f.line }); } while (this.is(',') && this.next()); }
-      this.structs[owner].ctors.push(ctor); ctor.body = this.parseBlock(); return;
+    if (name === 'operator') name = this.parseOpName();
+    if (this.is('::')) {
+      owner = name; this.next();
+      if (this.is('~')) { this.next(); isDtor = true; }
+      const nt = this.next(); name = nt.v;
+      if (name === 'operator') name = this.parseOpName();
     }
-    const fn = { name, ret, params, line: nameT.line, body: null, owner };
-    if (owner && this.structs[owner]) this.structs[owner].methods[name] = fn; else this.funcs[name] = fn;
+    const def = owner ? this.structs[owner] : null;
+    if (def && !isDtor && (this.is('=') || this.is(';') || this.is('['))) {
+      // out-of-class definition of a static data member: int Counter::count = 0;
+      const dims = this.parseDims(); let init = null;
+      if (this.is('=')) { this.next(); init = this.parseAssign(); }
+      this.expect(';');
+      const st = def.statics.find(x => x.name === name);
+      if (st) { if (init) st.init = init; } else def.statics.push({ name, type: { base: ret.base, ptr: ret.ptr, arr: dims.length > 0 }, dims, init, line: nameT.line, access: 'public' });
+      return;
+    }
+    const params = this.parseParams();
+    while (this.is('const') || this.is('noexcept') || this.is('override')) this.next();
+    if (isDtor && def) {
+      if (this.is(';')) { this.next(); return; }
+      if (!def.dtor) def.dtor = { line: nameT.line, virtual: false, access: 'public', owner: def.name };
+      def.dtor.line = nameT.line; def.dtor.body = this.parseBlock(); return;
+    }
+    if (def && name === owner) {
+      let ctor = def.ctors.find(c => c.declOnly && c.params.length === params.length);
+      if (!ctor) { ctor = { params, inits: [], baseInits: [], body: null, line: nameT.line, access: 'public', owner: def.name }; def.ctors.push(ctor); }
+      else { ctor.declOnly = false; ctor.params = params; ctor.line = nameT.line; }
+      if (this.is(';')) { this.next(); return; }
+      this.parseInitList(def, ctor);
+      ctor.body = this.parseBlock(); return;
+    }
+    if (this.is(';')) { this.next(); return; }
+    if (def && def.methods[name]) { const m = def.methods[name]; m.params = params; m.line = nameT.line; m.body = this.parseBlock(); return; }
+    const fn = { name, ret, params, line: nameT.line, body: null, owner: def ? def.name : null, access: 'public' };
+    if (def) def.methods[name] = fn; else this.funcs[name] = fn;
     fn.body = this.parseBlock();
   }
 
@@ -864,6 +1021,13 @@ class Parser {
     if (t.t === 'chr') { this.next(); if (t.open) throw new ParseError('This character is missing its closing quote', t); return { k: 'chr', v: t.v.charCodeAt(0) || 0, line: t.line }; }
     if (t.t === 'id') {
       if (t.v === 'std' && this.is('::', 1)) { this.next(); this.next(); return this.parsePrimary(); }
+      if (t.v in this.structs && this.is('::', 1)) {
+        this.next(); this.next(); const n = this.next();
+        if (n.t !== 'id') throw new ParseError(`Expected a member name after ${t.v}::`, n.t === 'eof' ? this.prevTok() : n);
+        let name = n.v; if (name === 'operator') name = this.parseOpName();
+        if (this.is('(')) return { k: 'qcall', cls: this.structs[t.v].name, name, args: this.parseArgs(), line: t.line };
+        return { k: 'qid', cls: this.structs[t.v].name, name, line: t.line };
+      }
       if (RESERVED.has(t.v)) throw new ParseError(`Unexpected '${t.v}'`, t);
       if ((t.v === 'greater' || t.v === 'less' || CONT_KINDS.has(t.v) || t.v === 'pair') && this.is('<', 1)) {
         const b = this.parseBaseType(); return { k: 'id', name: b, targs: this._targs, line: t.line };
@@ -877,6 +1041,64 @@ class Parser {
 
 // ===== Interpreter =====
 class RtErr { constructor(msg, line) { this.msg = msg; this.line = line; } }
+
+// ===== Classes: inheritance, virtual functions, object layout (shared with the UI) =====
+const an = w => (/^[aeiouAEIOU]/.test(String(w)) ? 'an ' : 'a ') + w;
+const fitsArgs = (params, n) => n <= params.length && n >= params.filter(p => !p.def).length;
+function isA(S, d, b) { if (!d || !b) return false; if (d === b) return true; const def = S[d]; return !!def && def.bases.some(x => isA(S, x.name, b)); }
+function findMethod(S, cls, name) {
+  const d = S[cls]; if (!d) return null;
+  if (d.methods[name]) return { fn: d.methods[name], cls: d.name };
+  for (const b of d.bases) { const r = findMethod(S, b.name, name); if (r) return r; }
+  return null;
+}
+function isVirtualIn(S, cls, name) {
+  const d = S[cls]; if (!d) return false;
+  if (d.methods[name] && d.methods[name].virtual) return true;
+  return d.bases.some(b => isVirtualIn(S, b.name, name));
+}
+function hasVirtualDtor(S, cls) { const d = S[cls]; if (!d) return false; if (d.dtor && d.dtor.virtual) return true; return d.bases.some(b => hasVirtualDtor(S, b.name)); }
+function chainHasDtor(S, cls) { const d = S[cls]; if (!d) return false; if (d.dtor && d.dtor.body) return true; return d.bases.some(b => chainHasDtor(S, b.name)); }
+function chainHasCtor(S, cls) { const d = S[cls]; if (!d) return false; if (d.ctors.length) return true; return d.bases.some(b => chainHasCtor(S, b.name)); }
+function vtableOf(S, cls) {
+  const names = [], seen = new Set();
+  const walk = c => { const d = S[c]; if (!d) return; for (const b of d.bases) walk(b.name); for (const n in d.methods) if (!seen.has(n) && !d.methods[n].static && isVirtualIn(S, c, n)) { seen.add(n); names.push(n); } };
+  walk(cls);
+  const rows = names.map(n => { const m = findMethod(S, cls, n); return { name: n, impl: m.cls, pure: !!m.fn.pure && !m.fn.body }; });
+  if (hasVirtualDtor(S, cls)) rows.unshift({ name: '~' + cls, impl: cls, dtor: true });
+  return rows;
+}
+function layoutOf(S, cls) {
+  const entries = [], parts = [], seenV = new Set();
+  const visit = (c, via, depth) => {
+    const d = S[c]; if (!d) return;
+    for (const b of d.bases) {
+      if (b.virtual) { if (seenV.has(b.name)) continue; seenV.add(b.name); }
+      visit(b.name, depth === 0 ? b.name : via, depth + 1);
+    }
+    const part = { cls: d.name, via, virtual: depth > 0 && seenV.has(d.name) };
+    parts.push(part);
+    for (const f of d.fields) entries.push({ f, from: d.name, via, part: parts.length - 1, depth });
+  };
+  visit(cls, null, 0);
+  const cnt = {}; for (const pt of parts) cnt[pt.cls] = (cnt[pt.cls] || 0) + 1;
+  for (const pt of parts) pt.label = cnt[pt.cls] > 1 ? `${pt.cls} via ${pt.via}` : pt.cls;
+  const ambig = {}; const groups = {};
+  for (const en of entries) (groups[en.f.name] = groups[en.f.name] || []).push(en);
+  for (const name in groups) {
+    const g = groups[name];
+    if (g.length === 1) { g[0].key = name; continue; }
+    const min = Math.min(...g.map(x => x.depth)); const win = g.filter(x => x.depth === min);
+    if (win.length === 1) { for (const x of g) x.key = x === win[0] ? name : `${x.from}::${name}`; }
+    else { for (const x of g) x.key = `${x.via || x.from}::${name}`; ambig[name] = g.map(x => x.key); }
+    const used = new Set(); for (const x of g) { let k = x.key, i = 2; while (used.has(k)) k = x.key + '#' + i++; x.key = k; used.add(k); }
+  }
+  return { entries, parts, ambig };
+}
+function oopUsed(S) {
+  for (const k in S) { const d = S[k]; if (d.bases.length || d.dtor || d.statics.length || d.friends.length || Object.values(d.methods).some(m => m.virtual || m.access !== 'public' || /^operator/.test(m.name)) || d.fields.some(f => f.access !== 'public') || d.ctors.some(c => c.access !== 'public')) return true; }
+  return false;
+}
 class HaltSig {}
 class ExitSig {}
 class RetSig { constructor(v) { this.v = v; } }
@@ -903,6 +1125,9 @@ function exprStr(e) {
     case 'un': case 'pre': return e.op + exprStr(e.a);
     case 'post': return exprStr(e.a) + e.op;
     case 'call': return `${e.name}(${e.args.map(exprStr).join(', ')})`;
+    case 'val': return e.src || 'value';
+    case 'qcall': return `${e.cls}::${e.name}(${e.args.map(exprStr).join(', ')})`;
+    case 'qid': return `${e.cls}::${e.name}`;
     case 'mcall': return `${exprStr(e.obj)}${e.arrow ? '->' : '.'}${e.name}(${e.args.map(exprStr).join(', ')})`;
     case 'new': return `new ${e.type}(${e.args.map(exprStr).join(', ')})`;
     case 'assign': return `${exprStr(e.l)} ${e.op} ${exprStr(e.r)}`;
@@ -918,19 +1143,22 @@ class Interp {
     this.out = ''; this.steps = []; this.ev = this.freshEv();
     this.input = (stdin || '').split(/\s+/).filter(Boolean); this.ops = 0;
     this.stats = { steps: 0, cmp: 0, writes: 0, calls: 0, maxDepth: 0 };
+    this.statics = Object.create(null); this._lay = Object.create(null);
   }
-  freshEv() { return { alloc: [], free: [], sets: [], reads: [], writes: [], desc: [], conts: [] }; }
+  freshEv() { return { alloc: [], free: [], sets: [], reads: [], writes: [], desc: [], conts: [], oop: [] }; }
   get frame() { return this.frames[this.frames.length - 1] || this.global; }
   sdef(t) { return t && !t.ptr ? this.p.structs[t.base] : null; }
 
   run() {
     try {
+      this.initStatics();
       for (const g of this.p.globals) this.execStmt(g);
       const main = this.p.funcs.main;
       if (!main || !main.body) { this.snapRaw(0, null, { nomain: true }); return this.steps; }
       this.frames.push({ fn: 'main', scopes: [new Map()], line: main.line, thisObj: null, self: null });
       this.snap(main.line, 'The program starts in main()');
       try { this.execBlock(main.body, false); } catch (e) { if (!(e instanceof RetSig)) throw e; }
+      this.endScope(this.frame.scopes[0], main.body.endLine || main.line);
       this.snap(main.body.endLine || main.line, 'Program finished', { done: true });
     } catch (e) {
       if (e instanceof HaltSig) { /* paused */ }
@@ -945,12 +1173,189 @@ class Interp {
 
   // ----- variables
   declare(name, entry) { const sc = this.frame.scopes; sc[sc.length - 1].set(name, entry); }
-  lookup(name) {
+  lookupEntry(name) {
     const f = this.frame;
-    for (let i = f.scopes.length - 1; i >= 0; i--) { const e = f.scopes[i].get(name); if (e) return e.cell; }
-    if (f.self && f.self.cells[name]) return f.self.cells[name];
-    if (f !== this.global) for (let i = this.global.scopes.length - 1; i >= 0; i--) { const e = this.global.scopes[i].get(name); if (e) return e.cell; }
+    for (let i = f.scopes.length - 1; i >= 0; i--) { const e = f.scopes[i].get(name); if (e) return e; }
+    if (f.self) {
+      const c = (f.via && f.self.cells[f.via + '::' + name]) || (f.cls && f.self.cells[f.cls + '::' + name]) || f.self.cells[name];
+      if (c) {
+        if (c.from && f.cls && c.from !== f.cls) this.checkAccess(c.from, c.access, f.cls, name, f.line);
+        return { cell: c, type: c.type, member: true };
+      }
+      const amb = f.self.type && this.p.structs[f.self.type] && this.layout(f.self.type).ambig[name];
+      if (amb) throw new RtErr(this.ambigMsg(f.self.type, name, amb), 0);
+    }
+    if (f.cls) { const st = this.staticCell(f.cls, name); if (st) return { cell: st, type: st.type, member: true }; }
+    if (f !== this.global) for (let i = this.global.scopes.length - 1; i >= 0; i--) { const e = this.global.scopes[i].get(name); if (e) return e; }
     return null;
+  }
+  lookup(name) { const e = this.lookupEntry(name); return e ? e.cell : null; }
+  entryOf(e) {
+    if (e.k === 'id') {
+      if (e.name === 'this') { const f = this.frame; if (f.thisObj == null) throw new RtErr("'this' can only be used inside a member function", e.line); return { cell: { val: { k: 'ptr', to: f.thisObj }, type: { base: f.cls, ptr: 1 } }, type: { base: f.cls, ptr: 1 } }; }
+      const en = this.lookupEntry(e.name);
+      if (!en) throw new RtErr(`'${e.name}' isn't declared yet`, e.line);
+      return { cell: en.cell, type: en.type || en.cell.type };
+    }
+    const c = this.lv(e); return { cell: c, type: c.type };
+  }
+
+  // ----- classes
+  layout(cls) { return this._lay[cls] || (this._lay[cls] = layoutOf(this.p.structs, cls)); }
+  ambigMsg(cls, name, keys) { return `'${name}' is ambiguous in ${cls}: it inherited ${keys.length} copies (${keys.join(' and ')}). This is the diamond problem. Make the classes in the middle inherit with virtual, like class B : virtual public A`; }
+  initStatics() {
+    for (const key in this.p.structs) {
+      const d = this.p.structs[key]; if (d.name !== key || !d.statics.length) continue;
+      const tab = this.statics[d.name] = Object.create(null);
+      for (const f of d.statics) {
+        const t = { base: f.type.base, ptr: f.type.ptr, targs: f.type.targs };
+        const val = f.init ? this.coerce(t, this.eval(f.init), f.line) : this.zero(t);
+        tab[f.name] = { val, type: t, owner: { st: d.name, f: f.name }, from: d.name, access: f.access, stat: true };
+      }
+    }
+  }
+  staticCell(cls, name) {
+    const d = this.p.structs[cls]; if (!d) return null;
+    const tab = this.statics[d.name]; if (tab && tab[name]) return tab[name];
+    for (const b of d.bases) { const c = this.staticCell(b.name, name); if (c) return c; }
+    return null;
+  }
+  publicPath(s, b) {
+    const S = this.p.structs; if (!s || s === b || !S[s] || !isA(S, s, b)) return true;
+    return S[s].bases.some(x => x.access === 'public' && isA(S, x.name, b) && this.publicPath(x.name, b));
+  }
+  checkAccess(declCls, access, staticCls, member, line) {
+    if (!declCls || !access) return;
+    if (access === 'public' && this.publicPath(staticCls, declCls)) return;
+    const S = this.p.structs; const f = this.frame; const ctx = f.cls || null; const d = S[declCls];
+    if (ctx === declCls) return;
+    if (d && (d.friends.includes(f.plain) || (ctx && d.friends.includes(ctx)))) return;
+    const who = ctx ? `${ctx}'s functions` : f === this.global ? 'code outside the class' : `${f.fn}()`;
+    if (access === 'private') {
+      const fix = ctx && isA(S, ctx, declCls) ? `Make it protected so ${ctx} can use it, or call a public ${declCls} function.` : 'Use a public member function instead, like a getter.';
+      throw new RtErr(`This won't compile: ${member} is private in ${declCls}, so ${who} can't use it. Only ${declCls}'s own functions${d && d.friends.length ? ' and its friends' : ''} can. ${fix}`, line);
+    }
+    if (ctx && isA(S, ctx, declCls)) return;
+    if (access === 'protected') throw new RtErr(`This won't compile: ${member} is protected in ${declCls}. Only ${declCls} and the classes derived from it can use it, not ${who}.`, line);
+    let mode = 'private'; const find = c => { const x = S[c]; if (!x || c === declCls) return; for (const b of x.bases) if (isA(S, b.name, declCls)) { if (b.access !== 'public') mode = b.access; find(b.name); return; } }; find(staticCls);
+    throw new RtErr(`This won't compile: ${member} is public in ${declCls}, but ${staticCls} inherits ${declCls} as ${mode}, so ${who} can't reach it through ${an(staticCls)}.`, line);
+  }
+  member(o, f, st, label, line, ptr) {
+    const S = this.p.structs; const sd = st && S[st] ? S[st].name : null;
+    const c = (sd && o.cells[sd + '::' + f]) || o.cells[f];
+    if (!c) {
+      const amb = S[o.type] && this.layout(o.type).ambig[f];
+      if (amb) throw new RtErr(this.ambigMsg(o.type, f, amb), line);
+      throw new RtErr(`${o.type} has no field '${f}'. Its fields are: ${o.order.join(', ')}`, line);
+    }
+    if (sd && c.from && !isA(S, sd, c.from)) throw new RtErr(`This won't compile: ${label} is ${an(sd)}${ptr ? '*' : ''}, and ${sd} has no member '${f}'. The object really is ${an(o.type)}, but the compiler only goes by the type of ${label}. Use ${an(o.type)}${ptr ? '*' : ''} to reach ${f}`, line);
+    if (c.from) this.checkAccess(c.from, c.access, sd || o.type, f, line);
+    return c;
+  }
+  checkAbstract(def, line) {
+    const pure = vtableOf(this.p.structs, def.name).find(r => r.pure);
+    if (pure) throw new RtErr(`${def.name} is an abstract class: ${pure.name}() is pure virtual (= 0) in ${pure.impl}. You can't create ${an(def.name)} object, only objects of a class that overrides ${pure.name}(). A ${def.name}* pointing to one of those is fine`, line);
+  }
+  initObject(def, args, self, thisObj, line, selfName) {
+    const S = this.p.structs;
+    this.checkAbstract(def, line);
+    const ctor = def.ctors.find(c => fitsArgs(c.params, args.length));
+    if (ctor) { this.checkAccess(def.name, ctor.access, def.name, `the constructor ${def.name}()`, line); this.runCtor(def, ctor, args, self, thisObj, line, selfName, {}); return true; }
+    if (args.length) { if (def.ctors.length) throw new RtErr(`${def.name} has no constructor that takes ${args.length} value(s)`, line); return false; }
+    if (def.ctors.length) throw new RtErr(`${def.name} needs constructor values, like ${def.name} ${selfName || 'obj'}(...)`, line);
+    if (!chainHasCtor(S, def.name)) return true;
+    const built = new Set();
+    for (const b of def.bases) {
+      if (b.virtual) { if (built.has(b.name)) continue; built.add(b.name); }
+      this.constructPart(b.name, [], self, thisObj, line, selfName, built, def.name, def.name, b.name);
+    }
+    return true;
+  }
+  constructPart(cls, args, self, thisObj, line, selfName, built, dyn, child, via) {
+    const S = this.p.structs; const d = S[cls];
+    const ctor = d.ctors.find(c => fitsArgs(c.params, args.length));
+    if (ctor) { this.checkAccess(cls, ctor.access, cls, `the constructor ${cls}()`, line); return this.runCtor(d, ctor, args, self, thisObj, line, selfName, { built, dyn, via }); }
+    if (args.length) throw new RtErr(`${cls} has no constructor that takes ${args.length} value(s)`, line);
+    if (d.ctors.length) throw new RtErr(`${cls} has no default constructor, so ${child} has to choose one. Write it in ${child}'s initializer list: ${child}(…) : ${cls}(…) { }`, line);
+    for (const b of d.bases) {
+      if (b.virtual) { if (built.has(b.name)) continue; built.add(b.name); }
+      this.constructPart(b.name, [], self, thisObj, line, selfName, built, dyn, cls, via);
+    }
+  }
+  destroy(obj, start, thisObj, selfName, line, why) {
+    const S = this.p.structs; const done = new Set(); const dyn = obj.type; let first = true;
+    const run = cls => {
+      const d = S[cls]; if (!d) return;
+      if (d.dtor && d.dtor.body) {
+        const note = first ? `${why ? why + ', so ' : ''}~${d.name}() runs` + (d.bases.length ? ' first. Destructors run in reverse: derived part first, base part last' : '') : `Then ~${d.name}() cleans up the ${d.name} part${dyn !== d.name ? ` of the ${dyn}` : ''}`;
+        first = false;
+        this.invoke({ name: '~' + d.name, params: [], body: d.dtor.body, line: d.dtor.line, ret: { base: 'void', ptr: 0 }, dtor: true, cls: d.name, dyn, note }, [], { self: obj, thisObj, selfName }, line);
+      }
+      for (const b of [...d.bases].reverse()) { if (b.virtual) { if (done.has(b.name)) continue; done.add(b.name); } run(b.name); }
+    };
+    run(start);
+  }
+  endScope(map, line) {
+    if (!map || !map.size) return;
+    const S = this.p.structs;
+    for (const [name, e] of [...map.entries()].reverse()) {
+      if (e.ref || e.dead) continue; const v = e.cell && e.cell.val;
+      if (v && v.k === 'rec' && S[v.type] && chainHasDtor(S, v.type)) { e.dead = true; this.destroy(v, v.type, null, name, line, `${name} goes out of scope`); }
+    }
+  }
+  constructingAs(obj) {
+    for (let i = this.frames.length - 1; i >= 0; i--) { const f = this.frames[i]; if ((f.ctor || f.dtor) && f.self === obj) return f.cls; }
+    return null;
+  }
+  callOn(obj, thisObj, staticCls, name, args, line, label) {
+    const S = this.p.structs; const real = obj.type; const midway = this.constructingAs(obj); const dyn = midway || real;
+    const st = staticCls && S[staticCls] ? S[staticCls].name : dyn;
+    let m = findMethod(S, st, name);
+    const sym = thisObj != null ? '*' : '&';
+    if (!m) {
+      const m2 = st !== real ? findMethod(S, real, name) : null;
+      throw new RtErr(m2 ? `This won't compile: ${label} is ${an(st)}${sym}, and ${st} has no function ${name}(). The object is ${an(real)}, but the compiler only goes by ${label}'s type. Declare virtual ${name}() in ${st}` : `${real} has no function ${name}()`, line);
+    }
+    this.checkAccess(m.cls, m.fn.access, st, name + '()', line);
+    if (m.fn.static) return this.callMethod(m.fn, args, null, null, line, null, null);
+    let note = null; const virt = isVirtualIn(S, st, name);
+    if (virt && dyn !== st && isA(S, dyn, st)) {
+      const m2 = findMethod(S, dyn, name);
+      this.ev.oop.push({ k: 'vcall', name, st, dyn, from: m.cls, impl: m2.cls, obj: thisObj != null ? thisObj : label, lab: label, sym });
+      note = m2.cls === m.cls ? `${name}() is virtual, but ${dyn} doesn't override it, so ${m.cls}::${name}() runs`
+        : `${name}() is virtual: ${label} is ${an(st)}${sym}, but the object is ${an(dyn)}, so the vtable sends the call to ${m2.cls}::${name}()`;
+      m = m2;
+    } else if (virt && midway && midway !== real) {
+      this.ev.oop.push({ k: 'vcall', name, st, dyn, from: m.cls, impl: m.cls, obj: thisObj != null ? thisObj : label, midway: true, lab: label, sym });
+      note = `${name}() is virtual, but the ${real} is still being ${this.frames.some(f => f.dtor && f.self === obj) ? 'destroyed' : 'built'}: inside ${midway}'s ${this.frames.some(f => f.dtor && f.self === obj) ? 'destructor' : 'constructor'} it is only ${an(midway)}, so ${m.cls}::${name}() runs, not ${real}'s`;
+    } else if (!virt && real !== st && isA(S, real, st)) {
+      const over = findMethod(S, real, name);
+      this.ev.oop.push({ k: 'scall', name, st, dyn: real, impl: m.cls, over: over && over.cls, obj: thisObj != null ? thisObj : label, lab: label, sym });
+      if (over && over.cls !== m.cls) note = `${name}() isn't virtual, so ${m.cls}::${name}() runs because ${label} is ${an(st)}${sym}. ${over.cls}::${name}() is ignored (static binding). Add virtual to fix it`;
+    } else this.ev.oop.push({ k: 'call', name, st, dyn, impl: m.cls, virtual: virt, obj: thisObj != null ? thisObj : label, lab: label, sym });
+    if (m.fn.pure && !m.fn.body) throw new RtErr(`${m.cls}::${name}() is pure virtual (= 0) and has no body to run`, line);
+    return this.callMethod(m.fn, args, obj, thisObj, line, label, note);
+  }
+  opOverload(op, l, r, e) {
+    const S = this.p.structs; const nm = 'operator' + op;
+    const ls = exprStr(e.l), rs = exprStr(e.r);
+    if (l.k === 'rec' && S[l.type]) {
+      const m = findMethod(S, l.type, nm);
+      if (m) { this.ev.oop.push({ k: 'op', op, impl: m.cls }); return this.callMethod(m.fn, [{ k: 'val', v: r, src: rs }], l, null, e.line, ls, `${ls} ${op} ${rs} calls your ${m.cls}::${nm}(${rs}), with ${ls} as *this`); }
+    }
+    const fn = this.p.funcs[nm];
+    if (fn) { this.ev.oop.push({ k: 'op', op, impl: null }); return this.invoke({ ...fn, note: `${ls} ${op} ${rs} calls your ${nm}(${ls}, ${rs})` }, this.bindAll(fn.params, [{ k: 'val', v: l, src: ls }, { k: 'val', v: r, src: rs }], nm, e.line), null, e.line); }
+    if (l.k === 'rec' && S[l.type]) throw new RtErr(`${l.type} has no ${nm}. Define ${l.type} ${nm}(const ${l.type}& other) inside the class to use ${op} with it`, e.line);
+    return null;
+  }
+  bindAll(params, args, name, line) { return params.map((p, i) => this.bindParam(p, i < args.length ? args[i] : p.def, name, line)); }
+  slice(v, base, line) {
+    const r = this.newRec({ base, ptr: 0 }, line);
+    for (const k of r.order) { const c = r.cells[k]; const src = v.order.map(x => v.cells[x]).find(x => x.from === c.from && x.fname === c.fname); if (src) c.val = this.copyVal(src.val); }
+    const lost = v.order.filter(k => !isA(this.p.structs, base, v.cells[k].from));
+    this.ev.oop.push({ k: 'slice', from: v.type, to: base, lost });
+    this.ev.desc.push(`Object slicing: only the ${base} part of the ${v.type} was copied${lost.length ? `. ${lost.join(', ')} ${lost.length === 1 ? 'was' : 'were'} cut off` : ''}`);
+    return r;
   }
   numType(t) { return t.base === 'char' ? 'char' : t.base === 'bool' ? 'bool' : t.base === 'double' ? 'double' : 'int'; }
   isCont(t) { return t && !t.ptr && CONT_KINDS.has(t.base); }
@@ -969,13 +1374,15 @@ class Interp {
       return r;
     }
     const def = this.sdef(t);
-    const r = { k: 'rec', type: def.name, cells: {}, order: [] };
-    for (const f of def.fields) {
+    const lay = this.layout(def.name);
+    const r = { k: 'rec', type: def.name, cells: {}, order: [], parts: lay.parts };
+    for (const en of lay.entries) {
+      const f = en.f;
       const ft = { base: f.type.base, ptr: f.type.ptr, targs: f.type.targs };
       let v;
       if (f.dims.length) { const sizes = f.dims.map(d => this.sizeOf(d, f.line)); v = this.makeArr(f.name, ft, sizes, f.init && f.init.k === 'list' ? f.init.items : null, f.line); }
       else v = f.init ? (f.init.k === 'list' ? this.fromList(ft, f.init.items, line) : this.coerce(ft, this.eval(f.init), line)) : this.defaultVal(ft);
-      r.cells[f.name] = { val: v, type: f.dims.length ? { ...ft, arr: true } : ft, owner: { rec: 1 } }; r.order.push(f.name);
+      r.cells[en.key] = { val: v, type: f.dims.length ? { ...ft, arr: true } : ft, owner: { rec: 1 }, from: en.from, part: en.part, access: f.access, fname: f.name }; r.order.push(en.key);
     }
     return r;
   }
@@ -995,8 +1402,8 @@ class Interp {
   }
   copyVal(v) {
     if (v.k === 'rec') {
-      const r = { k: 'rec', type: v.type, cells: {}, order: [...v.order] };
-      for (const f of v.order) { const c = v.cells[f]; r.cells[f] = { val: this.copyVal(c.val), type: c.type, owner: { rec: 1 } }; }
+      const r = { k: 'rec', type: v.type, cells: {}, order: [...v.order], parts: v.parts };
+      for (const f of v.order) { const c = v.cells[f]; r.cells[f] = { val: this.copyVal(c.val), type: c.type, owner: { rec: 1 }, from: c.from, part: c.part, access: c.access, fname: c.fname }; }
       return r;
     }
     if (v.k === 'cont') return { ...v, id: ++this.contSeq, items: v.items.map(c => ({ val: this.copyVal(c.val), type: c.type, owner: null })) };
@@ -1004,7 +1411,7 @@ class Interp {
   }
   coerce(t, v, line) {
     if (v === undefined || v.k === 'void') throw new RtErr('This function does not return a value', line);
-    if (!t || t.base === 'auto' || t.arr) return v;
+    if (!t || t.base === 'auto' || t.arr || STREAM_TYPES.has(t.base)) return v;
     if (t.ptr > 0) {
       if (v.k === 'ptr') return { k: 'ptr', to: v.to, uninit: v.uninit };
       if (v.k === 'num' && v.v === 0) return { k: 'ptr', to: null };
@@ -1012,7 +1419,14 @@ class Interp {
       throw new RtErr(`Can't store ${this.describe(v)} in a pointer`, line);
     }
     if (this.isCont(t)) { if (v.k === 'cont') return this.copyVal(v); throw new RtErr(`Expected a ${t.base} here`, line); }
-    if (this.isPair(t) || this.sdef(t)) { if (v.k === 'rec') return this.copyVal(v); throw new RtErr(`Expected a ${t.base} value here`, line); }
+    if (this.isPair(t) || this.sdef(t)) {
+      if (v.k === 'rec') {
+        const d = this.sdef(t);
+        if (d && v.type !== d.name && this.p.structs[v.type] && isA(this.p.structs, v.type, d.name)) return this.slice(v, d.name, line);
+        return this.copyVal(v);
+      }
+      throw new RtErr(`Expected a ${t.base} value here`, line);
+    }
     if (t.base === 'string') {
       if (v.k === 'str') return { k: 'str', v: v.v };
       if (v.k === 'num' && v.t === 'char') return { k: 'str', v: String.fromCharCode(v.v) };
@@ -1120,7 +1534,7 @@ class Interp {
       case 'num': return { k: 'num', v: v.v, t: v.t };
       case 'str': return { k: 'str', v: v.v };
       case 'arr': return { k: 'arr', id: v.id, name: v.name, dims: v.dims, vals: v.elems.map(c => this.sv(c.val)) };
-      case 'rec': return { k: 'rec', type: v.type, fields: v.order.map(f => ({ name: f, val: this.sv(v.cells[f].val) })) };
+      case 'rec': return { k: 'rec', type: v.type, parts: v.parts, fields: v.order.map(f => ({ name: f, val: this.sv(v.cells[f].val), from: v.cells[f].from, part: v.cells[f].part, ptr: (v.cells[f].type.ptr || 0) > 0 })) };
       case 'cont': return { k: 'cont', kind: v.kind, id: v.id, min: v.min, vals: v.items.map(c => this.sv(c.val)) };
       default: return { k: v.k };
     }
@@ -1140,7 +1554,7 @@ class Interp {
     const ev = this.ev; this.ev = this.freshEv(); this.lastLine = line; this.stats.steps++;
     const frames = [];
     const gl = this.flat(this.global); if (gl.length) frames.push({ fn: 'globals', vars: gl, global: true });
-    for (const f of this.frames) frames.push({ fn: f.fn, vars: this.flat(f), ctor: !!f.ctor });
+    for (const f of this.frames) frames.push({ fn: f.fn, vars: this.flat(f), ctor: !!f.ctor, dtor: !!f.dtor, cls: f.cls || null });
     const targets = new Set();
     const addT = v => {
       if (!v) return;
@@ -1153,9 +1567,11 @@ class Interp {
     const heap = [];
     for (const o of this.heap.values()) {
       if (!o.alive && !targets.has(o.id) && !ev.free.includes(o.id)) continue;
-      heap.push({ id: o.id, type: o.type, addr: o.addr, alive: o.alive, fields: o.order.map(f => ({ name: f, val: this.sv(o.cells[f].val), ptr: o.cells[f].type.ptr > 0 })) });
+      heap.push({ id: o.id, type: o.type, addr: o.addr, alive: o.alive, parts: o.parts, fields: o.order.map(f => ({ name: f, val: this.sv(o.cells[f].val), ptr: o.cells[f].type.ptr > 0, from: o.cells[f].from, part: o.cells[f].part })) });
     }
-    this.steps.push({ line, note: note ?? (ev.desc.slice(-2).join(' · ') || null), flags, frames, heap, out: this.out, ev, stats: { ...this.stats } });
+    const statics = [];
+    for (const cls in this.statics) for (const n in this.statics[cls]) statics.push({ cls, name: n, val: this.sv(this.statics[cls][n].val) });
+    this.steps.push({ line, note: note ?? (ev.desc.slice(-2).join(' · ') || null), flags, frames, heap, statics, out: this.out, ev, stats: { ...this.stats } });
   }
 
   // ----- statements
@@ -1168,9 +1584,10 @@ class Interp {
   }
   execBlock(b, scope) {
     if (scope) this.frame.scopes.push(new Map());
+    const end = () => { const sc = this.frame.scopes; this.endScope(sc[sc.length - 1], b.endLine || b.line); sc.pop(); };
     try { for (const st of b.stmts) this.execStmt(st); }
-    catch (e) { if (scope && (e instanceof BrkSig || e instanceof ContSig || e instanceof RetSig)) this.frame.scopes.pop(); throw e; }
-    if (scope) this.frame.scopes.pop();
+    catch (e) { if (scope && (e instanceof BrkSig || e instanceof ContSig || e instanceof RetSig)) end(); throw e; }
+    if (scope) end();
   }
   loopBody(body) {
     try { this.execStmt(body); return 0; }
@@ -1256,18 +1673,32 @@ class Interp {
       }
       case 'break': throw new BrkSig();
       case 'continue': throw new ContSig();
-      case 'delete': this.freeNode(this.eval(s.e), s.line); this.snap(s.line); return;
+      case 'delete': {
+        let p, st = null;
+        if (this.lvable(s.e) && !(s.e.k === 'id' && s.e.name === 'this')) { const en = this.entryOf(s.e); p = en.cell.val; st = en.type && !en.type.arr ? en.type.base : null; }
+        else p = this.eval(s.e);
+        this.freeNode(p, s.line, st, exprStr(s.e)); this.snap(s.line); return;
+      }
     }
   }
   valEq(a, b) { if (a.k === 'num' && b.k === 'num') return a.v === b.v; if (a.k === 'str' && b.k === 'str') return a.v === b.v; return false; }
-  freeNode(p, line) {
+  freeNode(p, line, st, label) {
     if (p.k !== 'ptr') throw new RtErr('delete/free needs a pointer', line);
     if (p.uninit) throw new RtErr('Deleting a pointer that was never given an address', line);
     if (p.to == null) { this.ev.desc.push('Deleting NULL does nothing'); return; }
     const o = this.heap.get(p.to);
     if (!o.alive) throw new RtErr('This node was already deleted. Deleting twice crashes real programs (double free)', line);
+    const S = this.p.structs; const sd = st && S[st] ? S[st].name : o.type;
+    let start = o.type, bad = false;
+    if (sd !== o.type && isA(S, o.type, sd) && !hasVirtualDtor(S, sd)) { start = sd; bad = true; }
+    if (chainHasDtor(S, start)) this.destroy(o, start, o.id, label, line, `delete ${label || ''}`.trim());
     o.alive = false; this.ev.free.push(o.id);
-    this.ev.desc.push(`Deleted node ${o.addr}. Its memory is given back`);
+    const isCls = S[o.type] && (S[o.type].kw === 'class' || S[o.type].bases.length);
+    if (bad) {
+      this.ev.oop.push({ k: 'baddel', st: sd, dyn: o.type, obj: o.id });
+      this.ev.desc.push(`${sd}'s destructor isn't virtual, so deleting through ${an(sd)}* only ran the ${sd} cleanup. ~${o.type}() never ran (undefined behavior). Make ~${sd}() virtual`);
+    }
+    this.ev.desc.push(`Deleted ${isCls ? 'the ' + o.type : 'node'} at ${o.addr}. Its memory is given back`);
   }
   declVar(d) {
     const t = d.type;
@@ -1294,7 +1725,7 @@ class Interp {
     else {
       cell.val = this.frames.length ? this.defaultVal(t) : this.zero(t);
       const def = this.sdef(t);
-      if (def && def.ctors.length) { const ctor = def.ctors.find(c => c.params.length === 0); if (!ctor) throw new RtErr(`${def.name} needs constructor values, like ${def.name} ${d.name}(...)`, d.line); this.runCtor(def, ctor, [], cell.val, null, d.line, d.name); }
+      if (def) this.initObject(def, [], cell.val, null, d.line, d.name);
     }
     this.declare(d.name, { cell, type: t });
     const v = cell.val;
@@ -1310,17 +1741,17 @@ class Interp {
     }
     const def = this.sdef(t);
     if (def) {
-      const r = this.newRec(t, line); const ctor = def.ctors.find(c => c.params.length === argExprs.length);
-      if (!ctor) { if (!def.ctors.length) return this.fromList(t, argExprs, line); throw new RtErr(`${def.name} has no constructor that takes ${argExprs.length} value(s)`, line); }
-      this.runCtor(def, ctor, argExprs, r, null, line, name); return r;
+      const r = this.newRec(t, line);
+      if (!this.initObject(def, argExprs, r, null, line, name)) return this.fromList(t, argExprs, line);
+      return r;
     }
     if (this.isPair(t)) return this.fromList(t, argExprs, line);
     if (argExprs.length !== 1) throw new RtErr('Expected one starting value', line);
     return this.coerce(t, this.eval(argExprs[0]), line);
   }
-  runCtor(def, ctor, argExprs, self, thisObj, line, selfName) {
-    const binds = ctor.params.map((p, i) => this.bindParam(p, argExprs[i], def.name, line));
-    this.invoke({ name: def.name, params: ctor.params, body: ctor.body, line: ctor.line, ret: { base: 'void', ptr: 0 }, inits: ctor.inits, ctor: true }, binds, { self, thisObj, selfName }, line);
+  runCtor(def, ctor, argExprs, self, thisObj, line, selfName, opts = {}) {
+    const binds = this.bindAll(ctor.params, argExprs, def.name, line);
+    this.invoke({ name: def.name, params: ctor.params, body: ctor.body, line: ctor.line, ret: { base: 'void', ptr: 0 }, inits: ctor.inits, baseInits: ctor.baseInits, ctor: true, def, cls: def.name, built: opts.built || new Set(), dyn: opts.dyn || def.name, via: opts.via || null }, binds, { self, thisObj, selfName }, line);
   }
 
   // ----- containers
@@ -1385,26 +1816,34 @@ class Interp {
     const name = lhs ? (lhs.src || exprStr(lhs)) : 'value';
     this.ev.desc.push(v.k === 'ptr' ? (v.to == null ? `${name} = NULL` : `${name} now points to node ${this.heap.get(v.to).addr}`) : `${name} = ${this.describe(v)}`);
   }
-  lvable(e) { return e.k === 'id' || e.k === 'arrow' || e.k === 'dot' || e.k === 'index' || (e.k === 'un' && e.op === '*'); }
+  lvable(e) { return e.k === 'id' || e.k === 'qid' || e.k === 'arrow' || e.k === 'dot' || e.k === 'index' || (e.k === 'un' && e.op === '*'); }
   lv(e) {
     if (e.k === 'id') {
       const c = this.lookup(e.name);
       if (!c) throw new RtErr(`'${e.name}' isn't declared yet`, e.line);
       return c;
     }
-    if (e.k === 'arrow' || (e.k === 'dot' && e.a.k === 'un' && e.a.op === '*')) {
-      const pe = e.k === 'arrow' ? e.a : e.a.a; const label = exprStr(pe);
-      const o = this.deref(this.eval(pe), label, e.line);
-      const c = o.cells[e.f];
-      if (!c) throw new RtErr(`${o.type} has no field '${e.f}'. Its fields are: ${o.order.join(', ')}`, e.line);
+    if (e.k === 'qid') {
+      const c = this.staticCell(e.cls, e.name);
+      if (!c) throw new RtErr(`${e.cls} has no static member '${e.name}'`, e.line);
+      this.checkAccess(c.from, c.access, e.cls, e.name, e.line);
       return c;
     }
+    if (e.k === 'arrow' || (e.k === 'dot' && e.a.k === 'un' && e.a.op === '*')) {
+      const pe = e.k === 'arrow' ? e.a : e.a.a; const label = exprStr(pe);
+      let p, st = null;
+      if (this.lvable(pe)) { const en = this.entryOf(pe); p = this.readCell(en.cell, label, e.line); st = en.type && !en.type.arr ? en.type.base : null; if (pe.k === 'index' && en.cell.owner) this.ev.reads.push(en.cell.owner); }
+      else p = this.eval(pe);
+      const o = this.deref(p, label, e.line);
+      return this.member(o, e.f, st, label, e.line, true);
+    }
     if (e.k === 'dot') {
-      const v = this.lvable(e.a) ? this.lv(e.a).val : this.eval(e.a);
+      let v, st = null;
+      if (this.lvable(e.a)) { const en = this.entryOf(e.a); v = en.cell.val; st = en.type && !en.type.ptr && !en.type.arr ? en.type.base : null; }
+      else v = this.eval(e.a);
       if (v.k === 'ptr') throw new RtErr(`${exprStr(e.a)} is a pointer. Write ${exprStr(e.a)}->${e.f}`, e.line);
       if (v.k !== 'rec') throw new RtErr(`${exprStr(e.a)} has no fields`, e.line);
-      const c = v.cells[e.f]; if (!c) throw new RtErr(`${v.type} has no field '${e.f}'`, e.line);
-      return c;
+      return this.member(v, e.f, st, exprStr(e.a), e.line, false);
     }
     if (e.k === 'index') {
       const a = this.lvable(e.a) ? this.lv(e.a).val : this.eval(e.a);
@@ -1470,6 +1909,18 @@ class Interp {
         }
         return this.readCell(c, e.name, e.line);
       }
+      case 'val': return e.v;
+      case 'qid': return this.readCell(this.lv(e), exprStr(e), e.line);
+      case 'qcall': {
+        const S = this.p.structs; const m = findMethod(S, e.cls, e.name);
+        if (!m) throw new RtErr(`${e.cls} has no function ${e.name}()`, e.line);
+        this.checkAccess(m.cls, m.fn.access, e.cls, e.name + '()', e.line);
+        if (m.fn.static) return this.callMethod(m.fn, e.args, null, null, e.line, null, null);
+        const f = this.frame;
+        if (!f.self || !isA(S, f.self.type, e.cls)) throw new RtErr(`${e.cls}::${e.name}() needs an object. Call it as obj.${e.name}(), or from inside a ${e.cls} member function`, e.line);
+        this.ev.oop.push({ k: 'qcall', name: e.name, st: e.cls, impl: m.cls, obj: f.thisObj != null ? f.thisObj : f.selfName });
+        return this.callMethod(m.fn, e.args, f.self, f.thisObj, e.line, f.selfName, `${e.cls}::${e.name}() names the class, so ${m.cls}'s version runs directly, with no virtual lookup`);
+      }
       case 'arrow': case 'dot': case 'index': {
         const c = this.lv(e); const v = this.readCell(c, exprStr(e), e.line);
         if (e.k === 'index' && c.owner) this.ev.reads.push(c.owner);
@@ -1481,15 +1932,29 @@ class Interp {
         let v = e.r.k === 'list' ? this.fromList(c.type, e.r.items, e.line) : this.eval(e.r);
         if (e.op !== '=') {
           const cur = this.readCell(c, exprStr(e.l), e.line);
-          v = (e.op === '+=' && cur.k === 'str') ? { k: 'str', v: cur.v + this.fmtOut(v) } : this.arith(e.op[0], cur, v, e.line);
+          if (cur.k === 'rec' && this.p.structs[cur.type]) {
+            const m = findMethod(this.p.structs, cur.type, 'operator' + e.op);
+            if (m) return this.callMethod(m.fn, [{ k: 'val', v, src: exprStr(e.r) }], cur, null, e.line, exprStr(e.l), `${exprStr(e.l)} ${e.op} ${exprStr(e.r)} calls your ${m.cls}::operator${e.op}`);
+            v = this.opOverload(e.op[0], cur, v, { l: e.l, r: e.r, line: e.line });
+          } else v = (e.op === '+=' && cur.k === 'str') ? { k: 'str', v: cur.v + this.fmtOut(v) } : this.arith(e.op[0], cur, v, e.line);
         }
         v = this.coerce(c.type, v, e.line); this.writeCell(c, v, e.l); return v;
       }
       case 'bin': return this.evalBin(e);
       case 'un': {
-        if (e.op === '*') { this.lv(e); break; }
+        if (e.op === '*') {
+          const S = this.p.structs;
+          if (e.a.k === 'id' && e.a.name === 'this' && this.frame.self) return this.frame.self.k === 'rec' ? this.frame.self : { k: 'rec', type: this.frame.self.type, cells: this.frame.self.cells, order: this.frame.self.order, parts: this.frame.self.parts };
+          const pv = this.eval(e.a);
+          if (pv.k === 'ptr' && pv.to != null && !pv.uninit) { const o = this.deref(pv, exprStr(e.a), e.line); const d = S[o.type]; if (d && (d.kw === 'class' || d.bases.length || Object.keys(d.methods).length)) return { k: 'rec', type: o.type, cells: o.cells, order: o.order, parts: o.parts }; }
+          this.lv(e); break;
+        }
         if (e.op === '&') throw new RtErr("Taking addresses with & isn't drawn yet. Use a reference parameter (Node*& head) instead", e.line);
         const v = this.eval(e.a);
+        if (v.k === 'rec' && this.p.structs[v.type]) {
+          const m = findMethod(this.p.structs, v.type, 'operator' + e.op);
+          if (m && m.fn.params.length === 0) return this.callMethod(m.fn, [], v, null, e.line, exprStr(e.a), `${e.op}${exprStr(e.a)} calls your ${m.cls}::operator${e.op}()`);
+        }
         if (e.op === '!') return NUM(this.truthy(v, e.a) ? 0 : 1, 'bool');
         this.needNum(v, e.line);
         if (e.op === '-') return NUM(-v.v, v.t === 'double' ? 'double' : 'int');
@@ -1529,14 +1994,21 @@ class Interp {
     if (l.k === 'stream') {
       if (op === '<<') {
         if (l.s !== 'out') throw new RtErr('Use >> with cin', e.line);
-        const r = this.eval(e.r); this.out += this.fmtOut(r); this.ev.desc.push('Printed to the output'); return l;
+        const ov = this.p.funcs['operator<<'];
+        const rc = ov && this.lvable(e.r) && !(e.r.k === 'id' && ['endl', 'cout', 'cin', 'true', 'false', 'NULL', 'nullptr', 'this'].includes(e.r.name)) ? this.lv(e.r) : null;
+        const r = rc ? rc.val : this.eval(e.r);
+        if (ov && r.k === 'rec') { this.ev.oop.push({ k: 'op', op: '<<', impl: null }); return this.invoke({ ...ov, note: `cout << ${exprStr(e.r)} calls your operator<<` }, this.bindAll(ov.params, [{ k: 'val', v: l, src: 'cout' }, rc ? e.r : { k: 'val', v: r, src: exprStr(e.r) }], 'operator<<', e.line), null, e.line); }
+        this.out += this.fmtOut(r); this.ev.desc.push('Printed to the output'); return l;
       }
       if (op === '>>') {
         if (l.s !== 'in') throw new RtErr('Use << with cout', e.line);
+        const ov = this.p.funcs['operator>>'];
+        if (ov && this.lvable(e.r)) { const c = this.lv(e.r); if (c.val.k === 'rec') return this.invoke({ ...ov, note: `cin >> ${exprStr(e.r)} calls your operator>>` }, this.bindAll(ov.params, [{ k: 'val', v: l, src: 'cin' }, e.r], 'operator>>', e.line), null, e.line); }
         this.readInput(this.lv(e.r), 'auto', e.r, e.line); return l;
       }
     }
     const r = this.eval(e.r);
+    if ((l.k === 'rec' && this.p.structs[l.type]) || (r.k === 'rec' && this.p.structs[r.type])) { const ov = this.opOverload(op, l, r, e); if (ov) return ov; }
     if (['==', '!=', '<', '>', '<=', '>='].includes(op)) {
       this.stats.cmp++;
       const cmp = (a, b) => ({ '==': a === b, '!=': a !== b, '<': a < b, '>': a > b, '<=': a <= b, '>=': a >= b }[op] ? 1 : 0);
@@ -1592,15 +2064,17 @@ class Interp {
   alloc(typeName, args, paren, line) {
     const def = this.p.structs[typeName];
     if (!def) throw new RtErr(BASE_TYPES.has(typeName) ? `new ${typeName} isn't drawn yet. Try a struct, like new Node(5)` : `Unknown type '${typeName}'`, line);
-    const ctor = def.ctors.find(c => c.params.length === args.length);
+    this.checkAbstract(def, line);
+    const ctor = def.ctors.find(c => fitsArgs(c.params, args.length));
     if (def.ctors.length && !ctor) throw new RtErr(`${def.name} has no constructor that takes ${args.length} value(s)`, line);
     const id = ++this.seq; this.addr += 0x20 + ((id * 37) % 5) * 0x10;
     const o = { id, type: def.name, addr: '0x' + this.addr.toString(16).toUpperCase(), cells: {}, order: [], alive: true };
     this.heap.set(id, o);
     const tpl = (!def.ctors.length && paren) ? this.zero({ base: def.name, ptr: 0 }) : this.newRec({ base: def.name, ptr: 0 }, line);
-    for (const f of tpl.order) { const c = tpl.cells[f]; o.cells[f] = { val: c.val, type: c.type, owner: { obj: id, f } }; o.order.push(f); }
+    o.parts = tpl.parts;
+    for (const f of tpl.order) { const c = tpl.cells[f]; o.cells[f] = { val: c.val, type: c.type, owner: { obj: id, f }, from: c.from, part: c.part, access: c.access, fname: c.fname }; o.order.push(f); }
     this.ev.alloc.push(id); this.ev.desc.push(`new ${def.name} created at ${o.addr}`);
-    if (ctor) this.runCtor(def, ctor, args, o, id, line);
+    if (ctor || !args.length) this.initObject(def, args, o, id, line, null);
     else if (args.length) {
       if (args.length > o.order.length) throw new RtErr(`${def.name} has only ${o.order.length} field(s)`, line);
       args.forEach((a, i) => { const c = o.cells[o.order[i]]; c.val = this.evalItem(c.type, a, line); });
@@ -1608,6 +2082,7 @@ class Interp {
     return { k: 'ptr', to: id };
   }
   bindParam(p, a, fname, line) {
+    if (STREAM_TYPES.has(p.type.base)) return { name: p.name, entry: { cell: { val: this.eval(a), type: p.type, owner: { v: p.name } }, type: p.type } };
     if (p.type.ref) {
       if (!this.lvable(a)) { const v = this.eval(a); return { name: p.name, entry: { cell: { val: this.coerce(p.type, v, line), type: p.type, owner: { v: p.name } }, type: p.type } }; }
       return { name: p.name, entry: { cell: this.lv(a), type: p.type, ref: true, alias: exprStr(a) } };
@@ -1621,40 +2096,54 @@ class Interp {
   }
   call(e) {
     const n = e.name; let fn = this.p.funcs[n];
-    if (!fn && this.frame.self) {
-      const def = this.p.structs[this.frame.self.type];
-      if (def && def.methods[n]) return this.callMethod(def.methods[n], e.args, this.frame.self, this.frame.thisObj, e.line, this.frame.selfName);
+    const f = this.frame;
+    if (f.cls) {
+      const m = findMethod(this.p.structs, f.cls, n);
+      if (m) {
+        if (m.fn.static || !f.self) return this.callMethod(m.fn, e.args, null, null, e.line, null, null);
+        return this.callOn(f.self, f.thisObj, f.cls, n, e.args, e.line, f.thisObj != null ? 'this' : (f.selfName || 'this'));
+      }
+    }
+    const sd = !fn && this.p.structs[n];
+    if (sd) {
+      const r = this.newRec({ base: sd.name, ptr: 0 }, e.line);
+      if (!this.initObject(sd, e.args, r, null, e.line, `temporary ${sd.name}`)) return this.fromList({ base: sd.name, ptr: 0 }, e.args, e.line);
+      return r;
     }
     if (!fn) {
       const b = this.builtin(e); if (b) return b;
       throw new RtErr(`The function '${n}' isn't defined yet`, e.line);
     }
     if (!fn.body) throw new RtErr(`${n} has no body yet`, e.line);
-    if (fn.params.length !== e.args.length) throw new RtErr(`${n} expects ${fn.params.length} argument(s) but got ${e.args.length}`, e.line);
-    const binds = fn.params.map((p, i) => this.bindParam(p, e.args[i], n, e.line));
-    return this.invoke(fn, binds, null, e.line);
+    if (!fitsArgs(fn.params, e.args.length)) throw new RtErr(`${n} expects ${fn.params.length} argument(s) but got ${e.args.length}`, e.line);
+    return this.invoke(fn, this.bindAll(fn.params, e.args, n, e.line), null, e.line);
   }
-  callMethod(fn, args, self, thisObj, line, selfName) {
-    if (!fn.body) throw new RtErr(`${fn.name} has no body yet`, line);
-    if (fn.params.length !== args.length) throw new RtErr(`${fn.name} expects ${fn.params.length} argument(s) but got ${args.length}`, line);
-    const binds = fn.params.map((p, i) => this.bindParam(p, args[i], fn.name, line));
-    return this.invoke({ ...fn, name: `${fn.owner || self.type}::${fn.name}` }, binds, { self, thisObj, selfName }, line);
+  callMethod(fn, args, self, thisObj, line, selfName, note) {
+    if (!fn.body) throw new RtErr(fn.pure ? `${fn.owner}::${fn.name}() is pure virtual (= 0) and has no body to run` : `${fn.name} has no body yet`, line);
+    if (!fitsArgs(fn.params, args.length)) throw new RtErr(`${fn.name} expects ${fn.params.length} argument(s) but got ${args.length}`, line);
+    const binds = this.bindAll(fn.params, args, fn.name, line);
+    const owner = fn.owner || (self && self.type);
+    return this.invoke({ ...fn, name: `${owner}::${fn.name}`, cls: owner, note: note || null }, binds, { self, thisObj, selfName }, line);
   }
   mcall(e) {
     let v, name = exprStr(e.obj);
     if (e.arrow) {
-      const p = this.eval(e.obj); const o = this.deref(p, name, e.line); const def = this.p.structs[o.type];
-      if (def && def.methods[e.name]) return this.callMethod(def.methods[e.name], e.args, o, o.id, e.line, name);
+      let p, st = null;
+      if (this.lvable(e.obj)) { const en = this.entryOf(e.obj); p = this.readCell(en.cell, name, e.line); st = en.type && !en.type.arr ? en.type.base : null; }
+      else p = this.eval(e.obj);
+      const o = this.deref(p, name, e.line);
+      if (this.p.structs[o.type]) return this.callOn(o, o.id, st, e.name, e.args, e.line, name);
       throw new RtErr(`${o.type} has no function ${e.name}()`, e.line);
     }
-    const cell = this.lvable(e.obj) ? this.lv(e.obj) : null;
+    let cell = null, st = null;
+    if (this.lvable(e.obj)) { const en = this.entryOf(e.obj); cell = en.cell; st = en.type && !en.type.arr && !en.type.ptr ? en.type.base : null; }
     v = cell ? cell.val : this.eval(e.obj);
     if (v.k === 'cont') return this.contMethod(v, e, name);
     if (v.k === 'rec') {
-      const def = this.p.structs[v.type];
-      if (def && def.methods[e.name]) return this.callMethod(def.methods[e.name], e.args, v, null, e.line, name);
+      if (this.p.structs[v.type]) return this.callOn(v, null, st, e.name, e.args, e.line, name);
       throw new RtErr(`${v.type} has no function ${e.name}()`, e.line);
     }
+    if (v.k === 'ptr' && v.to != null && !v.uninit && this.heap.has(v.to)) throw new RtErr(`${name} is a pointer. Write ${name}->${e.name}()`, e.line);
     if (v.k === 'str') {
       switch (e.name) {
         case 'length': case 'size': return NUM(v.v.length);
@@ -1744,21 +2233,35 @@ class Interp {
   }
   invoke(fn, binds, selfInfo, callLine) {
     if (this.frames.length >= MAX_DEPTH) throw new RtErr('Too many nested calls. Make sure the recursion reaches a base case that stops it', callLine);
-    const fr = { fn: fn.name, scopes: [new Map()], line: fn.line, thisObj: selfInfo ? selfInfo.thisObj ?? null : null, self: selfInfo ? selfInfo.self : null, selfName: selfInfo && selfInfo.selfName, ctor: !!fn.ctor };
+    const fr = { fn: fn.name, scopes: [new Map()], line: fn.line, thisObj: selfInfo ? selfInfo.thisObj ?? null : null, self: selfInfo ? selfInfo.self : null, selfName: selfInfo && selfInfo.selfName, ctor: !!fn.ctor, dtor: !!fn.dtor, cls: fn.cls || null, plain: fn.cls ? null : fn.name, via: fn.via || null };
     for (const b of binds) if (b.name) fr.scopes[0].set(b.name, b.entry);
     this.frames.push(fr); this.stats.calls++; this.stats.maxDepth = Math.max(this.stats.maxDepth, this.frames.length - 1);
     let ret = { k: 'void' };
     try {
+      if (fn.ctor && fn.def) for (const b of fn.def.bases) {
+        if (b.virtual) { if (fn.built.has(b.name)) continue; fn.built.add(b.name); }
+        const bi = (fn.baseInits || []).find(x => x.base === b.name);
+        this.constructPart(b.name, bi ? bi.args : [], fr.self, fr.thisObj, bi ? bi.line : fn.line, fr.selfName, fn.built, fn.dyn, fn.def.name, fn.via || (b.virtual ? null : b.name));
+      }
       if (fn.inits) for (const it of fn.inits) {
-        const c = fr.self.cells[it.f];
+        const c = (fn.via && fr.self.cells[fn.via + '::' + it.f]) || (fn.cls && fr.self.cells[fn.cls + '::' + it.f]) || fr.self.cells[it.f];
         if (!c) throw new RtErr(`${fn.name} has no field named ${it.f}`, it.line);
         const v = it.args.length ? this.eval(it.args[0]) : this.zero(c.type);
         this.store(c, this.coerce(c.type, v, it.line), { src: it.f });
       }
       const args = binds.map(b => this.describe(b.entry.cell.val)).join(', ');
-      this.snap(fn.line, fn.ctor ? `Constructor ${fn.name}(${args}) sets up the new ${fn.name}` : `Call ${fn.name}(${args})`, { call: true });
+      if (fn.ctor || fn.dtor) this.ev.oop.push({ k: fn.ctor ? 'ctor' : 'dtor', cls: fn.cls, dyn: fn.dyn || fn.cls, obj: fr.thisObj != null ? fr.thisObj : fr.selfName });
+      let note = fn.note;
+      if (!note && fn.ctor) {
+        const hasBases = fn.def && fn.def.bases.length;
+        note = fn.dyn && fn.dyn !== fn.cls ? `${fn.name}(${args}) runs first and builds the ${fn.cls} part of the new ${fn.dyn}`
+          : hasBases ? `Its base part${fn.def.bases.length > 1 ? 's are' : ' is'} ready, so now ${fn.name}(${args}) builds the ${fn.cls} part`
+          : `Constructor ${fn.name}(${args}) sets up the new ${fn.name}`;
+      }
+      this.snap(fn.line, note || `Call ${fn.name}(${args})`, { call: true });
       this.execBlock(fn.body, false);
     } catch (x) { if (x instanceof RetSig) ret = x.v; else throw x; }
+    this.endScope(fr.scopes[0], (fn.body && fn.body.endLine) || fn.line);
     this.frames.pop();
     if (fn.ret.base !== 'void' || fn.ret.ptr) {
       if (ret.k === 'void') throw new RtErr(`${fn.name} ended without returning a value`, callLine);
@@ -1803,6 +2306,438 @@ function runProgram(src, stdin) {
 </script>
 <script>
 const EXAMPLES = [{"unit":"Unit I · Basics and arrays","items":[{"id":"01_array_ops","name":"Array insertion and deletion","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    int arr[10] = {12, 45, 7, 23, 56};\n    int n = 5;\n\n    // Insert 99 at index 2\n    int pos = 2;\n    for (int i = n; i > pos; i--) {\n        arr[i] = arr[i - 1];\n    }\n    arr[pos] = 99;\n    n++;\n\n    // Delete the element at index 4\n    pos = 4;\n    for (int i = pos; i < n - 1; i++) {\n        arr[i] = arr[i + 1];\n    }\n    n--;\n\n    // Traverse\n    for (int i = 0; i < n; i++) {\n        cout << arr[i] << \" \";\n    }\n    cout << endl;\n    return 0;\n}\n","stdin":""},{"id":"02_merge_arrays","name":"Merging two sorted arrays","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    int a[] = {1, 4, 7, 9};\n    int b[] = {2, 3, 8};\n    int c[7];\n    int i = 0, j = 0, k = 0;\n    while (i < 4 && j < 3) {\n        if (a[i] <= b[j]) c[k++] = a[i++];\n        else c[k++] = b[j++];\n    }\n    while (i < 4) c[k++] = a[i++];\n    while (j < 3) c[k++] = b[j++];\n    for (int x = 0; x < 7; x++) cout << c[x] << \" \";\n    cout << endl;\n    return 0;\n}\n","stdin":""},{"id":"38_complexity","name":"Counting work: O(n), O(n²), O(log n)","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    int n = 8;\n    int linear = 0, quadratic = 0, logarithmic = 0;\n    for (int i = 0; i < n; i++) linear++;\n    for (int i = 0; i < n; i++)\n        for (int j = 0; j < n; j++) quadratic++;\n    for (int i = 1; i < n; i *= 2) logarithmic++;\n    cout << \"O(n): \" << linear << \", O(n^2): \" << quadratic << \", O(log n): \" << logarithmic << endl;\n    return 0;\n}\n","stdin":""}]},{"unit":"Unit I · Sorting and searching","items":[{"id":"03_bubble","name":"Bubble sort","code":"#include <iostream>\nusing namespace std;\n\nvoid bubbleSort(int arr[], int n) {\n    for (int i = 0; i < n - 1; i++) {\n        for (int j = 0; j < n - i - 1; j++) {\n            if (arr[j] > arr[j + 1]) {\n                int temp = arr[j];\n                arr[j] = arr[j + 1];\n                arr[j + 1] = temp;\n            }\n        }\n    }\n}\n\nint main() {\n    int arr[] = {64, 34, 25, 12, 22};\n    int n = sizeof(arr) / sizeof(arr[0]);\n    bubbleSort(arr, n);\n    for (int i = 0; i < n; i++) cout << arr[i] << \" \";\n    cout << endl;\n    return 0;\n}\n","stdin":""},{"id":"04_insertion","name":"Insertion sort","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    int arr[] = {9, 5, 1, 4, 3};\n    int n = 5;\n    for (int i = 1; i < n; i++) {\n        int key = arr[i];\n        int j = i - 1;\n        while (j >= 0 && arr[j] > key) {\n            arr[j + 1] = arr[j];\n            j--;\n        }\n        arr[j + 1] = key;\n    }\n    for (int i = 0; i < n; i++) cout << arr[i] << \" \";\n    return 0;\n}\n","stdin":""},{"id":"05_selection","name":"Selection sort","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    int arr[] = {29, 10, 14, 37, 13};\n    int n = 5;\n    for (int i = 0; i < n - 1; i++) {\n        int minIdx = i;\n        for (int j = i + 1; j < n; j++) {\n            if (arr[j] < arr[minIdx]) minIdx = j;\n        }\n        swap(arr[i], arr[minIdx]);\n    }\n    for (int i = 0; i < n; i++) cout << arr[i] << \" \";\n    return 0;\n}\n","stdin":""},{"id":"06_linear_search","name":"Linear search","code":"#include <iostream>\nusing namespace std;\n\nint linearSearch(int arr[], int n, int key) {\n    for (int i = 0; i < n; i++) {\n        if (arr[i] == key) return i;\n    }\n    return -1;\n}\n\nint main() {\n    int arr[] = {10, 50, 30, 70, 80};\n    int idx = linearSearch(arr, 5, 70);\n    cout << \"Found at index \" << idx << endl;\n    return 0;\n}\n","stdin":""},{"id":"07_binary_search","name":"Binary search","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    int arr[] = {2, 5, 8, 12, 16, 23, 38, 56, 72, 91};\n    int n = 10, key = 23;\n    int low = 0, high = n - 1, mid;\n    while (low <= high) {\n        mid = (low + high) / 2;\n        if (arr[mid] == key) {\n            cout << \"Found at \" << mid << endl;\n            break;\n        } else if (arr[mid] < key) {\n            low = mid + 1;\n        } else {\n            high = mid - 1;\n        }\n    }\n    return 0;\n}\n","stdin":""}]},{"unit":"Unit II · Linked lists","items":[{"id":"00_by_hand","name":"Create nodes by hand","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n    Node(int value) {\n        data = value;\n        next = NULL;\n    }\n};\n\nint main() {\n    Node* head = new Node(10);\n    Node* second = new Node(20);\n    head->next = second;\n\n    Node* third = new Node(30);\n    second->next = third;\n\n    // Try it: type the next line yourself and watch the node appear\n    // third->next = new Node(40);\n\n    return 0;\n}\n","stdin":""},{"id":"08_singly","name":"Insert and delete (singly)","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n    Node(int value) : data(value), next(NULL) {}\n};\n\nvoid insertAtHead(Node*& head, int value) {\n    Node* newNode = new Node(value);\n    newNode->next = head;\n    head = newNode;\n}\n\nvoid insertAtTail(Node*& head, int value) {\n    Node* newNode = new Node(value);\n    if (head == NULL) {\n        head = newNode;\n        return;\n    }\n    Node* temp = head;\n    while (temp->next != NULL) {\n        temp = temp->next;\n    }\n    temp->next = newNode;\n}\n\nvoid deleteValue(Node*& head, int key) {\n    if (head == NULL) return;\n    if (head->data == key) {\n        Node* old = head;\n        head = head->next;\n        delete old;\n        return;\n    }\n    Node* prev = head;\n    Node* curr = head->next;\n    while (curr != NULL && curr->data != key) {\n        prev = curr;\n        curr = curr->next;\n    }\n    if (curr != NULL) {\n        prev->next = curr->next;\n        delete curr;\n    }\n}\n\nint main() {\n    Node* head = NULL;\n    insertAtTail(head, 10);\n    insertAtTail(head, 20);\n    insertAtHead(head, 5);\n    insertAtTail(head, 30);\n    deleteValue(head, 20);\n    for (Node* t = head; t != NULL; t = t->next) cout << t->data << \" -> \";\n    cout << \"NULL\" << endl;\n    return 0;\n}\n","stdin":""},{"id":"09_c_style_malloc","name":"C style: malloc and free","code":"#include <stdio.h>\n#include <stdlib.h>\n\ntypedef struct node {\n    int data;\n    struct node *next;\n} Node;\n\nNode* createNode(int data) {\n    Node* n = (Node*)malloc(sizeof(Node));\n    n->data = data;\n    n->next = NULL;\n    return n;\n}\n\nint main() {\n    Node* head = createNode(1);\n    head->next = createNode(2);\n    head->next->next = createNode(3);\n    Node* t = head;\n    while (t != NULL) {\n        printf(\"%d \", t->data);\n        t = t->next;\n    }\n    printf(\"\\n\");\n    free(head->next->next);\n    head->next->next = NULL;\n    return 0;\n}\n","stdin":""},{"id":"10_header_list","name":"Header linked list","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n};\n\nint main() {\n    // Grounded header list: the header node stores the count, the last node points to NULL\n    Node* header = new Node();\n    header->data = 0;\n    header->next = NULL;\n    for (int v = 10; v <= 30; v += 10) {\n        Node* n = new Node();\n        n->data = v;\n        n->next = header->next;\n        header->next = n;\n        header->data++;\n    }\n    cout << \"Nodes: \" << header->data << endl;\n    return 0;\n}\n","stdin":""},{"id":"11_circular","name":"Circular linked list","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n    Node(int v) : data(v), next(NULL) {}\n};\n\nint main() {\n    Node* head = new Node(1);\n    Node* second = new Node(2);\n    Node* third = new Node(3);\n    head->next = second;\n    second->next = third;\n    third->next = head;\n    Node* temp = head;\n    do {\n        cout << temp->data << \" \";\n        temp = temp->next;\n    } while (temp != head);\n    cout << endl;\n    return 0;\n}\n","stdin":""},{"id":"12_doubly","name":"Two-way (doubly) linked list","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* prev;\n    Node* next;\n    Node(int v) : data(v), prev(NULL), next(NULL) {}\n};\n\nvoid pushBack(Node*& head, Node*& tail, int v) {\n    Node* n = new Node(v);\n    if (tail == NULL) {\n        head = tail = n;\n        return;\n    }\n    tail->next = n;\n    n->prev = tail;\n    tail = n;\n}\n\nint main() {\n    Node* head = NULL;\n    Node* tail = NULL;\n    pushBack(head, tail, 10);\n    pushBack(head, tail, 20);\n    pushBack(head, tail, 30);\n    Node* mid = head->next;\n    mid->prev->next = mid->next;\n    mid->next->prev = mid->prev;\n    delete mid;\n    mid = NULL;\n    for (Node* t = tail; t != NULL; t = t->prev) cout << t->data << \" \";\n    return 0;\n}\n","stdin":""},{"id":"37_reverse","name":"Reverse a list","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n    Node(int v) : data(v), next(NULL) {}\n};\n\nint main() {\n    Node* head = NULL;\n    for (int i = 4; i >= 1; i--) {\n        Node* n = new Node(i * 10);\n        n->next = head;\n        head = n;\n    }\n    Node* prev = NULL;\n    Node* curr = head;\n    while (curr != NULL) {\n        Node* nextNode = curr->next;\n        curr->next = prev;\n        prev = curr;\n        curr = nextNode;\n    }\n    head = prev;\n    return 0;\n}\n","stdin":""},{"id":"41_scratch","name":"Start from scratch","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n};\n\nint main() {\n    // Type a line like:  Node* head = new Node();\n    \n    return 0;\n}\n","stdin":""}]},{"unit":"Unit III · Stacks and queues","items":[{"id":"13_stack_array","name":"Stack with an array","code":"#include <iostream>\nusing namespace std;\n#define MAX 5\n\nint stack[MAX];\nint top = -1;\n\nvoid push(int x) {\n    if (top == MAX - 1) {\n        cout << \"Stack overflow\" << endl;\n        return;\n    }\n    stack[++top] = x;\n}\n\nint pop() {\n    if (top == -1) {\n        cout << \"Stack underflow\" << endl;\n        return -1;\n    }\n    return stack[top--];\n}\n\nint main() {\n    push(10);\n    push(20);\n    push(30);\n    cout << pop() << \" popped\" << endl;\n    push(40);\n    for (int i = top; i >= 0; i--) cout << stack[i] << \" \";\n    return 0;\n}\n","stdin":""},{"id":"14_stack_list","name":"Stack with a linked list","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n};\n\nNode* top = NULL;\n\nvoid push(int x) {\n    Node* n = new Node;\n    n->data = x;\n    n->next = top;\n    top = n;\n}\n\nvoid pop() {\n    if (top == NULL) return;\n    Node* t = top;\n    top = top->next;\n    delete t;\n}\n\nint main() {\n    push(1);\n    push(2);\n    push(3);\n    pop();\n    cout << top->data << endl;\n    return 0;\n}\n","stdin":""},{"id":"15_infix_postfix","name":"Infix to postfix conversion","code":"#include <iostream>\n#include <stack>\n#include <string>\nusing namespace std;\n\nint prec(char c) {\n    if (c == '^') return 3;\n    if (c == '*' || c == '/') return 2;\n    if (c == '+' || c == '-') return 1;\n    return -1;\n}\n\nstring infixToPostfix(string s) {\n    stack<char> st;\n    string result = \"\";\n    for (int i = 0; i < s.length(); i++) {\n        char c = s[i];\n        if (isalnum(c)) {\n            result += c;\n        } else if (c == '(') {\n            st.push(c);\n        } else if (c == ')') {\n            while (st.top() != '(') {\n                result += st.top();\n                st.pop();\n            }\n            st.pop();\n        } else {\n            while (!st.empty() && prec(c) <= prec(st.top())) {\n                result += st.top();\n                st.pop();\n            }\n            st.push(c);\n        }\n    }\n    while (!st.empty()) {\n        result += st.top();\n        st.pop();\n    }\n    return result;\n}\n\nint main() {\n    string exp = \"a+b*(c^d-e)\";\n    cout << infixToPostfix(exp) << endl;\n    return 0;\n}\n","stdin":""},{"id":"16_postfix_eval","name":"Evaluate a postfix expression","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    char exp[] = \"231*+9-\";\n    int stack[20];\n    int top = -1;\n    for (int i = 0; exp[i] != '\\0'; i++) {\n        char c = exp[i];\n        if (isdigit(c)) {\n            stack[++top] = c - '0';\n        } else {\n            int b = stack[top--];\n            int a = stack[top--];\n            switch (c) {\n                case '+': stack[++top] = a + b; break;\n                case '-': stack[++top] = a - b; break;\n                case '*': stack[++top] = a * b; break;\n                case '/': stack[++top] = a / b; break;\n            }\n        }\n    }\n    cout << \"Result: \" << stack[top] << endl;\n    return 0;\n}\n","stdin":""},{"id":"17_queue_array","name":"Queue with an array","code":"#include <iostream>\nusing namespace std;\n#define SIZE 5\n\nint q[SIZE];\nint front = -1, rear = -1;\n\nvoid enqueue(int x) {\n    if (rear == SIZE - 1) { cout << \"Queue full\" << endl; return; }\n    if (front == -1) front = 0;\n    q[++rear] = x;\n}\n\nvoid dequeue() {\n    if (front == -1 || front > rear) { cout << \"Queue empty\" << endl; return; }\n    cout << q[front] << \" removed\" << endl;\n    front++;\n}\n\nint main() {\n    enqueue(5);\n    enqueue(10);\n    enqueue(15);\n    dequeue();\n    enqueue(20);\n    return 0;\n}\n","stdin":""},{"id":"18_circular_queue","name":"Circular queue (class)","code":"#include <iostream>\nusing namespace std;\n\nclass CircularQueue {\n    int arr[4];\n    int front, rear, count;\npublic:\n    CircularQueue() { front = 0; rear = -1; count = 0; }\n    bool isFull() { return count == 4; }\n    bool isEmpty() { return count == 0; }\n    void enqueue(int x) {\n        if (isFull()) { cout << \"Full\" << endl; return; }\n        rear = (rear + 1) % 4;\n        arr[rear] = x;\n        count++;\n    }\n    int dequeue() {\n        int x = arr[front];\n        front = (front + 1) % 4;\n        count--;\n        return x;\n    }\n};\n\nint main() {\n    CircularQueue q;\n    q.enqueue(1);\n    q.enqueue(2);\n    q.enqueue(3);\n    q.dequeue();\n    q.enqueue(4);\n    q.enqueue(5);\n    return 0;\n}\n","stdin":""},{"id":"19_queue_list","name":"Queue with a linked list","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n    Node(int d) : data(d), next(NULL) {}\n};\n\nstruct Queue {\n    Node* front;\n    Node* rear;\n};\n\nint main() {\n    Queue q;\n    q.front = q.rear = NULL;\n    for (int i = 1; i <= 3; i++) {\n        Node* n = new Node(i * 10);\n        if (q.rear == NULL) {\n            q.front = q.rear = n;\n        } else {\n            q.rear->next = n;\n            q.rear = n;\n        }\n    }\n    Node* t = q.front;\n    q.front = q.front->next;\n    delete t;\n    return 0;\n}\n","stdin":""},{"id":"20_priority_deque","name":"Priority queue and deque","code":"#include <iostream>\n#include <queue>\n#include <deque>\nusing namespace std;\n\nint main() {\n    priority_queue<int> pq;\n    pq.push(30);\n    pq.push(10);\n    pq.push(50);\n    pq.push(20);\n    cout << \"Highest: \" << pq.top() << endl;\n    pq.pop();\n\n    priority_queue<int, vector<int>, greater<int>> minq;\n    minq.push(5);\n    minq.push(1);\n    minq.push(3);\n\n    deque<int> dq;\n    dq.push_back(1);\n    dq.push_front(0);\n    dq.push_back(2);\n    dq.pop_front();\n    cout << dq.front() << \" \" << dq.back() << endl;\n    return 0;\n}\n","stdin":""},{"id":"36_menu_cin","name":"Menu-driven stack with cin","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    int stack[10], top = -1, choice, x;\n    while (true) {\n        cout << \"1.Push 2.Pop 3.Exit: \";\n        cin >> choice;\n        if (choice == 1) {\n            cin >> x;\n            stack[++top] = x;\n        } else if (choice == 2) {\n            if (top >= 0) top--;\n        } else {\n            break;\n        }\n    }\n    return 0;\n}\n","stdin":"1 5 1 7 2 1 9 3"}]},{"unit":"Unit IV · Recursion and trees","items":[{"id":"21_recursion_factorial","name":"Recursion: factorial and Fibonacci","code":"#include <iostream>\nusing namespace std;\n\nint factorial(int n) {\n    if (n <= 1) return 1;\n    return n * factorial(n - 1);\n}\n\nint fib(int n) {\n    if (n <= 1) return n;\n    return fib(n - 1) + fib(n - 2);\n}\n\nint main() {\n    cout << factorial(5) << endl;\n    cout << fib(5) << endl;\n    return 0;\n}\n","stdin":""},{"id":"22_hanoi","name":"Tower of Hanoi","code":"#include <iostream>\nusing namespace std;\n\nvoid towerOfHanoi(int n, char from, char to, char aux) {\n    if (n == 1) {\n        cout << \"Move disk 1 from \" << from << \" to \" << to << endl;\n        return;\n    }\n    towerOfHanoi(n - 1, from, aux, to);\n    cout << \"Move disk \" << n << \" from \" << from << \" to \" << to << endl;\n    towerOfHanoi(n - 1, aux, to, from);\n}\n\nint main() {\n    towerOfHanoi(3, 'A', 'C', 'B');\n    return 0;\n}\n","stdin":""},{"id":"23_bst","name":"Binary search tree: insert, search, delete, traversals","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* left;\n    Node* right;\n    Node(int v) : data(v), left(NULL), right(NULL) {}\n};\n\nNode* insert(Node* root, int key) {\n    if (root == NULL) return new Node(key);\n    if (key < root->data) root->left = insert(root->left, key);\n    else root->right = insert(root->right, key);\n    return root;\n}\n\nNode* minNode(Node* root) {\n    while (root->left != NULL) root = root->left;\n    return root;\n}\n\nNode* deleteNode(Node* root, int key) {\n    if (root == NULL) return root;\n    if (key < root->data) root->left = deleteNode(root->left, key);\n    else if (key > root->data) root->right = deleteNode(root->right, key);\n    else {\n        if (root->left == NULL) {\n            Node* t = root->right;\n            delete root;\n            return t;\n        } else if (root->right == NULL) {\n            Node* t = root->left;\n            delete root;\n            return t;\n        }\n        Node* t = minNode(root->right);\n        root->data = t->data;\n        root->right = deleteNode(root->right, t->data);\n    }\n    return root;\n}\n\nbool search(Node* root, int key) {\n    if (root == NULL) return false;\n    if (root->data == key) return true;\n    if (key < root->data) return search(root->left, key);\n    return search(root->right, key);\n}\n\nvoid inorder(Node* root) {\n    if (root == NULL) return;\n    inorder(root->left);\n    cout << root->data << \" \";\n    inorder(root->right);\n}\n\nvoid preorder(Node* root) {\n    if (root == NULL) return;\n    cout << root->data << \" \";\n    preorder(root->left);\n    preorder(root->right);\n}\n\nvoid postorder(Node* root) {\n    if (root == NULL) return;\n    postorder(root->left);\n    postorder(root->right);\n    cout << root->data << \" \";\n}\n\nint main() {\n    Node* root = NULL;\n    int keys[] = {50, 30, 70, 20, 40, 60, 80};\n    for (int i = 0; i < 7; i++) root = insert(root, keys[i]);\n    inorder(root); cout << endl;\n    preorder(root); cout << endl;\n    postorder(root); cout << endl;\n    cout << search(root, 60) << endl;\n    root = deleteNode(root, 30);\n    inorder(root); cout << endl;\n    return 0;\n}\n","stdin":""},{"id":"24_tree_sequential","name":"Tree in an array (sequential)","code":"#include <iostream>\nusing namespace std;\n\nint main() {\n    // Sequential (array) representation: children of i are at 2i+1 and 2i+2\n    char tree[7] = {'A', 'B', 'C', 'D', 'E', 'F', 'G'};\n    for (int i = 0; i < 3; i++) {\n        cout << tree[i] << \": \" << tree[2 * i + 1] << \" \" << tree[2 * i + 2] << endl;\n    }\n    return 0;\n}\n","stdin":""},{"id":"25_merge_sort","name":"Merge sort","code":"#include <iostream>\nusing namespace std;\n\nvoid merge(int arr[], int l, int m, int r) {\n    int n1 = m - l + 1;\n    int n2 = r - m;\n    int L[n1], R[n2];\n    for (int i = 0; i < n1; i++) L[i] = arr[l + i];\n    for (int j = 0; j < n2; j++) R[j] = arr[m + 1 + j];\n    int i = 0, j = 0, k = l;\n    while (i < n1 && j < n2) {\n        if (L[i] <= R[j]) arr[k++] = L[i++];\n        else arr[k++] = R[j++];\n    }\n    while (i < n1) arr[k++] = L[i++];\n    while (j < n2) arr[k++] = R[j++];\n}\n\nvoid mergeSort(int arr[], int l, int r) {\n    if (l < r) {\n        int m = l + (r - l) / 2;\n        mergeSort(arr, l, m);\n        mergeSort(arr, m + 1, r);\n        merge(arr, l, m, r);\n    }\n}\n\nint main() {\n    int arr[] = {38, 27, 43, 3, 9, 82, 10};\n    mergeSort(arr, 0, 6);\n    for (int i = 0; i < 7; i++) cout << arr[i] << \" \";\n    return 0;\n}\n","stdin":""},{"id":"26_quick_sort","name":"Quick sort","code":"#include <iostream>\nusing namespace std;\n\nint partition(int arr[], int low, int high) {\n    int pivot = arr[high];\n    int i = low - 1;\n    for (int j = low; j < high; j++) {\n        if (arr[j] < pivot) {\n            i++;\n            swap(arr[i], arr[j]);\n        }\n    }\n    swap(arr[i + 1], arr[high]);\n    return i + 1;\n}\n\nvoid quickSort(int arr[], int low, int high) {\n    if (low < high) {\n        int pi = partition(arr, low, high);\n        quickSort(arr, low, pi - 1);\n        quickSort(arr, pi + 1, high);\n    }\n}\n\nint main() {\n    int arr[] = {10, 7, 8, 9, 1, 5};\n    quickSort(arr, 0, 5);\n    for (int i = 0; i < 6; i++) cout << arr[i] << \" \";\n    return 0;\n}\n","stdin":""}]},{"unit":"Unit V · Heaps and hashing","items":[{"id":"27_heap","name":"Max heap: insert and delete","code":"#include <iostream>\nusing namespace std;\n\nint heap[20];\nint heapSize = 0;\n\nvoid insert(int val) {\n    heapSize++;\n    int i = heapSize - 1;\n    heap[i] = val;\n    while (i > 0 && heap[(i - 1) / 2] < heap[i]) {\n        swap(heap[i], heap[(i - 1) / 2]);\n        i = (i - 1) / 2;\n    }\n}\n\nvoid heapify(int i) {\n    int largest = i;\n    int l = 2 * i + 1;\n    int r = 2 * i + 2;\n    if (l < heapSize && heap[l] > heap[largest]) largest = l;\n    if (r < heapSize && heap[r] > heap[largest]) largest = r;\n    if (largest != i) {\n        swap(heap[i], heap[largest]);\n        heapify(largest);\n    }\n}\n\nint deleteMax() {\n    int root = heap[0];\n    heap[0] = heap[heapSize - 1];\n    heapSize--;\n    heapify(0);\n    return root;\n}\n\nint main() {\n    insert(10);\n    insert(40);\n    insert(20);\n    insert(50);\n    insert(30);\n    cout << deleteMax() << endl;\n    return 0;\n}\n","stdin":""},{"id":"28_heap_sort","name":"Heap sort","code":"#include <iostream>\nusing namespace std;\n\nvoid heapify(int arr[], int n, int i) {\n    int largest = i;\n    int l = 2 * i + 1;\n    int r = 2 * i + 2;\n    if (l < n && arr[l] > arr[largest]) largest = l;\n    if (r < n && arr[r] > arr[largest]) largest = r;\n    if (largest != i) {\n        swap(arr[i], arr[largest]);\n        heapify(arr, n, largest);\n    }\n}\n\nvoid heapSort(int arr[], int n) {\n    for (int i = n / 2 - 1; i >= 0; i--) heapify(arr, n, i);\n    for (int i = n - 1; i > 0; i--) {\n        swap(arr[0], arr[i]);\n        heapify(arr, i, 0);\n    }\n}\n\nint main() {\n    int arr[] = {12, 11, 13, 5, 6, 7};\n    heapSort(arr, 6);\n    for (int i = 0; i < 6; i++) cout << arr[i] << \" \";\n    return 0;\n}\n","stdin":""},{"id":"29_hash_chaining","name":"Hashing: separate chaining","code":"#include <iostream>\nusing namespace std;\n#define SIZE 7\n\nstruct Node {\n    int key;\n    Node* next;\n};\n\nNode* table[SIZE];\n\nvoid insert(int key) {\n    int idx = key % SIZE;\n    Node* n = new Node;\n    n->key = key;\n    n->next = table[idx];\n    table[idx] = n;\n}\n\nint main() {\n    for (int i = 0; i < SIZE; i++) table[i] = NULL;\n    int keys[] = {50, 700, 76, 85, 92, 73, 101};\n    for (int i = 0; i < 7; i++) insert(keys[i]);\n    return 0;\n}\n","stdin":""},{"id":"30_hash_probing","name":"Hashing: linear, quadratic, double","code":"#include <iostream>\nusing namespace std;\n#define SIZE 10\n\nint table[SIZE];\n\nint h1(int key) { return key % SIZE; }\nint h2(int key) { return 7 - (key % 7); }\n\nvoid insertLinear(int key) {\n    int idx = h1(key);\n    int i = 0;\n    while (table[(idx + i) % SIZE] != -1) i++;\n    table[(idx + i) % SIZE] = key;\n}\n\nvoid insertQuadratic(int key) {\n    int idx = h1(key);\n    int i = 0;\n    while (table[(idx + i * i) % SIZE] != -1) i++;\n    table[(idx + i * i) % SIZE] = key;\n}\n\nvoid insertDouble(int key) {\n    int idx = h1(key);\n    int step = h2(key);\n    int i = 0;\n    while (table[(idx + i * step) % SIZE] != -1) i++;\n    table[(idx + i * step) % SIZE] = key;\n}\n\nint main() {\n    for (int i = 0; i < SIZE; i++) table[i] = -1;\n    insertLinear(23);\n    insertLinear(43);\n    insertLinear(13);\n    insertQuadratic(33);\n    insertDouble(53);\n    for (int i = 0; i < SIZE; i++) cout << table[i] << \" \";\n    return 0;\n}\n","stdin":""}]},{"unit":"Unit VI · Graphs","items":[{"id":"31_bfs_dfs","name":"BFS and DFS (adjacency matrix)","code":"#include <iostream>\nusing namespace std;\n#define V 5\n\nint adj[V][V] = {\n    {0, 1, 1, 0, 0},\n    {1, 0, 0, 1, 0},\n    {1, 0, 0, 1, 1},\n    {0, 1, 1, 0, 1},\n    {0, 0, 1, 1, 0}\n};\nbool visited[V];\n\nvoid dfs(int u) {\n    visited[u] = true;\n    cout << u << \" \";\n    for (int v = 0; v < V; v++) {\n        if (adj[u][v] == 1 && !visited[v]) dfs(v);\n    }\n}\n\nvoid bfs(int start) {\n    int queue[V];\n    int front = 0, rear = 0;\n    for (int i = 0; i < V; i++) visited[i] = false;\n    visited[start] = true;\n    queue[rear++] = start;\n    while (front < rear) {\n        int u = queue[front++];\n        cout << u << \" \";\n        for (int v = 0; v < V; v++) {\n            if (adj[u][v] == 1 && !visited[v]) {\n                visited[v] = true;\n                queue[rear++] = v;\n            }\n        }\n    }\n}\n\nint main() {\n    dfs(0);\n    cout << endl;\n    bfs(0);\n    cout << endl;\n    return 0;\n}\n","stdin":""},{"id":"32_bfs_stl","name":"BFS with vector and queue","code":"#include <iostream>\n#include <vector>\n#include <queue>\nusing namespace std;\n\nint main() {\n    int n = 5;\n    vector<int> adj[5];\n    adj[0].push_back(1); adj[1].push_back(0);\n    adj[0].push_back(2); adj[2].push_back(0);\n    adj[1].push_back(3); adj[3].push_back(1);\n    adj[2].push_back(4); adj[4].push_back(2);\n    vector<bool> visited(n, false);\n    queue<int> q;\n    q.push(0);\n    visited[0] = true;\n    while (!q.empty()) {\n        int u = q.front();\n        q.pop();\n        cout << u << \" \";\n        for (int v : adj[u]) {\n            if (!visited[v]) {\n                visited[v] = true;\n                q.push(v);\n            }\n        }\n    }\n    return 0;\n}\n","stdin":""},{"id":"33_dijkstra","name":"Dijkstra's algorithm","code":"#include <iostream>\n#include <climits>\nusing namespace std;\n#define V 5\n\nint minDistance(int dist[], bool sptSet[]) {\n    int min = INT_MAX, minIndex = -1;\n    for (int v = 0; v < V; v++) {\n        if (!sptSet[v] && dist[v] <= min) {\n            min = dist[v];\n            minIndex = v;\n        }\n    }\n    return minIndex;\n}\n\nvoid dijkstra(int graph[V][V], int src) {\n    int dist[V];\n    bool sptSet[V];\n    for (int i = 0; i < V; i++) {\n        dist[i] = INT_MAX;\n        sptSet[i] = false;\n    }\n    dist[src] = 0;\n    for (int count = 0; count < V - 1; count++) {\n        int u = minDistance(dist, sptSet);\n        sptSet[u] = true;\n        for (int v = 0; v < V; v++) {\n            if (!sptSet[v] && graph[u][v] && dist[u] != INT_MAX && dist[u] + graph[u][v] < dist[v]) {\n                dist[v] = dist[u] + graph[u][v];\n            }\n        }\n    }\n    for (int i = 0; i < V; i++) cout << i << \": \" << dist[i] << endl;\n}\n\nint main() {\n    int graph[V][V] = {\n        {0, 4, 1, 0, 0},\n        {4, 0, 2, 5, 0},\n        {1, 2, 0, 8, 10},\n        {0, 5, 8, 0, 2},\n        {0, 0, 10, 2, 0}\n    };\n    dijkstra(graph, 0);\n    return 0;\n}\n","stdin":""},{"id":"34_bellman_ford","name":"Bellman–Ford algorithm","code":"#include <iostream>\nusing namespace std;\n#define INF 99999\n\nstruct Edge {\n    int u, v, w;\n};\n\nint main() {\n    int V = 5, E = 7;\n    Edge edges[] = {\n        {0, 1, 6}, {0, 2, 7}, {1, 3, 5}, {1, 2, 8},\n        {2, 3, -3}, {3, 4, 2}, {1, 4, -4}\n    };\n    int dist[5];\n    for (int i = 0; i < V; i++) dist[i] = INF;\n    dist[0] = 0;\n    for (int i = 1; i <= V - 1; i++) {\n        for (int j = 0; j < E; j++) {\n            int u = edges[j].u, v = edges[j].v, w = edges[j].w;\n            if (dist[u] != INF && dist[u] + w < dist[v]) dist[v] = dist[u] + w;\n        }\n    }\n    for (int j = 0; j < E; j++) {\n        if (dist[edges[j].u] != INF && dist[edges[j].u] + edges[j].w < dist[edges[j].v]) {\n            cout << \"Negative cycle found\" << endl;\n        }\n    }\n    for (int i = 0; i < V; i++) cout << i << \": \" << dist[i] << endl;\n    return 0;\n}\n","stdin":""},{"id":"35_floyd","name":"Floyd–Warshall algorithm","code":"#include <iostream>\nusing namespace std;\n#define V 4\n#define INF 99999\n\nint main() {\n    int dist[V][V] = {\n        {0, 5, INF, 10},\n        {INF, 0, 3, INF},\n        {INF, INF, 0, 1},\n        {INF, INF, INF, 0}\n    };\n    for (int k = 0; k < V; k++)\n        for (int i = 0; i < V; i++)\n            for (int j = 0; j < V; j++)\n                if (dist[i][k] + dist[k][j] < dist[i][j])\n                    dist[i][j] = dist[i][k] + dist[k][j];\n    for (int i = 0; i < V; i++) {\n        for (int j = 0; j < V; j++) {\n            if (dist[i][j] == INF) cout << \"INF \";\n            else cout << dist[i][j] << \" \";\n        }\n        cout << endl;\n    }\n    return 0;\n}\n","stdin":""}]},{"unit":"Common bugs","items":[{"id":"39_bug_lost_node","name":"Bug: a lost node (memory leak)","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n    Node(int v) : data(v), next(NULL) {}\n};\n\nvoid insertAtHead(Node*& head, int value) {\n    Node* newNode = new Node(value);\n    // Bug: we forgot  newNode->next = head;\n    head = newNode;\n}\n\nint main() {\n    Node* head = new Node(10);\n    head->next = new Node(20);\n    insertAtHead(head, 5);\n    return 0;\n}\n","stdin":""},{"id":"40_bug_null_crash","name":"Bug: using -> on NULL","code":"#include <iostream>\nusing namespace std;\n\nstruct Node {\n    int data;\n    Node* next;\n};\n\nint main() {\n    Node* head = NULL;\n    Node* temp = head;\n    // Walking to the last node without checking for an empty list\n    while (temp->next != NULL) {\n        temp = temp->next;\n    }\n    return 0;\n}\n","stdin":""}]}];
+// OOP example programs for Visual Code. Each one is also a test (see test_oop.js).
+const OOP_UNIT = { unit: 'OOP · Classes, inheritance and polymorphism', items: [
+{ id: 'oop_01_encapsulation', name: 'Class and encapsulation (private data)', expect: 'Balance: 1500\nBalance: 1300\nNot enough money\n',
+code: `#include <iostream>
+using namespace std;
+
+class BankAccount {
+private:
+    string owner;
+    int balance;          // only BankAccount's own functions can touch this
+
+public:
+    BankAccount(string name, int amount) {
+        owner = name;
+        balance = amount;
+    }
+    void deposit(int amount) { balance += amount; }
+    bool withdraw(int amount) {
+        if (amount > balance) {
+            cout << "Not enough money" << endl;
+            return false;
+        }
+        balance -= amount;
+        return true;
+    }
+    int getBalance() { return balance; }
+};
+
+int main() {
+    BankAccount acc("Asha", 1000);
+    acc.deposit(500);
+    cout << "Balance: " << acc.getBalance() << endl;
+    acc.withdraw(200);
+    cout << "Balance: " << acc.getBalance() << endl;
+    acc.withdraw(5000);
+
+    // Uncomment the next line: it won't compile, balance is private
+    // acc.balance = 1000000;
+    return 0;
+}
+` },
+{ id: 'oop_02_ctor_dtor', name: 'Constructors and destructors (order)', expect: 'Box 1 made\nBox 2 made\nInner block ends\nBox 2 destroyed\nmain ends\nBox 1 destroyed\n',
+code: `#include <iostream>
+using namespace std;
+
+class Box {
+public:
+    int id;
+    Box(int n) {
+        id = n;
+        cout << "Box " << id << " made" << endl;
+    }
+    ~Box() {
+        cout << "Box " << id << " destroyed" << endl;
+    }
+};
+
+int main() {
+    Box a(1);
+    {
+        Box b(2);
+        cout << "Inner block ends" << endl;
+    }   // b goes out of scope here, so ~Box() runs for it
+    cout << "main ends" << endl;
+    return 0;
+}   // a is destroyed last
+` },
+{ id: 'oop_03_single', name: 'Single inheritance (Animal → Dog)', expect: 'Rex is eating\nRex says Woof\nRex is 3 years old\n',
+code: `#include <iostream>
+using namespace std;
+
+class Animal {
+protected:
+    string name;          // protected: Dog can use it, main can't
+public:
+    Animal(string n) : name(n) {}
+    void eat() { cout << name << " is eating" << endl; }
+};
+
+class Dog : public Animal {
+    int age;
+public:
+    Dog(string n, int a) : Animal(n), age(a) {}
+    void bark() { cout << name << " says Woof" << endl; }
+    void info() { cout << name << " is " << age << " years old" << endl; }
+};
+
+int main() {
+    Dog d("Rex", 3);      // Animal part is built first, then the Dog part
+    d.eat();              // inherited from Animal
+    d.bark();
+    d.info();
+    return 0;
+}
+` },
+{ id: 'oop_04_multilevel', name: 'Multilevel inheritance (constructor chain)', expect: 'Vehicle()\nCar()\nSportsCar()\nTop speed 300, 2 doors, 4 wheels\n~SportsCar()\n~Car()\n~Vehicle()\n',
+code: `#include <iostream>
+using namespace std;
+
+class Vehicle {
+public:
+    int wheels;
+    Vehicle() { wheels = 4; cout << "Vehicle()" << endl; }
+    ~Vehicle() { cout << "~Vehicle()" << endl; }
+};
+
+class Car : public Vehicle {
+public:
+    int doors;
+    Car() { doors = 4; cout << "Car()" << endl; }
+    ~Car() { cout << "~Car()" << endl; }
+};
+
+class SportsCar : public Car {
+public:
+    int topSpeed;
+    SportsCar() { doors = 2; topSpeed = 300; cout << "SportsCar()" << endl; }
+    ~SportsCar() { cout << "~SportsCar()" << endl; }
+};
+
+int main() {
+    SportsCar s;    // constructors run base first: Vehicle, Car, SportsCar
+    cout << "Top speed " << s.topSpeed << ", " << s.doors << " doors, " << s.wheels << " wheels" << endl;
+    return 0;       // destructors run in reverse order
+}
+` },
+{ id: 'oop_05_multiple', name: 'Multiple inheritance', expect: 'Dr. Mehta teaches DSA\nDr. Mehta researches AI\n',
+code: `#include <iostream>
+using namespace std;
+
+class Teacher {
+public:
+    string subject;
+    Teacher(string s) : subject(s) {}
+    void teach(string who) { cout << who << " teaches " << subject << endl; }
+};
+
+class Researcher {
+public:
+    string field;
+    Researcher(string f) : field(f) {}
+    void research(string who) { cout << who << " researches " << field << endl; }
+};
+
+// A Professor is both: it gets a Teacher part and a Researcher part
+class Professor : public Teacher, public Researcher {
+public:
+    string name;
+    Professor(string n) : Teacher("DSA"), Researcher("AI"), name(n) {}
+};
+
+int main() {
+    Professor p("Dr. Mehta");
+    p.teach(p.name);
+    p.research(p.name);
+    return 0;
+}
+` },
+{ id: 'oop_06_virtual', name: 'Virtual functions (runtime polymorphism)', expect: 'Circle area: 78.5\nRectangle area: 24\nTriangle area: 6\n',
+code: `#include <iostream>
+using namespace std;
+
+class Shape {
+public:
+    virtual double area() = 0;     // pure virtual: Shape is abstract
+    virtual string name() { return "Shape"; }
+    virtual ~Shape() {}
+};
+
+class Circle : public Shape {
+    double r;
+public:
+    Circle(double radius) : r(radius) {}
+    double area() override { return 3.14 * r * r; }
+    string name() override { return "Circle"; }
+};
+
+class Rectangle : public Shape {
+    double w, h;
+public:
+    Rectangle(double a, double b) : w(a), h(b) {}
+    double area() override { return w * h; }
+    string name() override { return "Rectangle"; }
+};
+
+class Triangle : public Shape {
+    double b, h;
+public:
+    Triangle(double base, double height) : b(base), h(height) {}
+    double area() override { return 0.5 * b * h; }
+    string name() override { return "Triangle"; }
+};
+
+int main() {
+    Shape* shapes[3];
+    shapes[0] = new Circle(5);
+    shapes[1] = new Rectangle(4, 6);
+    shapes[2] = new Triangle(3, 4);
+
+    // Same line of code, three different functions: the vtable decides
+    for (int i = 0; i < 3; i++) {
+        cout << shapes[i]->name() << " area: " << shapes[i]->area() << endl;
+    }
+    for (int i = 0; i < 3; i++) delete shapes[i];
+
+    // Shape s;   // uncomment: you can't create an abstract class
+    return 0;
+}
+` },
+{ id: 'oop_07_static_binding', name: 'virtual vs non-virtual (static binding)', expect: 'Some animal sound\nMeow\n',
+code: `#include <iostream>
+using namespace std;
+
+class Animal {
+public:
+    void sound() { cout << "Some animal sound" << endl; }          // not virtual
+    virtual void speak() { cout << "..." << endl; }               // virtual
+    virtual ~Animal() {}
+};
+
+class Cat : public Animal {
+public:
+    void sound() { cout << "Purr" << endl; }
+    void speak() override { cout << "Meow" << endl; }
+};
+
+int main() {
+    Animal* a = new Cat();
+    a->sound();   // not virtual: picked by the pointer's type, Animal
+    a->speak();   // virtual: picked by the object's type, Cat
+    delete a;
+    return 0;
+}
+` },
+{ id: 'oop_08_virtual_dtor', name: 'Why destructors should be virtual', expect: 'Base()\nDerived()\n~Base()\nBase()\nDerived()\n~Derived()\n~Base()\n',
+code: `#include <iostream>
+using namespace std;
+
+class Base {
+public:
+    Base() { cout << "Base()" << endl; }
+    ~Base() { cout << "~Base()" << endl; }          // not virtual
+};
+class Derived : public Base {
+public:
+    Derived() { cout << "Derived()" << endl; }
+    ~Derived() { cout << "~Derived()" << endl; }
+};
+
+class SafeBase {
+public:
+    SafeBase() { cout << "Base()" << endl; }
+    virtual ~SafeBase() { cout << "~Base()" << endl; }  // virtual
+};
+class SafeDerived : public SafeBase {
+public:
+    SafeDerived() { cout << "Derived()" << endl; }
+    ~SafeDerived() { cout << "~Derived()" << endl; }
+};
+
+int main() {
+    Base* p = new Derived();
+    delete p;          // only ~Base() runs: the Derived part is never cleaned up
+
+    SafeBase* q = new SafeDerived();
+    delete q;          // ~Derived() then ~Base(), as it should be
+    return 0;
+}
+` },
+{ id: 'oop_09_diamond', name: 'Diamond problem and virtual base class', expect: 'Person() runs once\nAge: 21\n',
+code: `#include <iostream>
+using namespace std;
+
+class Person {
+public:
+    int age;
+    Person() { age = 0; cout << "Person() runs once" << endl; }
+};
+
+// virtual: Student and Employee share ONE Person part
+class Student : virtual public Person {
+public:
+    int rollNo;
+    Student() { rollNo = 101; }
+};
+
+class Employee : virtual public Person {
+public:
+    int empId;
+    Employee() { empId = 7; }
+};
+
+class Intern : public Student, public Employee {
+public:
+    Intern() { age = 21; }
+};
+
+int main() {
+    Intern x;
+    cout << "Age: " << x.age << endl;
+    // Remove both "virtual" words above: Intern gets two Person parts
+    // and x.age becomes ambiguous
+    return 0;
+}
+` },
+{ id: 'oop_10_slicing', name: 'Object slicing', expect: 'Generic animal\nWoof\n',
+code: `#include <iostream>
+using namespace std;
+
+class Animal {
+public:
+    string name;
+    Animal() { name = "animal"; }
+    virtual void speak() { cout << "Generic animal" << endl; }
+};
+
+class Dog : public Animal {
+public:
+    string breed;
+    Dog() { name = "Rex"; breed = "Beagle"; }
+    void speak() override { cout << "Woof" << endl; }
+};
+
+int main() {
+    Dog d;
+    Animal copy = d;    // slicing: only the Animal part is copied
+    copy.speak();       // it's a real Animal now, so Animal::speak() runs
+
+    Animal& ref = d;    // a reference does NOT slice
+    ref.speak();        // the object is still a Dog
+    return 0;
+}
+` },
+{ id: 'oop_11_operator', name: 'Operator overloading (+ and <<)', expect: '3+4i\n1+2i\n4+6i\n',
+code: `#include <iostream>
+using namespace std;
+
+class Complex {
+public:
+    int re, im;
+    Complex(int r = 0, int i = 0) : re(r), im(i) {}
+
+    Complex operator+(const Complex& other) {
+        return Complex(re + other.re, im + other.im);
+    }
+    friend ostream& operator<<(ostream& out, const Complex& c);
+};
+
+ostream& operator<<(ostream& out, const Complex& c) {
+    out << c.re << "+" << c.im << "i";
+    return out;
+}
+
+int main() {
+    Complex a(3, 4), b(1, 2);
+    cout << a << endl;
+    cout << b << endl;
+    Complex c = a + b;     // calls a.operator+(b)
+    cout << c << endl;
+    return 0;
+}
+` },
+{ id: 'oop_12_static', name: 'Static members (shared by all objects)', expect: 'Objects alive: 3\nObjects alive: 2\n',
+code: `#include <iostream>
+using namespace std;
+
+class Counter {
+public:
+    static int count;     // one copy shared by every Counter
+    int id;
+    Counter() { count++; id = count; }
+    ~Counter() { count--; }
+    static int alive() { return count; }
+};
+
+int Counter::count = 0;
+
+int main() {
+    Counter a, b;
+    {
+        Counter c;
+        cout << "Objects alive: " << Counter::alive() << endl;
+    }
+    cout << "Objects alive: " << Counter::count << endl;
+    return 0;
+}
+` },
+{ id: 'oop_13_friend', name: 'Friend function', expect: 'Area: 12\n',
+code: `#include <iostream>
+using namespace std;
+
+class Rect {
+private:
+    int w, h;
+public:
+    Rect(int a, int b) : w(a), h(b) {}
+    friend int area(Rect r);    // area() may read the private w and h
+};
+
+int area(Rect r) {
+    return r.w * r.h;
+}
+
+int main() {
+    Rect r(3, 4);
+    cout << "Area: " << area(r) << endl;
+    return 0;
+}
+` },
+{ id: 'oop_14_ctor_virtual', name: 'Virtual call inside a constructor', expect: 'Base hello\nDerived hello\n',
+code: `#include <iostream>
+using namespace std;
+
+class Base {
+public:
+    Base() { hello(); }     // the object is only a Base here
+    virtual void hello() { cout << "Base hello" << endl; }
+};
+
+class Derived : public Base {
+public:
+    void hello() override { cout << "Derived hello" << endl; }
+};
+
+int main() {
+    Derived d;     // prints "Base hello": Derived isn't built yet
+    d.hello();     // now it's a full Derived
+    return 0;
+}
+` },
+] };
+EXAMPLES.push(OOP_UNIT);
 const DEFAULT_EXAMPLE = '00_by_hand';
 </script>
 <script>
@@ -1816,7 +2751,7 @@ const DEFAULT_EXAMPLE = '00_by_hand';
   const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ---------- state ----------
-  const state = { queueStyle: 'boxes', steps: [], idx: 0, live: true, lines: [], prog: null, kinds: {}, parseErr: null, playing: null, structNames: new Set(), funcNames: [] };
+  const state = { classView: 'full', queueStyle: 'boxes', steps: [], idx: 0, live: true, lines: [], prog: null, kinds: {}, parseErr: null, playing: null, structNames: new Set(), funcNames: [] };
   let kinds = {};
 
   // ---------- editor ----------
@@ -2144,6 +3079,7 @@ const DEFAULT_EXAMPLE = '00_by_hand';
       case 'rec': return `{${v.fields.map(f => valText(f.val, true)).join(', ')}}`;
       case 'cont': return `${v.kind}(${v.vals.length})`;
       case 'ph': return '…';
+      case 'vt': return '→ ' + v.cls;
       default: return '…';
     }
   }
@@ -2161,7 +3097,7 @@ const DEFAULT_EXAMPLE = '00_by_hand';
     let ord;
     if (k.kind === 'doubly') ord = [...ptrs.filter(f => f.name === k.back), ...vals, ...ptrs.filter(f => f.name === k.link), ...ptrs.filter(f => f.name !== k.back && f.name !== k.link)];
     else if (k.kind === 'tree') ord = [...ptrs.filter(f => f.name === k.left), ...vals, ...ptrs.filter(f => f.name === k.right), ...ptrs.filter(f => f.name !== k.left && f.name !== k.right)];
-    else ord = [...vals, ...ptrs];
+    else ord = fields.some(f => f.vptr || f.part > 0) ? fields : [...vals, ...ptrs];
     let x = 0;
     const slots = ord.map(f => { const w = f.ptr ? G.PTR : Math.min(120, Math.max(G.VAL, valText(f.val, true).length * 8.6 + 18, f.name.length * 6 + 14)); const s = { ...f, x, w, cx: x + w / 2 }; x += w; return s; });
     return { slots, w: Math.max(x, G.VAL) };
@@ -2181,7 +3117,8 @@ const DEFAULT_EXAMPLE = '00_by_hand';
       if (val.k === 'arr' || val.k === 'cont') add(val, name, fi, recInts);
       else if (val.k === 'rec') {
         const ints = val.fields.filter(f => f.val.k === 'num').map(f => ({ name: f.name, v: f.val.v }));
-        for (const f of val.fields) walk(f.val, name === '*this' ? f.name : `${name}.${f.name}`, fi, ints);
+        const cm = state.prog && classModel(state.prog); const objRec = cm && cm.on && cm.S[val.type];
+        for (const f of val.fields) if (!(objRec && f.val.k === 'str')) walk(f.val, name === '*this' ? f.name : `${name}.${f.name}`, fi, ints);
       } else if (val.k === 'str' && val.v.length && val.v.length <= 48 && (fi === lastFi || step.frames[fi].global)) add({ ...val, id: fi + ':' + name }, name, fi, null);
     };
     step.frames.forEach((fr, fi) => fr.vars.forEach(v => walk(v.val, v.name, fi, null)));
@@ -2338,14 +3275,296 @@ const DEFAULT_EXAMPLE = '00_by_hand';
   }
 
   // ---------- full layout ----------
+  // ---------- classes and objects (OOP view) ----------
+  const NPAL = 6;
+  const SYM = { public: '+', protected: '#', private: '−' };
+  function classModel(prog) {
+    if (prog._cm) return prog._cm;
+    const S = prog.structs; const list = [];
+    for (const k in S) { const d = S[k]; if (d.name === k && !d.anon && k !== 'pair') list.push(d); }
+    list.sort((a, b) => a.line - b.line);
+    const on = oopUsed(S) && list.length > 0;
+    const pal = new Map(list.map((d, i) => [d.name, i % NPAL]));
+    const kids = new Map(list.map(d => [d.name, []]));
+    for (const d of list) for (const b of d.bases) if (kids.has(b.name)) kids.get(b.name).push(d.name);
+    const depth = new Map(); const dep = n => { if (depth.has(n)) return depth.get(n); depth.set(n, 0); const d = S[n]; const v = d && d.bases.length ? 1 + Math.max(...d.bases.map(b => dep(b.name))) : 0; depth.set(n, v); return v; };
+    list.forEach(d => dep(d.name));
+    const vt = new Map(), abs = new Map();
+    for (const d of list) { const rows = vtableOf(S, d.name); vt.set(d.name, rows); abs.set(d.name, rows.some(r => r.pure)); }
+    const inHier = n => (S[n] && S[n].bases.length) || (kids.get(n) || []).length || (vt.get(n) || []).length;
+    return (prog._cm = { on, list, pal, kids, depth, vt, abs, inHier, S });
+  }
+  const tstr = t => t ? `${t.base}${t.targs ? '<…>' : ''}${'*'.repeat(t.ptr || 0)}${t.ref ? '&' : ''}` : '';
+  const ptypes = ps => ps.map(p => tstr(p.type)).join(', ');
+  // which part of each object is being built or torn down right now
+  function buildState(step) {
+    const st = new Map();
+    for (const f of step.frames) {
+      if (!f.ctor && !f.dtor) continue;
+      const th = f.vars.find(v => v.name === 'this' || v.name === '*this'); if (!th) continue;
+      const key = th.name === 'this' ? th.val.to : 'v:' + th.alias;
+      st.set(key, { cls: f.cls, dtor: f.dtor });
+    }
+    return st;
+  }
+  function partStatus(parts, bs) {
+    if (!bs || !parts) return null;
+    let idx = -1; parts.forEach((p, i) => { if (p.cls === bs.cls) idx = i; });
+    if (idx < 0) return null;
+    return parts.map((p, i) => i === idx ? (bs.dtor ? 'tearing' : 'building') : i > idx ? (bs.dtor ? 'gone' : 'pending') : 'done');
+  }
+  // fields of an object as drawn: vptr first when the class has virtual functions, then fields grouped by part
+  function objFields(o, bs) {
+    const cm = state.prog && classModel(state.prog);
+    if (!cm || !cm.on || !o.parts) return o.fields;
+    const fs = o.fields.map((f, i) => ({ ...f, _i: i })).sort((a, b) => ((a.part ?? 0) - (b.part ?? 0)) || (a._i - b._i));
+    const rows = cm.vt.get(o.type) || [];
+    if (rows.length) {
+      let at = o.type;
+      if (bs && !bs.dtor) at = bs.cls; else if (bs && bs.dtor) at = bs.cls;
+      fs.unshift({ name: 'vptr', ptr: false, vptr: true, part: 0, val: { k: 'vt', cls: at } });
+    }
+    return fs;
+  }
+  function chipRow(x, y, chips, maxW) {
+    let s = '', cx = x, y0 = y, right = x;
+    chips.forEach((c, i) => {
+      const w = c.t.length * 6.9 + 18;
+      if (i && maxW && cx + w > maxW) { cx = x + 14; y += 30; }
+      else if (i) s += `<path class="flow-a" d="M${cx - 16} ${y + 11} h10" marker-end="url(#mh-g)"/>`;
+      s += `<g class="flow ${c.c || ''}"><rect x="${cx}" y="${y}" width="${w}" height="22" rx="11"/><text x="${cx + w / 2}" y="${y + 15}" text-anchor="middle">${esc(c.t)}</text></g>`;
+      cx += w + 22; right = Math.max(right, cx);
+    });
+    return { svg: s, w: right - x, h: y - y0 + 22 };
+  }
+  function flowChips(step, cm) {
+    const evs = step.ev.oop || [];
+    const pick = k => evs.find(e => e.k === k);
+    let e;
+    if ((e = pick('baddel'))) return [{ t: `delete through ${e.st}*` }, { t: `~${e.st}() isn't virtual`, c: 'bad' }, { t: `~${e.dyn}() skipped`, c: 'bad x' }];
+    if ((e = evs.find(x => x.k === 'vcall' && x.midway))) return [{ t: `${e.name}()` }, { t: `inside ${e.dyn}'s ${step.frames.some(f => f.dtor) ? 'destructor' : 'constructor'}` }, { t: `object is only ${an(e.dyn)} so far` }, { t: `${e.impl}::${e.name}()`, c: 'hit' }];
+    if ((e = pick('vcall'))) return [{ t: `${e.lab}${e.sym === '*' ? '->' : '.'}${e.name}()`, c: 'code' }, { t: `${e.lab} is ${e.st}${e.sym}` }, { t: `object is ${an(e.dyn)}` }, { t: `vtable of ${e.dyn}` }, { t: `${e.impl}::${e.name}()`, c: 'hit' }];
+    if ((e = pick('scall'))) return [{ t: `${e.lab}${e.sym === '*' ? '->' : '.'}${e.name}()`, c: 'code' }, { t: `${e.lab} is ${e.st}${e.sym}` }, { t: 'not virtual: no vtable' }, { t: `${e.impl}::${e.name}()`, c: 'hit' }, ...(e.over && e.over !== e.impl ? [{ t: `${e.over}::${e.name}() ignored`, c: 'x' }] : [])];
+    if ((e = pick('qcall'))) return [{ t: `${e.st}::${e.name}()`, c: 'code' }, { t: 'class named: no vtable lookup' }, { t: `${e.impl}::${e.name}()`, c: 'hit' }];
+    if ((e = pick('slice'))) return [{ t: `${e.from} copied into ${e.to}` }, { t: `only the ${e.to} part fits`, c: 'bad' }, ...(e.lost.length ? [{ t: `${e.lost.join(', ')} cut off`, c: 'bad x' }] : [])];
+    if ((e = pick('op'))) return [{ t: `operator${e.op}`, c: 'code' }, { t: 'is just a function call' }, { t: e.impl ? `${e.impl}::operator${e.op}` : `operator${e.op}(a, b)`, c: 'hit' }];
+    // constructor / destructor order for the object being built or destroyed
+    const bs = buildState(step);
+    for (const [key, b] of bs) {
+      const o = typeof key === 'number' ? step.heap.find(h => h.id === key) : null;
+      let parts = o && o.parts;
+      if (!parts) for (const f of step.frames) for (const v of f.vars) if (v.name === '*this' && 'v:' + v.alias === key) parts = v.val.parts;
+      const ps = partStatus(parts, b); if (!ps || parts.length < 2) continue;
+      const order = parts.map((p, i) => ({ p, s: ps[i] }));
+      if (b.dtor) order.reverse();
+      return [{ t: b.dtor ? 'destroying' : 'building', c: 'lead' }, ...order.map(x => x.s === 'building' || x.s === 'tearing' ? { t: x.p.label, c: 'hit' }
+        : b.dtor ? (x.s === 'gone' ? { t: x.p.label + ' ✓', c: 'done' } : { t: x.p.label, c: 'pend' })
+        : (x.s === 'done' ? { t: '✓ ' + x.p.label, c: 'done' } : { t: x.p.label, c: 'pend' }))];
+    }
+    return null;
+  }
+  function classLines(d, cm, step) {
+    const L = [];
+    const sv = new Map((step.statics || []).filter(x => x.cls === d.name).map(x => [x.name, x.val]));
+    for (const f of d.fields) L.push({ key: 'f:' + f.name, t: `${SYM[f.access] || '+'} ${f.name}: ${tstr(f.type)}${f.dims && f.dims.length ? '[]' : ''}`, a: f.access });
+    for (const f of d.statics) L.push({ key: 's:' + f.name, t: `${SYM[f.access] || '+'} static ${f.name}: ${tstr(f.type)}${sv.has(f.name) ? ' = ' + valText(sv.get(f.name), true) : ''}`, a: f.access, st: true });
+    const sec2 = L.length;
+    d.ctors.forEach((c, i) => L.push({ key: 'c:' + i, t: `${SYM[c.access] || '+'} ${d.name}(${ptypes(c.params)})`, a: c.access, ctor: true }));
+    if (d.dtor) L.push({ key: 'd', t: `${SYM[d.dtor.access] || '+'} ${d.dtor.virtual ? 'virtual ' : ''}~${d.name}()`, a: d.dtor.access, dtor: true });
+    for (const n in d.methods) {
+      const m = d.methods[n]; const virt = !m.static && isVirtualIn(cm.S, d.name, n);
+      const over = virt && !m.virtual || m.override;
+      L.push({ key: 'm:' + n, t: `${SYM[m.access] || '+'} ${m.static ? 'static ' : ''}${m.virtual ? 'virtual ' : ''}${n}(${ptypes(m.params)}): ${tstr(m.ret)}${m.pure ? ' = 0' : ''}`, a: m.access, virt, over: over && d.bases.length > 0, pure: m.pure });
+    }
+    return { L, sec2 };
+  }
+  function oopSection(step) {
+    const cm = state.prog && classModel(state.prog);
+    if (!cm || !cm.on) return { on: false, svg: '', h: 22, w: 0 };
+    let svg = '', y = 22, w = 0;
+    const evs = step.ev.oop || [];
+    // flow strip: how the current call or construction was decided
+    const flow = flowChips(step, cm);
+    if (flow) { const wrapEl = document.getElementById('canvasWrap'); const r = chipRow(G.PADX, y, flow, Math.max(320, ((wrapEl && wrapEl.clientWidth) || 900) - 16)); svg += r.svg; w = Math.max(w, G.PADX + r.w); y += r.h + 18; }
+    // ----- class diagram -----
+    const classTop = y;
+    let diagramRight = G.PADX;
+    if (state.classView === 'compact') {
+      svg += labelSVG(G.PADX, y + 12, 'Classes', 'compact view'); y += 24;
+      let cx = G.PADX;
+      for (const d of cm.list) {
+        const t = d.name + (d.bases.length ? ' : ' + d.bases.map(x => x.name).join(', ') : '') + (cm.abs.get(d.name) ? ' (abstract)' : '');
+        const cw = t.length * 6.9 + 22; const on = top && top.cls === d.name;
+        if (cx > G.PADX && cx + cw > Math.max(700, w)) { cx = G.PADX; y += 30; }
+        svg += `<g class="cchip k${cm.pal.get(d.name)}${on ? ' on' : ''}"><rect x="${cx}" y="${y}" width="${cw}" height="22" rx="6"/><text x="${cx + 11}" y="${y + 15}">${esc(t)}</text></g>`;
+        cx += cw + 10; diagramRight = Math.max(diagramRight, cx);
+      }
+      w = Math.max(w, diagramRight); y += 44;
+    } else {
+      svg += labelSVG(G.PADX, y + 12, 'Classes', 'drawn from your code as you type'); y += 26;
+      const top = step.frames[step.frames.length - 1];
+      const hl = new Map(); const mark = (cls, key, c) => { if (!hl.has(cls)) hl.set(cls, new Map()); hl.get(cls).set(key, c); };
+      if (top && top.cls) {
+        const fn = top.fn.includes('::') ? top.fn.split('::')[1] : null;
+        if (top.ctor) cm.S[top.cls] && cm.S[top.cls].ctors.forEach((c, i) => mark(top.cls, 'c:' + i, 'run'));
+        else if (top.dtor) mark(top.cls, 'd', 'run');
+        else if (fn) mark(top.cls, 'm:' + fn, 'run');
+      }
+      for (const e of evs) {
+        if (e.k === 'vcall') { if (e.from !== e.impl) mark(e.from, 'm:' + e.name, 'via'); mark(e.impl, 'm:' + e.name, 'run'); mark(e.dyn, 'v:' + e.name, 'run'); }
+        if (e.k === 'scall' && e.over && e.over !== e.impl) mark(e.over, 'm:' + e.name, 'skip');
+      }
+      const LH = 17, PADT = 30;
+      const boxes = new Map();
+      for (const d of cm.list) {
+        const { L, sec2 } = classLines(d, cm, step);
+        const vt = cm.vt.get(d.name) || [];
+        const head = (cm.abs.get(d.name) ? '«abstract» ' : d.kw === 'struct' ? 'struct ' : 'class ') + d.name;
+        const lens = [head.length + 2, ...L.map(l => l.t.length + (l.over ? 10 : 0)), ...vt.map(r => (r.dtor ? r.name.length : r.name.length + 2) + 3 + (r.pure ? 10 : r.impl.length + 2 + r.name.length)), 10];
+        const bw = Math.max(150, Math.min(380, Math.max(...lens) * 6.75 + 26));
+        const bh = PADT + Math.max(1, L.length) * LH + (sec2 > 0 && sec2 < L.length ? 6 : 0) + (vt.length ? 22 + vt.length * LH : 0) + 8;
+        boxes.set(d.name, { d, L, sec2, vt, head, w: bw, h: bh });
+      }
+      // rows by inheritance depth; children follow their parents left to right
+      const rows = [];
+      for (const d of cm.list) { const k = cm.depth.get(d.name) || 0; (rows[k] = rows[k] || []).push(d.name); }
+      let ry = y; const GAPX = 36, GAPY = 58;
+      rows.forEach((row, ri) => {
+        if (!row) return;
+        if (ri > 0) row.sort((a, b) => { const ax = n => { const bs = cm.S[n].bases.map(x => boxes.get(x.name)).filter(Boolean); return bs.length ? bs.reduce((s, q) => s + q.x + q.w / 2, 0) / bs.length : 0; }; return ax(a) - ax(b); });
+        let rx = G.PADX; let rh = 0;
+        for (const n of row) {
+          const b = boxes.get(n);
+          if (ri > 0) { const ps = cm.S[n].bases.map(x => boxes.get(x.name)).filter(q => q && q.x != null); if (ps.length) { const want = ps.reduce((s, q) => s + q.x + q.w / 2, 0) / ps.length - b.w / 2; rx = Math.max(rx, want); } }
+          b.x = rx; b.y = ry; rx += b.w + GAPX; rh = Math.max(rh, b.h);
+        }
+        w = Math.max(w, rx); ry += rh + GAPY;
+      });
+      // inheritance arrows (drawn under the boxes)
+      for (const [n, b] of boxes) for (const base of b.d.bases) {
+        const p = boxes.get(base.name); if (!p) continue;
+        const sx = b.x + b.w / 2, sy = b.y, tx = p.x + p.w / 2, ty = p.y + p.h + 11;
+        const my = (sy + ty) / 2;
+        svg += `<path class="inh${base.virtual ? ' virt' : ''}" d="M${sx} ${sy} C${sx} ${my} ${tx} ${my} ${tx} ${ty}"/><path class="inh-h" d="M${tx} ${ty - 11} l-7 11 h14 z"/>`;
+        const lx = (sx + tx) / 2, ly = my + 4; const lt = (base.virtual ? 'virtual ' : '') + base.access;
+        svg += `<g class="inh-l"><rect x="${lx - lt.length * 3.3 - 6}" y="${ly - 11}" width="${lt.length * 6.6 + 12}" height="16" rx="8"/><text x="${lx}" y="${ly + 1}" text-anchor="middle">${lt}</text></g>`;
+      }
+      for (const [n, b] of boxes) {
+        const k = cm.pal.get(n); const H = hl.get(n) || new Map();
+        const running = top && top.cls === n;
+        let s = `<g class="cls k${k}${running ? ' on' : ''}" transform="translate(${b.x},${b.y})">`;
+        s += `<rect class="cbox" width="${b.w}" height="${b.h}" rx="8"/><path class="chead" d="M0 8 a8 8 0 0 1 8 -8 h${b.w - 16} a8 8 0 0 1 8 8 v14 h-${b.w} z"/>`;
+        s += `<text class="cname" x="12" y="16">${cm.abs.get(n) ? '<tspan class="cabs">«abstract» </tspan>' : ''}${esc(n)}</text>`;
+        let ly = PADT;
+        if (!b.L.length) s += `<text class="cmem dim" x="12" y="${ly + 12}">empty</text>`, ly += LH;
+        b.L.forEach((l, i) => {
+          if (i === b.sec2 && i > 0) { s += `<line class="csep" x1="0" x2="${b.w}" y1="${ly + 1}" y2="${ly + 1}"/>`; ly += 6; }
+          const h = H.get(l.key);
+          if (h) s += `<rect class="crow ${h}" x="3" y="${ly}" width="${b.w - 6}" height="${LH}" rx="4"/>`;
+          s += `<text class="cmem a-${l.a || 'public'}${l.st ? ' st' : ''}${l.pure ? ' pure' : ''}${h === 'skip' ? ' skip' : ''}" x="12" y="${ly + 12.5}">${esc(l.t)}</text>`;
+          if (l.over) s += `<text class="cover" x="${b.w - 10}" y="${ly + 12}" text-anchor="end">override</text>`;
+          ly += LH;
+        });
+        if (b.vt.length) {
+          s += `<line class="csep" x1="0" x2="${b.w}" y1="${ly + 4}" y2="${ly + 4}"/><text class="cvt" x="12" y="${ly + 17}">vtable</text>`; ly += 22;
+          for (const r of b.vt) {
+            const h = H.get('v:' + r.name);
+            if (h) s += `<rect class="crow ${h}" x="3" y="${ly}" width="${b.w - 6}" height="${LH}" rx="4"/>`;
+            s += `<text class="cmem vrow" x="12" y="${ly + 12.5}">${esc(r.dtor ? r.name : r.name + '()')} → <tspan class="vimpl k${cm.pal.get(r.impl)}">${r.pure ? '= 0 (none)' : esc(r.impl + '::' + (r.dtor ? r.name : r.name))}</tspan></text>`;
+            ly += LH;
+          }
+        }
+        s += '</g>'; svg += s;
+      }
+      y = ry - GAPY + 30;
+
+      diagramRight = Math.max(G.PADX, ...[...boxes.values()].map(q => q.x + q.w));
+    }
+    // ----- objects on the stack -----
+    const bs = buildState(step); const objs = []; const seen = new Set();
+    const showObj = t => { const d = cm.S[t]; return d && (cm.inHier(t) || !d.fields.some(f => f.dims && f.dims.length || /^(vector|stack|queue|deque|priority_queue)$/.test(f.type.base))); };
+    step.frames.forEach((f, fi) => f.vars.forEach(v => {
+      if (v.ref || v.val.k !== 'rec' || !cm.S[v.val.type] || v.name === '*this' || !showObj(v.val.type)) return;
+      const key = 'v:' + v.name; if (seen.has(key + fi)) return; seen.add(key + fi);
+      objs.push({ label: v.name, where: f.global ? 'global' : `in ${f.fn}()`, o: { id: key, type: v.val.type, parts: v.val.parts, fields: v.val.fields, alive: true, addr: '' }, key });
+    }));
+    step.frames.forEach(f => {
+      if (!f.ctor && !f.dtor) return;
+      const v = f.vars.find(x => x.name === '*this'); if (!v || !showObj(v.val.type)) return;
+      const key = 'v:' + v.alias; if (objs.some(x => x.key === key)) return;
+      objs.push({ label: v.alias, where: f.ctor ? 'being built' : 'being destroyed', o: { id: key, type: v.val.type, parts: v.val.parts, fields: v.val.fields, alive: true, addr: '' }, key });
+    });
+    if (objs.length) {
+      const items = objs.slice(0, 10).map(ob => {
+        const st = bs.get(ob.key); const fs = objFields(ob.o, st); const geo = fitParts(slotsFor(ob.o.type, fs), ob.o.parts);
+        const pw = ob.o.parts ? Math.max(0, ...ob.o.parts.map(p => p.label.length * 7 + 30)) : 0;
+        return { ob, st, fs, geo, ow: Math.max(geo.w, (ob.label.length + ob.o.type.length + 3) * 7.2, pw) };
+      });
+      const wrapEl = document.getElementById('canvasWrap'); const avail = (wrapEl && wrapEl.clientWidth) || 0;
+      const colX = Math.max(diagramRight, G.PADX + 250) + 60; const colW = Math.max(...items.map(it => it.ow));
+      const beside = state.classView !== 'compact' && colX + colW + 30 <= avail;
+      let ox, oy;
+      if (beside) { ox = colX; oy = classTop; svg += labelSVG(ox, oy + 12, 'Objects', 'one part per class'); oy += 44; }
+      else { y += 6; svg += labelSVG(G.PADX, y + 12, 'Objects', 'each object holds a part for every class it inherits from'); y += 44; ox = G.PADX; oy = y; }
+      let rowH = 0; const x0 = ox;
+      for (const it of items) {
+        const { ob, st, fs, geo, ow } = it;
+        if (!beside && ox > x0 && ox + ow > Math.max(760, w)) { ox = x0; oy += rowH; rowH = 0; }
+        const n = { geo, o: { ...ob.o, fields: fs }, kind: { kind: 'plain' }, pstat: partStatus(ob.o.parts, st), where: ob.where };
+        svg += `<g class="nd obj" transform="translate(${ox},${oy})"><text class="olabel" x="0" y="-10">${esc(ob.label)}<tspan class="otype"> : ${esc(ob.o.type)}</tspan></text><g class="nd-body">${nodeBody(n, new Set())}</g></g>`;
+        if (beside) { oy += G.H + 92; w = Math.max(w, ox + ow + 40); }
+        else { ox += ow + 46; rowH = Math.max(rowH, G.H + 82); w = Math.max(w, ox); }
+      }
+      if (beside) y = Math.max(y, oy - 30); else y = oy + rowH;
+    }
+    return { on: true, svg, h: y + 8, w, bs };
+  }
+  function fitParts(geo, parts) {
+    const cm = state.prog && classModel(state.prog);
+    if (!cm || !cm.on || !parts || !geo.slots.length) return geo;
+    const slots = geo.slots.map(sl => ({ ...sl }));
+    for (let i = 0; i < slots.length;) {
+      let j = i; const pi = slots[i].part ?? 0;
+      while (j + 1 < slots.length && (slots[j + 1].part ?? 0) === pi) j++;
+      const p = parts[pi]; const need = p ? p.label.length * 7 + 18 : 0;
+      const have = slots.slice(i, j + 1).reduce((a, sl) => a + sl.w, 0);
+      if (need > have) { const add = (need - have) / (j - i + 1); for (let k = i; k <= j; k++) slots[k].w += add; }
+      i = j + 1;
+    }
+    let x = 0; for (const sl of slots) { sl.x = x; sl.cx = x + sl.w / 2; x += sl.w; }
+    return { slots, w: Math.max(x, geo.w) };
+  }
+  function partsSVG(n) {
+    const { geo, o } = n; if (!o.parts) return '';
+    const cm = state.prog && classModel(state.prog); if (!cm || !cm.on) return '';
+    const groups = [];
+    for (const sl of geo.slots) { const p = sl.part ?? 0; const g = groups[groups.length - 1]; if (g && g.p === p) g.x1 = sl.x + sl.w; else groups.push({ p, x0: sl.x, x1: sl.x + sl.w }); }
+    const used = new Set(groups.map(g => g.p));
+    const empty = o.parts.map((p, i) => i).filter(i => !used.has(i));
+    if (o.parts.length < 2 && !empty.length && !cm.inHier(o.type)) return '';
+    const H = G.H; let s = '';
+    const ps = n.pstat;
+    for (const g of groups) {
+      const part = o.parts[g.p]; if (!part) continue; const k = cm.pal.get(part.cls); const st = ps ? ps[g.p] : '';
+      s += `<rect class="ptint k${k} ${st}" x="${g.x0 + 1.5}" y="1.5" width="${g.x1 - g.x0 - 3}" height="${H - 3}" rx="6"/>`;
+      s += `<g class="pbr k${k} ${st}"><path d="M${g.x0 + 4} ${H + 5} v5 H${g.x1 - 4} v-5"/><text x="${(g.x0 + g.x1) / 2}" y="${H + 23}" text-anchor="middle">${esc(part.label)}</text></g>`;
+    }
+    if (empty.length) {
+      const t = 'no data: ' + empty.map(i => o.parts[i].label).join(', ');
+      s += `<text class="pempty" x="${geo.w + 8}" y="${H / 2 + 4}">${esc(t)}</text>`;
+    }
+    return s;
+  }
+
   function computeLayout(step) {
     const heap = step.heap; const byId = new Map(heap.map(o => [o.id, o]));
-    const geo = new Map(heap.map(o => [o.id, slotsFor(o.type, o.fields)]));
+    const OO = oopSection(step);
+    const geo = new Map(heap.map(o => [o.id, fitParts(slotsFor(o.type, objFields(o, OO.bs && OO.bs.get(o.id))), o.parts)]));
     const fv = (o, n) => { const f = o.fields.find(f => f.name === n); return f && f.val; };
     const kindOf = o => kinds[o.type] || { kind: 'plain' };
     const linkTo = o => { if (!o.alive) return null; const k = kindOf(o); return k.link ? tgtOf(fv(o, k.link), byId) : null; };
     const lastFi = step.frames.length - 1;
-    let svg = ''; const anchors = []; let y = 22; let maxX = 300;
+    let svg = OO.svg; const anchors = []; let y = OO.h; let maxX = Math.max(300, OO.w);
     const items = collectData(step);
     let hasQueue = false; const si = state.steps.indexOf(step); const prevStep = si > 0 ? state.steps[si - 1] : null;
 
@@ -2421,7 +3640,8 @@ const DEFAULT_EXAMPLE = '00_by_hand';
       if (!isCont && ptrCells && listTargets) {
         // bucket column with chains (hash table with chaining, adjacency lists of nodes)
         const lx = G.PADX; const colX = lx + 34;
-        svg += labelSVG(lx, y + 14, it.name, `${n} buckets`);
+        const cmA = state.prog && classModel(state.prog); const objArr = cmA && cmA.on && vals.some(c => c.k === 'ptr' && c.to != null && byId.has(c.to) && cmA.S[byId.get(c.to).type] && cmA.inHier(byId.get(c.to).type));
+        svg += labelSVG(lx, y + 14, it.name, objArr ? `array of ${n} pointers` : `${n} buckets`);
         const top = y + 30;
         vals.forEach((c, i) => {
           const cy = top + i * G.ROWB;
@@ -2589,14 +3809,14 @@ const DEFAULT_EXAMPLE = '00_by_hand';
         ghost = { x: gx, y: gy, geo: g, type: step.flags.ghost.type }; maxX = Math.max(maxX, gx + g.w + 60); yy = Math.max(yy, gy + G.ROWH);
       }
     }
-    if (!heap.length && !ghost && state.prog) {
+    if (!heap.length && !ghost && state.prog && !OO.on) {
       const def = Object.values(state.prog.structs).find(d => d.fields.length && kinds[d.name] && kinds[d.name].kind !== 'plain') || (!items.length && Object.values(state.prog.structs).find(d => d.fields.length));
       if (def) { const g = phGeo(def.name); blueprint = { x: G.PADX, y: listStart, geo: g, def }; yy = Math.max(yy, listStart + G.ROWH); maxX = Math.max(maxX, G.PADX + g.w + 200); }
     }
 
     // nodes
     const nodes = [];
-    for (const o of heap) { const p = P.get(o.id); if (!p) continue; let cls = o.alive ? '' : 'dead'; if (isLost(o.id)) cls += ' lost'; nodes.push({ key: 'n' + o.id, id: o.id, x: p.x, y: p.y, geo: geo.get(o.id), o, cls, kind: kindOf(o) }); }
+    for (const o of heap) { const p = P.get(o.id); if (!p) continue; let cls = o.alive ? '' : 'dead'; if (isLost(o.id)) cls += ' lost'; nodes.push({ key: 'n' + o.id, id: o.id, x: p.x, y: p.y, geo: geo.get(o.id), o, cls, kind: kindOf(o), pstat: OO.bs ? partStatus(o.parts, OO.bs.get(o.id)) : null }); }
 
     // edges
     const edges = [];
@@ -2657,11 +3877,13 @@ const DEFAULT_EXAMPLE = '00_by_hand';
   function nodeBody(n, sets) {
     const { geo, o } = n; const H = G.H; const k = n.kind || { kind: 'plain' };
     let s = `<rect class="box" x="0" y="0" width="${geo.w}" height="${H}" rx="7"/>`;
+    const pv = partsSVG(n); s += pv;
     geo.slots.forEach((sl, i) => {
       if (i > 0) s += `<line class="div" x1="${sl.x}" y1="0" x2="${sl.x}" y2="${H}"/>`;
       if (sets.has(o.id + '.' + sl.name)) s += `<rect class="slot-flash" x="${sl.x + 2}" y="2" width="${sl.w - 4}" height="${H - 4}" rx="5"/>`;
       s += `<text class="fname" x="${sl.cx}" y="13" text-anchor="middle">${esc(sl.name)}</text>`;
       const v = sl.val;
+      if (sl.vptr) { s += `<text class="vptrv" x="${sl.cx}" y="37" text-anchor="middle">${esc(valText(v, true))}</text>`; return; }
       if (sl.ptr) {
         const dy = dotY(k, sl.name);
         if (v.k === 'ph') { /* ghost */ }
@@ -2673,7 +3895,10 @@ const DEFAULT_EXAMPLE = '00_by_hand';
         else s += `<text class="fval" x="${sl.cx}" y="38" text-anchor="middle">${esc(valText(v, true))}</text>`;
       } else s += `<text class="fval${v.k === 'uninit' ? ' garb' : ''}" x="${sl.cx}" y="38" text-anchor="middle">${esc(valText(v, true))}</text>`;
     });
-    if (o.addr) s += `<text class="addr" x="0" y="${H + 15}">${o.addr}${o.alive === false ? ' · deleted' : ''}</text>`;
+    const ay = pv ? H + 40 : H + 15;
+    const cm = pv && state.prog && classModel(state.prog);
+    if (o.addr) s += `<text class="addr" x="0" y="${ay}">${cm ? esc(o.type) + ' · ' : ''}${o.addr}${o.alive === false ? ' · deleted' : ''}</text>`;
+    else if (n.where) s += `<text class="addr" x="0" y="${ay}">on the stack · ${esc(n.where)}</text>`;
     return s;
   }
 
@@ -2733,6 +3958,7 @@ const DEFAULT_EXAMPLE = '00_by_hand';
     // null pointer chips
     $('#chips').innerHTML = Lay.nullChips.slice(0, 8).map(c => `<span class="nchip"><b>${esc(c.label)}</b> → ${c.uninit ? '? (not set)' : 'NULL'}</span>`).join('');
     $('#qstyle').hidden = !Lay.hasQueue;
+    $('#cview').hidden = !(state.prog && classModel(state.prog).on);
     const empty = !Lay.nodes.length && !Lay.svg && !Lay.ghost && !Lay.blueprint;
     const em = $('#empty'); em.hidden = !empty;
     if (empty) em.innerHTML = step.flags.nomain && !Object.keys(state.prog.structs).length
@@ -2768,6 +3994,15 @@ const DEFAULT_EXAMPLE = '00_by_hand';
       const last = r.ids[r.ids.length - 1]; const t = Lay.linkTo(byId.get(last));
       if (t != null && r.ids.includes(t)) out.push(t === r.ids[0] ? { sev: 'info', t: 'Circular list: the last node links back to the first. A traversal needs a stop condition such as temp != head.' } : { sev: 'warn', t: `Cycle: node ${byId.get(last).addr} links back into the middle of the list, so following the links never reaches NULL.` });
     }
+    for (const e of step.ev.oop || []) {
+      if (e.k === 'baddel') out.push({ sev: 'warn', t: `delete only ran ~${e.st}(). The ${e.dyn} part was never cleaned up, because ~${e.st}() isn't virtual. Give ${e.st} a virtual destructor: virtual ~${e.st}() {}` });
+      if (e.k === 'slice') out.push({ sev: 'info', t: `Object slicing: ${an(e.from)} was copied into ${an(e.to)}, so only its ${e.to} part was kept${e.lost.length ? ' (' + e.lost.join(', ') + ' lost)' : ''}. Use ${e.to}& or ${e.to}* to keep the whole object.` });
+    }
+    const cmx = state.prog && classModel(state.prog);
+    if (cmx && cmx.on) for (const d of cmx.list) {
+      const kids = cmx.kids.get(d.name) || [];
+      if (kids.length && (cmx.vt.get(d.name) || []).some(r => !r.dtor) && !hasVirtualDtor(cmx.S, d.name)) out.push({ sev: 'info', t: `${d.name} has virtual functions and derived classes, but its destructor isn't virtual. Deleting ${an(kids[0])} through ${an(d.name)}* would skip ~${kids[0]}(). Add virtual ~${d.name}() {}` });
+    }
     if (!out.length) out.push({ sev: 'ok', t: step.flags.done ? 'Program finished with no memory problems.' : 'No problems at this step.' });
     return out.slice(0, 6);
   }
@@ -2790,6 +4025,19 @@ const DEFAULT_EXAMPLE = '00_by_hand';
       }
     }
     if (Lay.han) labels.add('Tower of Hanoi');
+    const cm = state.prog && classModel(state.prog);
+    if (cm && cm.on) {
+      const L = cm.list;
+      if (L.some(d => d.bases.length)) labels.add(L.some(d => d.bases.length > 1) ? 'Multiple inheritance' : L.some(d => (cm.depth.get(d.name) || 0) >= 2) ? 'Multilevel inheritance' : [...cm.kids.values()].some(k => k.length > 1) ? 'Hierarchical inheritance' : 'Single inheritance');
+      else labels.add('Classes');
+      if (L.some(d => d.bases.some(b => b.virtual))) labels.add('Virtual base class');
+      if ([...cm.vt.values()].some(r => r.some(x => !x.dtor))) labels.add('Runtime polymorphism');
+      if ([...cm.abs.values()].some(Boolean)) labels.add('Abstract class');
+      if (L.some(d => Object.keys(d.methods).some(n => n.startsWith('operator'))) || Object.keys(state.prog.funcs).some(n => n.startsWith('operator'))) labels.add('Operator overloading');
+      if (L.some(d => d.statics.length || Object.values(d.methods).some(m => m.static))) labels.add('Static members');
+      if (L.some(d => d.friends.length)) labels.add('Friend functions');
+      if (!L.some(d => d.bases.length) && L.some(d => d.fields.some(f => f.access === 'private'))) labels.add('Encapsulation');
+    }
     if (state.steps.some(s => { const fs = s.frames.map(f => f.fn); return fs.some((f, i) => f !== 'globals' && fs.indexOf(f) !== i); })) labels.add('Recursion');
     return [...labels].filter(Boolean);
   }
@@ -2813,7 +4061,7 @@ const DEFAULT_EXAMPLE = '00_by_hand';
       else if (f.end) note = 'Reached the end of what you have written so far.';
       else note = pe ? `Line ${pe.line} isn't finished yet: ${pe.msg}. Everything above it has run.` : 'Paused here.';
     }
-    if (f.nomain) note = Object.keys(state.prog.structs).length ? 'Your struct is drawn as a blueprint. Write int main() { … } to run the code.' : 'Write a struct and an int main() function to see your data structure.';
+    if (f.nomain) note = Object.keys(state.prog.structs).length ? (classModel(state.prog).on ? 'Your classes are drawn above. Write int main() { … } to create objects and run the code.' : 'Your struct is drawn as a blueprint. Write int main() { … } to run the code.') : 'Write a struct and an int main() function to see your data structure.';
     const cls = f.error ? 'err' : f.halt ? 'warn' : f.done ? 'ok' : '';
     $('#explain').innerHTML = `<span class="lnchip ${cls}">${step.line ? 'Line ' + step.line : 'Ready'}</span>${lineText ? `<code>${esc(lineText)}</code>` : ''}<span class="note">${esc(note)}</span>`;
 
@@ -2905,6 +4153,11 @@ const DEFAULT_EXAMPLE = '00_by_hand';
     kd.addEventListener('click', e => { if (e.target === kd) kd.close(); });
   });
   // ---------- queue style toggle ----------
+  try { const cv = localStorage.getItem('vc-class-view'); if (cv === 'full' || cv === 'compact') state.classView = cv; } catch (e) { /* storage unavailable */ }
+  const cvBtns = document.querySelectorAll('#cview button');
+  const syncCV = () => cvBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cv === state.classView)));
+  cvBtns.forEach(b => b.addEventListener('click', () => { state.classView = b.dataset.cv; syncCV(); try { localStorage.setItem('vc-class-view', state.classView); } catch (e) { /* storage unavailable */ } render(); }));
+  syncCV();
   try { const q = localStorage.getItem('vc-queue-style'); if (q === 'people' || q === 'boxes') state.queueStyle = q; } catch (e) { /* storage unavailable */ }
   const qBtns = document.querySelectorAll('#qstyle button');
   const syncQ = () => qBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.style === state.queueStyle)));
