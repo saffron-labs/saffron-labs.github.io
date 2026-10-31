@@ -180,3 +180,8 @@ details.all .facts{margin-top:12px}
 @media(prefers-reduced-motion:reduce){
   *,*:before,*:after{animation:none!important;transition:none!important}
 }
+
+/* pitch decks */
+.drawer.drawer-wide{width:min(780px,100%)}
+.pitch-frame{overflow:hidden;border:1px solid var(--line);border-radius:var(--radius);background:#fff}
+.pitch-frame iframe{display:block;border:0;transform-origin:0 0;background:#fff}

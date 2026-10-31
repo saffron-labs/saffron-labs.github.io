@@ -72,6 +72,7 @@
   const LEAD_TABS = ['Leads', 'Global', 'International'];
   const SECTIONS = [
     { id: 'today', title: 'Today' },
+    { id: 'scout', title: 'Scout' },
     ...Object.keys(TABS).map((id) => ({ id, title: TABS[id].title })),
     { id: 'social', title: 'Social' },
   ];
@@ -318,6 +319,7 @@
     const active = $('tabs').querySelector('[aria-current="page"]');
     if (active) active.scrollIntoView({ inline: 'nearest', block: 'nearest' });
     if (section === 'today') renderToday();
+    else if (section === 'scout') renderScout();
     else if (section === 'social') renderSocial();
     else renderTab(section);
     window.scrollTo(0, 0);
@@ -533,6 +535,7 @@
   const openDrawer = (html, opener) => {
     drawerOpener = opener || document.activeElement;
     drawerDirty = () => false;
+    $('drawer').classList.remove('drawer-wide');
     $('drawer').innerHTML = html;
     $('drawer').hidden = false;
     $('drawer-backdrop').hidden = false;
@@ -651,6 +654,7 @@
         ${editable.length ? `<div><p class="block-title">Update</p><form class="form" data-form>${editable.map((s, i) => fieldHtml(s, original[s.h], 'f' + i)).join('')}</form></div>` : ''}
         ${rest ? `<details class="all"><summary>All details</summary><div class="facts">${rest}</div></details>` : ''}
         ${canMovePipeline || canMakeClient ? `<div class="quick">
+          ${tab !== 'Clients' ? '<button class="btn btn-accent" type="button" data-pitch>Pitch deck</button>' : ''}
           ${canMovePipeline ? '<button class="btn btn-outline" type="button" data-move="Pipeline">Move to Pipeline</button>' : ''}
           ${canMakeClient ? '<button class="btn btn-outline" type="button" data-move="Clients">Make client</button>' : ''}</div>` : ''}
       </div>
@@ -721,6 +725,9 @@
       const ok = await save(Object.assign(changes(), set));
       if (ok) openRow(tab, row, opener);
     };
+
+    const pitchButton = drawer.querySelector('[data-pitch]');
+    if (pitchButton) pitchButton.onclick = () => { if (closeDrawer()) openPitch(tab, row, opener); };
 
     drawer.querySelectorAll('[data-move]').forEach((b) => {
       b.onclick = async () => {
@@ -952,7 +959,7 @@
     const body = $('social-body');
     const list = (tab, records) => {
       const items = records.map((r) => {
-        const name = String(r.values.Name || Object.values(r.values)[0] || '').trim();
+        const name = recordName(r);
         if (!name) return '';
         const detail = [r.values.Service, r.values.Notes].filter(Boolean).join(' · ');
         return `<div class="toggle-row"><div><strong>${esc(name)}</strong>${detail ? `<div class="meta">${esc(detail)}</div>` : ''}</div>
@@ -968,7 +975,7 @@
         try {
           await api('socialSetActive', { tab: input.dataset.tab, name: input.dataset.name, active: input.checked });
           const rec = (input.dataset.tab === 'Services' ? state.social.services : state.social.offers)
-            .find((r) => String(r.values.Name || Object.values(r.values)[0] || '').trim() === input.dataset.name);
+            .find((r) => recordName(r) === input.dataset.name);
           if (rec) rec.values.Active = input.checked;
           toast(`${input.dataset.name} ${input.checked ? 'on' : 'off'}`);
         } catch (error) {
@@ -979,6 +986,418 @@
         }
       };
     });
+  };
+
+  // The script matches Services/Offers rows by their first column.
+  function recordName(r) {
+    return String(Object.values(r.values)[0] || '').trim();
+  }
+
+  // ---------- AI (scouting + pitch decks) ----------
+  // scout-ai.js is the app's own pipeline and pitch code, bundled for the browser.
+  // Its API calls come back here and go through the Apps Script, which holds the keys.
+
+  window.ScoutProxy = async (url, payload, headers) => {
+    const data = await api('aiProxy', { url, payload, headers });
+    return { status: data.status, text: data.text };
+  };
+
+  let aiLoading = null;
+  const loadAi = () => {
+    if (window.ScoutAI) return Promise.resolve(window.ScoutAI);
+    if (!aiLoading) {
+      aiLoading = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'scout-ai.js?v=1';
+        s.onload = () => resolve(window.ScoutAI);
+        s.onerror = () => { aiLoading = null; reject(new Error("Couldn't load the scouting tools. Check your connection.")); };
+        document.head.appendChild(s);
+      });
+    }
+    return aiLoading;
+  };
+
+  const aiSettings = async () => {
+    if (!state.aiKeys) {
+      try {
+        state.aiKeys = (await api('aiProxy', { check: true })).keys || {};
+      } catch (error) {
+        if (/unknown action/i.test(error.message)) {
+          throw new Error('The sheet script needs the AI update (AiProxy.gs) before scouting and pitch decks work.');
+        }
+        throw error;
+      }
+    }
+    const k = state.aiKeys;
+    if (!k.gemini && !k.claude) throw new Error('No AI key in the sheet script yet. Add GEMINI_API_KEY to its Script properties.');
+    const via = (on) => (on ? 'via-script' : '');
+    return {
+      provider: k.gemini ? 'gemini' : 'claude',
+      geminiKey: via(k.gemini), anthropicKey: via(k.claude), placesKey: via(k.places), tavilyKey: via(k.tavily),
+      sheetUrl: '', sheetSecret: '', userName: state.session.name, model: '', githubToken: '',
+    };
+  };
+
+  const shrinkImage = (file, maxWidth, quality) =>
+    new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve({ dataUrl, base64: dataUrl.split(',')[1] });
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("That image couldn't be read. Try a JPG or PNG.")); };
+      img.src = url;
+    });
+
+  // ---------- Scout ----------
+
+  const SCOUT_STEPS = [
+    ['reading', 'Reading the photo'],
+    ['maps', 'Searching Google Maps'],
+    ['web', 'Searching the web'],
+    ['matching', 'Matching the details'],
+    ['website', 'Reading their website'],
+    ['competitors', 'Checking nearby competitors'],
+  ];
+  const LEAD_FIELDS = [
+    { k: 'businessName', h: 'Business name' }, { k: 'category', h: 'Category' }, { k: 'area', h: 'Area' },
+    { k: 'phone', h: 'Phone / WhatsApp', t: 'tel' }, { k: 'email', h: 'Email' }, { k: 'contactPerson', h: 'Contact person' },
+    { k: 'instagram', h: 'Instagram' }, { k: 'facebook', h: 'Facebook' }, { k: 'website', h: 'Website' }, { k: 'mapsUrl', h: 'Maps link' },
+    { k: 'rating', h: 'Google rating' }, { k: 'reviewCount', h: 'Reviews' },
+    { k: 'bestFitService', h: 'Best-fit service', select: 'services' }, { k: 'fitScore', h: 'Fit score (1-5)', select: ['1', '2', '3', '4', '5'] },
+    { k: 'digitalGaps', h: 'Digital gaps spotted', long: true }, { k: 'pitchAngle', h: 'Pitch angle', long: true },
+    { k: 'scoreReason', h: 'Score reason', long: true }, { k: 'otherLinks', h: 'Other listings', long: true },
+    { k: 'note', h: 'Your note', long: true },
+  ];
+
+  const newScout = () => ({ step: 'capture', photo: null, lat: null, lng: null, accuracy: null, area: '', note: '', progress: '', lead: null, warnings: [], error: '' });
+
+  const renderScout = () => {
+    const sc = (state.scout = state.scout || newScout());
+    const view = $('view');
+    const head = `<div class="view-head"><div><p class="eyebrow">New lead</p><h2>Scout</h2></div>
+      ${sc.step !== 'capture' && sc.step !== 'running' ? '<button class="btn btn-outline btn-sm" type="button" data-again>Scout another</button>' : ''}</div>`;
+
+    if (sc.step === 'running') {
+      const at = SCOUT_STEPS.findIndex(([id]) => id === sc.progress);
+      view.innerHTML = head + `<div class="panel" style="max-width:520px"><p class="block-title">Looking it up</p><div class="list">${SCOUT_STEPS.map(([id, label], i) =>
+        `<div class="toggle-row"><span>${esc(label)}</span><span class="pill ${i < at ? 's-won' : i === at ? 'due-today' : ''}">${i < at ? 'Done' : i === at ? 'Working…' : 'Waiting'}</span></div>`).join('')}</div>
+        <p class="meta" style="margin-top:12px">Takes about 20–40 seconds. You can leave this tab open and come back.</p></div>`;
+      return;
+    }
+
+    if (sc.step === 'saved') {
+      view.innerHTML = head + `<div class="panel" style="max-width:520px">
+        <p class="block-title">Saved to Local leads</p>
+        <h3 class="section-title" style="margin:6px 0 10px">${esc(sc.lead.businessName)}</h3>
+        ${sc.duplicate ? `<p style="color:var(--danger);margin:0 0 12px">This looks like a duplicate of an existing lead. It was saved anyway and noted in Remarks, so check row ${esc(sc.duplicate)}.</p>` : ''}
+        <div class="quick"><button class="btn btn-primary" type="button" data-open>Open the lead</button>
+        <button class="btn btn-outline" type="button" data-again2>Scout another</button></div></div>`;
+      view.querySelector('[data-again]').onclick = view.querySelector('[data-again2]').onclick = () => { state.scout = newScout(); renderScout(); };
+      view.querySelector('[data-open]').onclick = async (e) => {
+        go('Leads');
+        await ensureTab('Leads', true).catch(handleError);
+        const row = findRow('Leads', sc.row, sc.lead.businessName);
+        if (row) openRow('Leads', row, e.target);
+      };
+      return;
+    }
+
+    if (sc.step === 'review') {
+      const services = (window.ScoutAI && window.ScoutAI.SERVICES) || SERVICES;
+      const lead = sc.lead;
+      const field = (f) => {
+        const v = lead[f.k] == null ? '' : String(lead[f.k]);
+        const id = 'lf-' + f.k;
+        let input;
+        if (f.select) {
+          const opts = f.select === 'services' ? services : f.select;
+          const all = v && !opts.includes(v) ? [v, ...opts] : opts;
+          input = `<select id="${id}" data-k="${f.k}"><option value="">—</option>${all.map((o) => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+        } else if (f.long) input = `<textarea id="${id}" data-k="${f.k}">${esc(v)}</textarea>`;
+        else input = `<input id="${id}" data-k="${f.k}" ${f.t ? `type="${f.t}"` : ''} value="${esc(v)}">`;
+        return `<div class="field${f.long ? ' full' : ''}"><label for="${id}">${esc(f.h)}</label>${input}</div>`;
+      };
+      const comps = lead.competitors || [];
+      view.innerHTML = head + `<div class="two-col" style="grid-template-columns:minmax(0,2fr) minmax(0,1fr)">
+        <div class="panel"><div class="card-top" style="margin-bottom:14px"><p class="block-title" style="margin:0">Check before saving</p>
+          <span class="pill ${lead.confidence === 'high' ? 's-won' : lead.confidence === 'medium' ? 's-warm' : 's-dead'}">${esc(lead.confidence || 'low')} match</span></div>
+          ${lead.matchNotes ? `<p class="meta" style="margin:0 0 14px">${esc(lead.matchNotes)}</p>` : ''}
+          <form class="form" data-lead>${LEAD_FIELDS.map(field).join('')}</form>
+          <p class="form-error" data-err style="color:var(--danger);margin:14px 0 0"></p>
+          <div class="quick" style="margin-top:14px"><button class="btn btn-primary" type="button" data-save-lead>Save to Local leads</button>
+          <button class="btn btn-outline" type="button" data-again2>Discard</button></div></div>
+        <div class="list">
+          ${sc.photo ? `<img src="${sc.photo.dataUrl}" alt="The photo you scouted" style="width:100%;border-radius:12px;border:1px solid var(--line)">` : ''}
+          ${sc.warnings.length ? `<div class="panel"><p class="block-title">Heads-up</p>${sc.warnings.map((w) => `<p class="meta" style="margin:0 0 6px">${esc(w)}</p>`).join('')}</div>` : ''}
+          <div class="panel"><p class="block-title">Nearby competitors</p>${comps.length ? comps.map((c) =>
+            `<div class="toggle-row"><span>${esc(c.name)}</span><span class="meta">${c.rating != null ? esc(c.rating) + '★ ' : ''}${c.reviewCount != null ? esc(c.reviewCount) + ' reviews' : ''}</span></div>`).join('')
+            : '<p class="meta" style="margin:0">None found.</p>'}</div></div></div>`;
+      view.querySelector('[data-again]').onclick = view.querySelector('[data-again2]').onclick = () => {
+        if (confirm('Discard this lead? Nothing has been saved yet.')) { state.scout = newScout(); renderScout(); }
+      };
+      const form = view.querySelector('[data-lead]');
+      form.addEventListener('input', (e) => { if (e.target.dataset.k) lead[e.target.dataset.k] = e.target.value; });
+      form.addEventListener('change', (e) => { if (e.target.dataset.k) lead[e.target.dataset.k] = e.target.value; });
+      view.querySelector('[data-save-lead]').onclick = async (e) => {
+        const err = view.querySelector('[data-err]');
+        if (!String(lead.businessName || '').trim()) { err.textContent = 'Add the business name first.'; view.querySelector('#lf-businessName').focus(); return; }
+        e.target.disabled = true;
+        e.target.textContent = 'Saving…';
+        err.textContent = '';
+        try {
+          const AI = await loadAi();
+          const data = await api('addLead', {
+            loggedBy: state.session.name,
+            lead: {
+              businessName: lead.businessName, category: lead.category, area: lead.area, mapsUrl: lead.mapsUrl, phone: lead.phone,
+              instagram: lead.instagram, website: lead.website, digitalGaps: lead.digitalGaps, bestFitService: lead.bestFitService,
+              fitScore: lead.fitScore ? Number(lead.fitScore) : null, scoreReason: lead.scoreReason, pitchAngle: lead.pitchAngle,
+              note: lead.note, confidence: lead.confidence, matchNotes: lead.matchNotes, email: lead.email,
+              contactPerson: lead.contactPerson, facebook: lead.facebook, otherLinks: lead.otherLinks, rating: lead.rating,
+              reviewCount: lead.reviewCount, competitors: AI.competitorsToRemark(lead.competitors || []), source: 'gallery',
+            },
+            photoBase64: sc.photo ? sc.photo.base64 : '',
+          });
+          sc.row = data.row;
+          sc.duplicate = data.duplicate ? data.row : 0;
+          sc.step = 'saved';
+          delete state.tabs.Leads;
+          state.summary = null;
+          toast('Saved to Local leads');
+          if (state.section === 'scout') renderScout();
+        } catch (error) {
+          handleError(error);
+          err.textContent = `Not saved yet. ${error.message} Your edits are still here, so try again.`;
+          e.target.disabled = false;
+          e.target.textContent = 'Save to Local leads';
+        }
+      };
+      return;
+    }
+
+    // capture
+    view.innerHTML = head + `<div class="two-col">
+      <form class="panel form" data-capture style="grid-template-columns:1fr">
+        <div class="field"><label for="sc-photo">Photo</label>
+          <input id="sc-photo" type="file" accept="image/*" capture="environment">
+          <span class="meta">A shop front, visiting card, flyer or a screenshot of their Instagram or Maps listing.</span></div>
+        <div class="field"><label for="sc-area">Area or landmark</label><input id="sc-area" value="${esc(sc.area)}" placeholder="e.g. Kakkanad, Kochi"></div>
+        <div><button class="btn btn-outline btn-sm" type="button" data-locate>${sc.lat != null ? 'Location added ✓' : 'Use my location'}</button>
+          <span class="meta" data-loc-msg>${sc.lat != null ? ` ±${esc(Math.round(sc.accuracy || 0))} m` : ' Helps find the right shop on Maps.'}</span></div>
+        <div class="field"><label for="sc-note">Note (optional)</label><textarea id="sc-note" placeholder="Anything you noticed: owner's name, what they asked for">${esc(sc.note)}</textarea></div>
+        <p class="form-error" data-err style="color:var(--danger);margin:0">${esc(sc.error)}</p>
+        <button class="btn btn-primary" type="submit">Find this business</button>
+      </form>
+      <div data-preview>${sc.photo ? `<img src="${sc.photo.dataUrl}" alt="Selected photo" style="width:100%;border-radius:12px;border:1px solid var(--line)">`
+        : emptyState('No photo yet.', ' Pick one on the left. On a phone this opens the camera.')}</div></div>`;
+    const form = view.querySelector('[data-capture]');
+    const err = form.querySelector('[data-err]');
+    form.querySelector('#sc-area').oninput = (e) => (sc.area = e.target.value);
+    form.querySelector('#sc-note').oninput = (e) => (sc.note = e.target.value);
+    form.querySelector('#sc-photo').onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        sc.photo = await shrinkImage(file, 1280, 0.7);
+        view.querySelector('[data-preview]').innerHTML = `<img src="${sc.photo.dataUrl}" alt="Selected photo" style="width:100%;border-radius:12px;border:1px solid var(--line)">`;
+        err.textContent = '';
+      } catch (error) {
+        err.textContent = error.message;
+      }
+    };
+    form.querySelector('[data-locate]').onclick = (e) => {
+      const msg = form.querySelector('[data-loc-msg]');
+      if (!navigator.geolocation) { msg.textContent = " This browser can't share location. Type the area instead."; return; }
+      e.target.disabled = true;
+      msg.textContent = ' Finding you…';
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          sc.lat = pos.coords.latitude; sc.lng = pos.coords.longitude; sc.accuracy = pos.coords.accuracy;
+          e.target.textContent = 'Location added ✓';
+          e.target.disabled = false;
+          msg.textContent = ` ±${Math.round(pos.coords.accuracy)} m`;
+        },
+        () => { e.target.disabled = false; msg.textContent = ' Location was blocked. Type the area instead.'; },
+        { enableHighAccuracy: true, timeout: 15000 },
+      );
+    };
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      if (!sc.photo) { err.textContent = 'Pick a photo first.'; form.querySelector('#sc-photo').focus(); return; }
+      sc.error = '';
+      sc.step = 'running';
+      sc.progress = 'reading';
+      renderScout();
+      try {
+        const [AI, settings] = await Promise.all([loadAi(), aiSettings()]);
+        const capture = { source: 'gallery', photoUri: '', photoBase64: sc.photo.base64, latitude: sc.lat, longitude: sc.lng, locality: sc.area.trim(), note: sc.note.trim() };
+        const result = await AI.scoutBusiness(settings, capture, (step) => {
+          sc.progress = step;
+          if (state.section === 'scout') renderScout();
+        });
+        sc.lead = Object.assign({}, result.lead, { area: result.lead.area || sc.area.trim(), note: result.lead.note || sc.note.trim() });
+        sc.warnings = result.warnings || [];
+        sc.step = 'review';
+      } catch (error) {
+        if (error instanceof SessionExpired) { handleError(error); return; }
+        sc.step = 'capture';
+        sc.error = 'Lookup failed. ' + error.message;
+      }
+      if (state.section === 'scout') renderScout();
+      else toast(sc.step === 'review' ? 'Scout finished. Open the Scout tab to review.' : 'Scout lookup failed.', sc.step !== 'review');
+    };
+  };
+
+  // ---------- Pitch decks ----------
+
+  const PITCH_STAGES = [['gathering', 'Reading the lead'], ['competitors', 'Checking competitors'], ['writing', 'Writing the deck']];
+
+  const openPitch = (tab, row, opener) => {
+    const name = str(row, 'Business Name');
+    const p = { stage: 'gathering', content: null, error: '', pptx: null, savedKey: '', drive: '' };
+
+    const shell = (body, foot) => `
+      <div class="drawer-head"><div class="grow"><p class="eyebrow">Pitch deck · ${esc(TABS[tab].title)}</p>
+        <h2 id="drawer-title">${esc(name)}</h2></div>
+        <button class="btn btn-outline icon-btn" type="button" data-close aria-label="Close">✕</button></div>
+      <div class="drawer-body">${body}</div>${foot ? `<div class="drawer-foot">${foot}</div>` : ''}`;
+
+    const paint = () => {
+      if ($('drawer').hidden || !$('drawer').querySelector('[data-pitch-drawer]')) return;
+      const drawer = $('drawer');
+      if (!p.content) {
+        const at = PITCH_STAGES.findIndex(([id]) => id === p.stage);
+        drawer.innerHTML = shell(`<div data-pitch-drawer>${p.error
+          ? emptyState("Couldn't make the deck.", ' ' + p.error, '<br><button class="btn btn-outline" type="button" data-regen>Try again</button>')
+          : `<div class="list">${PITCH_STAGES.map(([id, label], i) =>
+              `<div class="toggle-row"><span>${esc(label)}</span><span class="pill ${i < at ? 's-won' : i === at ? 'due-today' : ''}">${i < at ? 'Done' : i === at ? 'Working…' : 'Waiting'}</span></div>`).join('')}</div>
+             <p class="meta">Usually 15–30 seconds.</p>`}</div>`);
+      } else {
+        const c = p.content;
+        const phone = phoneDigits(str(row, TABS[tab].phone));
+        const email = (str(row, TABS[tab].email || 'Email').match(/[\w.+-]+@[\w-]+\.[\w.]+/) || [''])[0];
+        drawer.innerHTML = shell(`<div data-pitch-drawer style="display:flex;flex-direction:column;gap:16px">
+          <div class="quick">
+            <button class="btn btn-primary" type="button" data-pdf>Save as PDF</button>
+            <button class="btn btn-outline" type="button" data-pptx>Download PowerPoint</button>
+            ${phone ? '<button class="btn btn-outline" type="button" data-wa>Send on WhatsApp</button>' : ''}
+            ${email ? '<button class="btn btn-outline" type="button" data-mail>Email it</button>' : ''}
+          </div>
+          <div class="field"><label for="pitch-intro">${c.channel === 'email' ? 'Email message' : 'WhatsApp message'}</label>
+            <textarea id="pitch-intro" style="min-height:120px">${esc(c.introMessage)}</textarea>
+            <span class="meta">Attach the PDF or PowerPoint yourself after it opens. WhatsApp and email links can't carry files.</span></div>
+          <div class="pitch-frame"><iframe title="Pitch deck preview" sandbox="allow-same-origin" data-frame></iframe></div>
+        </div>`, `<span class="status-text" data-drive>${esc(p.drive)}</span><button class="btn btn-outline" type="button" data-regen>Regenerate</button>`);
+        const frame = drawer.querySelector('[data-frame]');
+        const page = window.ScoutAI.PAGE[c.format];
+        const pagePx = page.width * (96 / 72);
+        frame.style.width = pagePx + 'px';
+        frame.srcdoc = window.ScoutAI.renderPitchHtml(c);
+        frame.onload = () => {
+          const box = frame.parentElement;
+          const scale = Math.min(1, box.clientWidth / pagePx);
+          const h = frame.contentDocument ? frame.contentDocument.documentElement.scrollHeight : 1200;
+          frame.style.height = h + 'px';
+          frame.style.transform = `scale(${scale})`;
+          box.style.height = Math.ceil(h * scale) + 'px';
+        };
+        const intro = drawer.querySelector('#pitch-intro');
+        drawer.querySelector('[data-pdf]').onclick = () => {
+          const win = window.open('', '_blank');
+          if (!win) { toast('Allow pop-ups for this site to save the PDF.', true); return; }
+          win.document.open();
+          win.document.write(window.ScoutAI.renderPitchHtml(c).replace('</body>', '<script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body>'));
+          win.document.close();
+          saveCopy();
+        };
+        drawer.querySelector('[data-pptx]').onclick = async (e) => {
+          e.target.disabled = true;
+          try {
+            const b64 = await makePptx();
+            const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+            const url = URL.createObjectURL(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' }));
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${c.businessName.replace(/[^\w\s-]/g, '').trim() || 'pitch'} - Saffron Labs.pptx`;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 4000);
+            saveCopy();
+          } catch (error) {
+            handleError(error);
+          } finally {
+            e.target.disabled = false;
+          }
+        };
+        const wa = drawer.querySelector('[data-wa]');
+        if (wa) wa.onclick = () => { window.open(`https://wa.me/${phone}?text=${encodeURIComponent(intro.value)}`, '_blank', 'noopener'); saveCopy(); };
+        const mail = drawer.querySelector('[data-mail]');
+        if (mail) mail.onclick = () => { location.href = `mailto:${email}?subject=${encodeURIComponent(c.emailSubject)}&body=${encodeURIComponent(intro.value)}`; saveCopy(); };
+      }
+      drawer.querySelector('[data-close]').onclick = () => closeDrawer();
+      const regen = drawer.querySelector('[data-regen]');
+      if (regen) regen.onclick = generate;
+    };
+
+    const makePptx = async () => {
+      const key = JSON.stringify(p.content);
+      if (p.pptx && p.pptx.key === key) return p.pptx.base64;
+      const base64 = await window.ScoutAI.buildPitchPptx(p.content);
+      p.pptx = { key, base64 };
+      return base64;
+    };
+
+    // Like the app: every deck that gets shared also goes to Drive, linked in the lead's Remarks.
+    const saveCopy = async () => {
+      const key = JSON.stringify(p.content);
+      if (p.savedKey === key) return;
+      p.savedKey = key;
+      const set = (msg) => { p.drive = msg; const el = $('drawer').querySelector('[data-drive]'); if (el) el.textContent = msg; };
+      set('Saving a copy to Drive…');
+      try {
+        const fileBase64 = await makePptx();
+        await api('savePitch', { tab, row: row.row, businessName: name, format: 'pptx', fileBase64 });
+        set('Copy saved to Drive and linked in the lead');
+        delete state.tabs[tab];
+      } catch (error) {
+        p.savedKey = '';
+        set("Couldn't save the Drive copy");
+        if (error instanceof SessionExpired) handleError(error);
+      }
+    };
+
+    const generate = async () => {
+      p.content = null; p.error = ''; p.stage = 'gathering'; p.pptx = null;
+      paint();
+      try {
+        const [AI, settings] = await Promise.all([loadAi(), aiSettings()]);
+        const facts = AI.gatherFacts(row);
+        p.stage = 'competitors'; paint();
+        const enriched = await AI.withCompetitors(settings, facts);
+        p.stage = 'writing'; paint();
+        let offers = [];
+        try {
+          const social = await loadSocial();
+          offers = (social.offers || []).filter((o) => isTrue(o.values.Active)).map((o) => String(o.values.Offer || '').trim()).filter(Boolean);
+        } catch (e) { /* default offers are used */ }
+        p.content = await AI.writePitch(settings, enriched, offers);
+      } catch (error) {
+        if (error instanceof SessionExpired) { handleError(error); return; }
+        p.error = error.message;
+      }
+      paint();
+    };
+
+    openDrawer(shell('<div data-pitch-drawer></div>'), opener);
+    $('drawer').classList.add('drawer-wide');
+    generate();
   };
 
   // ---------- boot ----------
