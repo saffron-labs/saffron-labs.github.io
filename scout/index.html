@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1e0806">
+<title>Saffron Scout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="scout.css">
+</head>
+<body>
+<div id="login" class="login" hidden>
+  <form id="login-form" class="login-card" novalidate>
+    <a class="wordmark" href="/" aria-label="Saffron Labs home">
+      <svg class="mark" viewBox="0 0 42 42" aria-hidden="true"><path d="M21 35V8M21 35L8 12M21 35L34 12"/><circle cx="21" cy="7" r="2.8"/><circle cx="8" cy="12" r="2.8"/><circle cx="34" cy="12" r="2.8"/><circle cx="21" cy="35" r="2.8"/></svg>
+      <span>SAFFRON LABS</span>
+    </a>
+    <h1>Scout<em>.</em></h1>
+    <p class="login-sub">Team workspace. Leads, pipeline, clients and posts, straight from the sheets.</p>
+    <label for="login-name">Name</label>
+    <input id="login-name" name="name" autocomplete="username" autocapitalize="words" required>
+    <label for="login-password">Password</label>
+    <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+    <p id="login-error" class="form-error" role="alert"></p>
+    <button id="login-button" class="btn btn-primary btn-wide" type="submit">Sign in</button>
+  </form>
+</div>
+
+<div id="app" class="app" hidden>
+  <header class="topbar">
+    <a class="wordmark" href="/" aria-label="Saffron Labs home">
+      <svg class="mark" viewBox="0 0 42 42" aria-hidden="true"><path d="M21 35V8M21 35L8 12M21 35L34 12"/><circle cx="21" cy="7" r="2.8"/><circle cx="8" cy="12" r="2.8"/><circle cx="34" cy="12" r="2.8"/><circle cx="21" cy="35" r="2.8"/></svg>
+      <span>SCOUT</span>
+    </a>
+    <div class="topbar-right">
+      <span id="who" class="who"></span>
+      <button id="logout" class="btn btn-ghost-light" type="button">Sign out</button>
+    </div>
+  </header>
+  <nav id="tabs" class="tabs" aria-label="Sections"></nav>
+  <main id="view" class="view" tabindex="-1"></main>
+</div>
+
+<div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
+<aside id="drawer" class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden></aside>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="config.js"></script>
+<script src="scout.js"></script>
+</body>
+</html>
