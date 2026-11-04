@@ -185,3 +185,12 @@ details.all .facts{margin-top:12px}
 .drawer.drawer-wide{width:min(780px,100%)}
 .pitch-frame{overflow:hidden;border:1px solid var(--line);border-radius:var(--radius);background:#fff}
 .pitch-frame iframe{display:block;border:0;transform-origin:0 0;background:#fff}
+
+/* team inbox */
+.tab-badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:var(--danger);color:#fff;font:700 10px/1 "DM Sans";vertical-align:1px}
+.inbox-layout{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr)}
+.msg-unread{border-color:var(--saffron);background:#fff8ea}
+.lead-chip{display:inline-flex;align-items:center;gap:6px;align-self:start;background:#fbe6bd;border-radius:999px;padding:5px 6px 5px 12px;font-size:14px}
+.chip-x{border:0;background:transparent;cursor:pointer;width:28px;height:28px;border-radius:50%;color:var(--muted)}
+.chip-x:hover{background:rgba(0,0,0,.06)}
+@media(max-width:700px){.inbox-layout{grid-template-columns:1fr}}

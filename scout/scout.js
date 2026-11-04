@@ -75,6 +75,7 @@
     { id: 'scout', title: 'Scout' },
     ...Object.keys(TABS).map((id) => ({ id, title: TABS[id].title })),
     { id: 'social', title: 'Social' },
+    { id: 'inbox', title: 'Inbox' },
   ];
 
   // ---------- state ----------
@@ -87,6 +88,8 @@
     summary: null,
     social: null,
     socialView: 'posts',
+    team: null,
+    shareLead: null,
     postFilter: 'Pending',
   };
 
@@ -279,6 +282,8 @@
     state.tabs = {};
     state.summary = null;
     state.social = null;
+    state.team = null;
+    clearInterval(teamTimer);
     saveSession(null);
     showLogin(message);
   };
@@ -292,14 +297,16 @@
     $('who').textContent = 'Signed in as ' + state.session.name;
     const fromHash = decodeURIComponent(location.hash.slice(1));
     go(SECTIONS.some((s) => s.id === fromHash) ? fromHash : 'today', true);
+    startTeamPolling();
   };
 
   const renderTabs = () => {
     $('tabs').innerHTML = SECTIONS.map((s) => {
       const t = state.tabs[s.id];
       const open = t && t.rows ? t.rows.filter((r) => !CLOSED.includes(str(r, TABS[s.id].status))).length : null;
+      const unread = s.id === 'inbox' && state.team ? state.team.unread : 0;
       return `<button class="tab" type="button" data-section="${s.id}" ${s.id === state.section ? 'aria-current="page"' : ''}>${esc(s.title)}${
-        open !== null ? `<span class="count">${open}</span>` : ''
+        unread ? `<span class="tab-badge" aria-label="${unread} unread">${unread > 9 ? '9+' : unread}</span>` : open !== null ? `<span class="count">${open}</span>` : ''
       }</button>`;
     }).join('');
   };
@@ -321,6 +328,7 @@
     if (section === 'today') renderToday();
     else if (section === 'scout') renderScout();
     else if (section === 'social') renderSocial();
+    else if (section === 'inbox') renderInbox();
     else renderTab(section);
     window.scrollTo(0, 0);
   };
@@ -653,10 +661,11 @@
         ${summary ? `<div class="facts">${summary}</div>` : ''}
         ${editable.length ? `<div><p class="block-title">Update</p><form class="form" data-form>${editable.map((s, i) => fieldHtml(s, original[s.h], 'f' + i)).join('')}</form></div>` : ''}
         ${rest ? `<details class="all"><summary>All details</summary><div class="facts">${rest}</div></details>` : ''}
-        ${canMovePipeline || canMakeClient ? `<div class="quick">
+        <div class="quick">
           ${tab !== 'Clients' ? '<button class="btn btn-accent" type="button" data-pitch>Pitch deck</button>' : ''}
+          <button class="btn btn-outline" type="button" data-share>Send to teammate</button>
           ${canMovePipeline ? '<button class="btn btn-outline" type="button" data-move="Pipeline">Move to Pipeline</button>' : ''}
-          ${canMakeClient ? '<button class="btn btn-outline" type="button" data-move="Clients">Make client</button>' : ''}</div>` : ''}
+          ${canMakeClient ? '<button class="btn btn-outline" type="button" data-move="Clients">Make client</button>' : ''}</div>
       </div>
       <div class="drawer-foot"><span class="status-text" data-status-text>No changes</span>
         <button class="btn btn-outline" type="button" data-close-foot>Close</button>
@@ -728,6 +737,12 @@
 
     const pitchButton = drawer.querySelector('[data-pitch]');
     if (pitchButton) pitchButton.onclick = () => { if (closeDrawer()) openPitch(tab, row, opener); };
+    const shareButton = drawer.querySelector('[data-share]');
+    if (shareButton) shareButton.onclick = () => {
+      if (!closeDrawer()) return;
+      state.shareLead = { tab, row: row.row, business: name };
+      go('inbox');
+    };
 
     drawer.querySelectorAll('[data-move]').forEach((b) => {
       b.onclick = async () => {
@@ -1398,6 +1413,136 @@
     openDrawer(shell('<div data-pitch-drawer></div>'), opener);
     $('drawer').classList.add('drawer-wide');
     generate();
+  };
+
+  // ---------- Team inbox ----------
+
+  let teamTimer = null;
+  const loadTeam = async () => {
+    try {
+      const data = await api('teamInbox', { appVersion: 'web' });
+      const before = state.team ? state.team.unread : 0;
+      state.team = data;
+      if (data.unread !== before || state.section === 'inbox') renderTabs();
+      if (data.unread > before && state.section !== 'inbox') toast(`New message${data.unread - before > 1 ? 's' : ''} in your inbox`);
+      document.title = data.unread ? `(${data.unread}) Saffron Scout` : 'Saffron Scout';
+      return data;
+    } catch (error) {
+      if (error instanceof SessionExpired) handleError(error);
+      throw error;
+    }
+  };
+  const startTeamPolling = () => {
+    clearInterval(teamTimer);
+    loadTeam().catch(() => {});
+    teamTimer = setInterval(() => { if (!document.hidden) loadTeam().catch(() => {}); }, 60000);
+  };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && state.session) loadTeam().catch(() => {}); });
+
+  const whenText = (ms) => {
+    if (!ms) return '';
+    const d = new Date(ms);
+    const time = d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+    return d.toDateString() === new Date().toDateString() ? time : `${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}, ${time}`;
+  };
+
+  const renderInbox = async (force) => {
+    const view = $('view');
+    if (!state.team || force) {
+      view.innerHTML = `<div class="view-head"><div><p class="eyebrow">Team</p><h2>Inbox</h2></div></div>${skeletons(3)}`;
+      try {
+        await loadTeam();
+      } catch (error) {
+        if (state.section !== 'inbox') return;
+        view.innerHTML = `<div class="view-head"><div><p class="eyebrow">Team</p><h2>Inbox</h2></div></div>` + emptyState(
+          "Couldn't load messages.",
+          /unknown action/i.test(error.message) ? ' The sheet script needs the team update (Team.gs) before messages work.' : ' ' + error.message,
+          '<br><button class="btn btn-outline" type="button" data-retry>Try again</button>');
+        const retry = view.querySelector('[data-retry]');
+        if (retry) retry.onclick = () => renderInbox(true);
+        return;
+      }
+      if (state.section !== 'inbox') return;
+    }
+    const t = state.team;
+    const recipients = [...(t.members || []), 'Everyone'];
+    const lead = state.shareLead;
+    const draft = state.inboxDraft || '';
+    const to = recipients.includes(state.inboxTo) ? state.inboxTo : recipients[0];
+    view.innerHTML = `
+      <div class="view-head"><div><p class="eyebrow">Team · signed in as ${esc(t.me)}</p><h2>Inbox</h2></div>
+        <button class="btn btn-outline btn-sm" type="button" data-refresh>Refresh</button></div>
+      <div class="two-col inbox-layout">
+        <form class="panel form" data-compose style="grid-template-columns:1fr">
+          <p class="block-title" style="margin:0">New message</p>
+          ${lead ? `<div class="lead-chip">About <b>${esc(lead.business)}</b> <button type="button" class="chip-x" data-unlink aria-label="Remove the lead from this message">✕</button></div>` : ''}
+          <div class="field"><span class="field-label" style="font:500 11px/1 'DM Mono';letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">To</span>
+            <div class="chips" role="radiogroup" aria-label="Send to" style="margin:0">${recipients.map((r) =>
+              `<button class="chip" type="button" role="radio" data-to="${esc(r)}" aria-pressed="${r === to}" aria-checked="${r === to}">${esc(r)}</button>`).join('')}</div></div>
+          <div class="field"><label for="msg">Message</label><textarea id="msg" placeholder="${esc(to ? 'Message ' + (to === 'Everyone' ? 'everyone' : to) : 'Message')}">${esc(draft)}</textarea></div>
+          <p class="form-error" data-err style="color:var(--danger);margin:0"></p>
+          <button class="btn btn-primary" type="submit">Send</button>
+        </form>
+        <div class="list">${t.messages.length ? t.messages.map((m, i) => {
+          const fromMe = !m.incoming;
+          const who = fromMe ? `You → ${m.to === 'Everyone' ? 'everyone' : m.to}` : m.to === 'Everyone' ? `${m.from} → everyone` : m.from;
+          return `<div class="panel msg${m.read ? '' : ' msg-unread'}">
+            <div class="card-top"><strong style="color:var(--wine)">${esc(who)}</strong><span class="meta">${esc(whenText(m.sent))}</span></div>
+            <p style="margin:6px 0 0;white-space:pre-line">${esc(m.message)}</p>
+            ${m.leadTab && m.leadRow > 1 ? `<button class="btn btn-outline btn-sm" type="button" data-open-msg="${i}" style="margin-top:10px">Open ${esc(m.business || 'lead')}</button>` : ''}
+          </div>`;
+        }).join('') : emptyState('No messages yet.', ' Send one here, or open a lead and use "Send to teammate".')}</div>
+      </div>`;
+    view.querySelector('[data-refresh]').onclick = () => renderInbox(true);
+    const form = view.querySelector('[data-compose]');
+    const textarea = form.querySelector('#msg');
+    textarea.oninput = () => { state.inboxDraft = textarea.value; };
+    form.querySelectorAll('[data-to]').forEach((b) => (b.onclick = () => { state.inboxTo = b.dataset.to; state.inboxDraft = textarea.value; renderInbox(); }));
+    const unlink = form.querySelector('[data-unlink]');
+    if (unlink) unlink.onclick = () => { state.shareLead = null; state.inboxDraft = textarea.value; renderInbox(); };
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const err = form.querySelector('[data-err]');
+      const message = textarea.value.trim();
+      if (!message) { err.textContent = 'Write a message first.'; textarea.focus(); return; }
+      const button = form.querySelector('button[type=submit]');
+      button.disabled = true; button.textContent = 'Sending…'; err.textContent = '';
+      try {
+        await api('teamSend', { to, message, leadTab: lead ? lead.tab : '', leadRow: lead ? lead.row : '', business: lead ? lead.business : '' });
+        state.inboxDraft = ''; state.shareLead = null;
+        toast(`Sent to ${to === 'Everyone' ? 'everyone' : to}`);
+        renderInbox(true);
+      } catch (error) {
+        handleError(error);
+        err.textContent = `Not sent. ${error.message} Your message is still here.`;
+        button.disabled = false; button.textContent = 'Send';
+      }
+    };
+    view.querySelectorAll('[data-open-msg]').forEach((b) => {
+      b.onclick = async () => {
+        const m = t.messages[Number(b.dataset.openMsg)];
+        try {
+          await ensureTab(m.leadTab);
+        } catch (error) { handleError(error); return; }
+        const row = findRow(m.leadTab, m.leadRow, m.business);
+        if (row) openRow(m.leadTab, row, b);
+        else toast(`${m.business || 'That lead'} isn't in ${TABS[m.leadTab].title} any more.`, true);
+      };
+    });
+    // Opening the inbox reads what's here.
+    const unreadIds = t.messages.filter((m) => m.incoming && !m.read).map((m) => m.id);
+    if (unreadIds.length) {
+      setTimeout(() => {
+        if (state.section !== 'inbox') return;
+        api('teamMarkRead', { ids: unreadIds }).then(() => {
+          t.messages.forEach((m) => { if (unreadIds.includes(m.id)) m.read = true; });
+          t.unread = Math.max(0, t.unread - unreadIds.length);
+          document.title = t.unread ? `(${t.unread}) Saffron Scout` : 'Saffron Scout';
+          renderTabs();
+          view.querySelectorAll('.msg-unread').forEach((el) => el.classList.remove('msg-unread'));
+        }).catch(() => {});
+      }, 1500);
+    }
   };
 
   // ---------- boot ----------
