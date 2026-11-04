@@ -1031,7 +1031,7 @@
     if (!aiLoading) {
       aiLoading = new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'scout-ai.js?v=6';
+        s.src = 'scout-ai.js?v=7';
         s.onload = () => resolve(window.ScoutAI);
         s.onerror = () => { aiLoading = null; reject(new Error("Couldn't load the scouting tools. Check your connection.")); };
         document.head.appendChild(s);
@@ -2192,7 +2192,7 @@
           .flatMap((m) => [...(m.meta.question ? [{ role: 'user', text: m.meta.question }] : []), { role: 'agent', text: m.message }]);
         try {
           const settings = await aiSettings();
-          const answer = await AI.askAgent(settings, { me: state.chat.me, members: state.chat.members.filter((x) => normName(x) !== normName(state.chat.me)), tabs, social: state.social }, history, question, 'chat', recent);
+          const answer = await AI.askAgentLive(settings, { me: state.chat.me, members: state.chat.members.filter((x) => normName(x) !== normName(state.chat.me)), tabs, social: state.social }, history, question, 'chat', recent, (label) => { const b = document.querySelector('.bubble.scout.thinking'); if (b) b.textContent = label === 'Writing the answer' ? 'Scout is writing the answer…' : `Scout is checking ${label.toLowerCase()}…`; });
           let msg = answer.say || 'Sorry, I did not get that.';
           if (answer.rejected.length && !answer.actions.length) msg = `Sorry: ${answer.rejected[0]}`;
           else if (answer.rejected.length) msg += `\n(I couldn't do one part: ${answer.rejected[0]})`;
