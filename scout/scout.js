@@ -2046,3 +2046,16 @@
   if (state.session) startApp();
   else showLogin();
 })();
+
+// Light/dark toggle: first tap switches away from what the device uses; the choice is remembered.
+(() => {
+  const btn = document.getElementById('theme');
+  if (!btn) return;
+  btn.onclick = () => {
+    const root = document.documentElement;
+    const current = root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const next = current === 'dark' ? 'light' : 'dark';
+    root.dataset.theme = next;
+    try { localStorage.setItem('scout-theme', next); } catch (e) { /* not remembered */ }
+  };
+})();
