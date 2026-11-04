@@ -1280,7 +1280,23 @@
 
   const openPitch = (tab, row, opener) => {
     const name = str(row, 'Business Name');
-    const p = { stage: 'gathering', content: null, error: '', pptx: null, savedKey: '', drive: '' };
+    const p = { stage: 'brief', content: null, error: '', pptx: null, savedKey: '', drive: '', brief: null, offers: [] };
+    const BRIEF_KEY = 'saffron-scout-briefs';
+    const SERVICES_LIST = ['Website', 'AI automation', 'WhatsApp bot', 'Ads & creatives', 'Reels', 'Custom software / app', 'Google Business profile'];
+    const LANGS = ['English', 'Hindi', 'Malayalam', 'Tamil', 'Hinglish'];
+    const TONES = ['Friendly', 'Professional', 'Bold'];
+    const briefKey = `${tab}:${name}`;
+    const defaultBrief = () => {
+      const facts = window.ScoutAI.gatherFacts(row);
+      const intl = facts.market === 'international';
+      return {
+        services: SERVICES_LIST.filter((s) => (facts.bestFitService || '').toLowerCase().includes(s.split(' ')[0].toLowerCase())).slice(0, 2),
+        offer: '', price: '', timeline: '', language: 'English', tone: 'Friendly', includeCompetitors: true,
+        format: intl ? 'landscape' : 'portrait', channel: intl || (!facts.phone && facts.email) ? 'email' : 'whatsapp', notes: '',
+      };
+    };
+    const loadBriefSaved = () => { try { return (JSON.parse(localStorage.getItem(BRIEF_KEY) || '{}'))[briefKey] || null; } catch (e) { return null; } };
+    const saveBriefSaved = () => { try { const all = JSON.parse(localStorage.getItem(BRIEF_KEY) || '{}'); all[briefKey] = p.brief; localStorage.setItem(BRIEF_KEY, JSON.stringify(all)); } catch (e) { /* not remembered */ } };
 
     const shell = (body, foot) => `
       <div class="drawer-head"><div class="grow"><p class="eyebrow">Pitch deck · ${esc(TABS[tab].title)}</p>
@@ -1291,6 +1307,47 @@
     const paint = () => {
       if ($('drawer').hidden || !$('drawer').querySelector('[data-pitch-drawer]')) return;
       const drawer = $('drawer');
+      if (p.stage === 'brief' && !p.content) {
+        const b = p.brief;
+        if (!b) { drawer.innerHTML = shell('<div data-pitch-drawer><div class="list"><div class="toggle-row"><span>Loading…</span></div></div></div>'); return; }
+        const chips = (name, items, sel) => items.map((v, i) => `<button type="button" class="chip${sel(v) ? ' on' : ''}" data-chip="${name}" data-i="${i}">${esc(v)}</button>`).join('');
+        drawer.innerHTML = shell(`<div data-pitch-drawer class="brief">
+          <p class="meta">Choose what goes in. Leave anything empty and Scout decides.</p>
+          <div class="field"><label>Services to pitch</label><div class="chips">${chips('service', SERVICES_LIST, (v) => b.services.includes(v))}</div></div>
+          <div class="field"><label>Offer</label><div class="chips"><button type="button" class="chip${!b.offer ? ' on' : ''}" data-chip="offer" data-i="-1">Scout picks</button>${chips('offer', p.offers.map((o) => o.split(':')[0]), (v) => { const o = p.offers.find((x) => x.split(':')[0] === v); return b.offer === o; })}</div>
+            <input id="b-offer" placeholder="Or write your own offer" value="${esc(p.offers.includes(b.offer) ? '' : b.offer)}"></div>
+          <div class="field"><label for="b-price">Price to show</label><input id="b-price" placeholder="e.g. ₹15,000 one time (empty = no price)" value="${esc(b.price)}"></div>
+          <div class="field"><label for="b-time">Timeline</label><input id="b-time" placeholder="e.g. 7 days" value="${esc(b.timeline)}"></div>
+          <div class="field"><label>Language</label><div class="chips">${chips('lang', LANGS, (v) => b.language === v)}</div></div>
+          <div class="field"><label>Tone</label><div class="chips">${chips('tone', TONES, (v) => b.tone === v)}</div></div>
+          <div class="field"><label>Format</label><div class="chips">${chips('format', ['Portrait (WhatsApp)', 'Landscape (slides)'], (v) => (b.format === 'portrait') === v.startsWith('Portrait'))}</div></div>
+          <div class="field"><label>Send by</label><div class="chips">${chips('channel', ['WhatsApp', 'Email'], (v) => b.channel === v.toLowerCase())}</div></div>
+          <label class="check"><input type="checkbox" id="b-comp" ${b.includeCompetitors ? 'checked' : ''}> Compare with nearby competitors</label>
+          <div class="field"><label for="b-notes">Notes for Scout</label><textarea id="b-notes" placeholder="Anything to stress or avoid">${esc(b.notes)}</textarea></div>
+          <button class="btn btn-primary" type="button" data-generate>Generate deck</button>
+        </div>`);
+        const readInputs = () => {
+          b.price = $('b-price').value.trim(); b.timeline = $('b-time').value.trim(); b.notes = $('b-notes').value.trim(); b.includeCompetitors = $('b-comp').checked;
+          const own = $('b-offer').value.trim(); if (own) b.offer = own;
+        };
+        drawer.querySelectorAll('[data-chip]').forEach((el) => (el.onclick = () => {
+          readInputs();
+          const i = Number(el.dataset.i);
+          switch (el.dataset.chip) {
+            case 'service': { const v = SERVICES_LIST[i]; b.services = b.services.includes(v) ? b.services.filter((s) => s !== v) : [...b.services, v]; break; }
+            case 'offer': b.offer = i < 0 ? '' : p.offers[i]; break;
+            case 'lang': b.language = LANGS[i]; break;
+            case 'tone': b.tone = TONES[i]; break;
+            case 'format': b.format = i === 0 ? 'portrait' : 'landscape'; break;
+            case 'channel': b.channel = i === 0 ? 'whatsapp' : 'email'; break;
+          }
+          if (el.dataset.chip === 'offer') $('b-offer').value = '';
+          paint();
+        }));
+        drawer.querySelector('[data-generate]').onclick = () => { readInputs(); generate(); };
+        drawer.querySelector('[data-close]').onclick = () => closeDrawer();
+        return;
+      }
       if (!p.content) {
         const at = PITCH_STAGES.findIndex(([id]) => id === p.stage);
         drawer.innerHTML = shell(`<div data-pitch-drawer>${p.error
@@ -1313,7 +1370,7 @@
             <textarea id="pitch-intro" style="min-height:120px">${esc(c.introMessage)}</textarea>
             <span class="meta">Attach the PDF or PowerPoint yourself after it opens. WhatsApp and email links can't carry files.</span></div>
           <div class="pitch-frame"><iframe title="Pitch deck preview" sandbox="allow-same-origin" data-frame></iframe></div>
-        </div>`, `<span class="status-text" data-drive>${esc(p.drive)}</span><button class="btn btn-outline" type="button" data-regen>Regenerate</button>`);
+        </div>`, `<span class="status-text" data-drive>${esc(p.drive)}</span><button class="btn btn-outline" type="button" data-regen>Change &amp; redo</button>`);
         const frame = drawer.querySelector('[data-frame]');
         const page = window.ScoutAI.PAGE[c.format];
         const pagePx = page.width * (96 / 72);
@@ -1361,7 +1418,7 @@
       }
       drawer.querySelector('[data-close]').onclick = () => closeDrawer();
       const regen = drawer.querySelector('[data-regen]');
-      if (regen) regen.onclick = generate;
+      if (regen) regen.onclick = () => { p.content = null; p.error = ''; p.stage = 'brief'; paint(); };
     };
 
     const makePptx = async () => {
@@ -1393,19 +1450,15 @@
 
     const generate = async () => {
       p.content = null; p.error = ''; p.stage = 'gathering'; p.pptx = null;
+      saveBriefSaved();
       paint();
       try {
         const [AI, settings] = await Promise.all([loadAi(), aiSettings()]);
         const facts = AI.gatherFacts(row);
         p.stage = 'competitors'; paint();
-        const enriched = await AI.withCompetitors(settings, facts);
+        const enriched = p.brief.includeCompetitors ? await AI.withCompetitors(settings, facts) : { ...facts, competitors: [] };
         p.stage = 'writing'; paint();
-        let offers = [];
-        try {
-          const social = await loadSocial();
-          offers = (social.offers || []).filter((o) => isTrue(o.values.Active)).map((o) => String(o.values.Offer || '').trim()).filter(Boolean);
-        } catch (e) { /* default offers are used */ }
-        p.content = await AI.writePitch(settings, enriched, offers);
+        p.content = await AI.writePitch(settings, enriched, p.offers, p.brief);
       } catch (error) {
         if (error instanceof SessionExpired) { handleError(error); return; }
         p.error = error.message;
@@ -1415,7 +1468,15 @@
 
     openDrawer(shell('<div data-pitch-drawer></div>'), opener);
     $('drawer').classList.add('drawer-wide');
-    generate();
+    (async () => {
+      try { await loadAi(); } catch (e) { /* surfaced when generating */ }
+      try {
+        const social = await loadSocial();
+        p.offers = (social.offers || []).filter((o) => isTrue(o.values.Active)).map((o) => String(o.values.Offer || '').trim()).filter(Boolean);
+      } catch (e) { /* default offers are used */ }
+      try { p.brief = loadBriefSaved() || defaultBrief(); } catch (e) { p.brief = { services: [], offer: '', price: '', timeline: '', language: 'English', tone: 'Friendly', includeCompetitors: true, format: 'portrait', channel: 'whatsapp', notes: '' }; }
+      paint();
+    })();
   };
 
   // ---------- Team chats ----------
@@ -1432,7 +1493,7 @@
   const loadChatCache = () => {
     try {
       const c = JSON.parse(localStorage.getItem(CHAT_KEY()) || 'null');
-      if (c && Array.isArray(c.messages)) return c;
+      if (c && Array.isArray(c.messages)) return { me: state.session.name, cursor: 0, epoch: '0', ...c, members: Array.isArray(c.members) ? c.members : [], chats: Array.isArray(c.chats) ? c.chats : [] };
     } catch (e) { /* fall back to a fresh sync */ }
     return { me: state.session.name, members: [], chats: [], messages: [], cursor: 0, epoch: '0' };
   };
@@ -1473,7 +1534,7 @@
       state.chat = state.chat || loadChatCache();
       const before = totalUnread();
       const data = await api('teamSync', { since: Math.max(0, state.chat.cursor - 2000), epoch: state.chat.epoch || '0', appVersion: 'web' });
-      state.chat = { ...state.chat, me: data.me, members: data.members, chats: data.chats, cursor: data.cursor, epoch: data.epoch || '0', messages: (data.epoch || '0') !== (state.chat.epoch || '0') ? data.messages : mergeMsgs(state.chat.messages, data.messages) };
+      state.chat = { ...state.chat, me: data.me || state.chat.me, members: data.members || [], chats: data.chats || [], cursor: data.cursor, epoch: data.epoch || '0', messages: (data.epoch || '0') !== (state.chat.epoch || '0') ? (data.messages || []) : mergeMsgs(state.chat.messages, data.messages || []) };
       saveChatCache();
       const after = totalUnread();
       document.title = after ? `(${after}) Saffron Scout` : 'Saffron Scout';
@@ -1552,7 +1613,13 @@
     const focused = document.activeElement && document.activeElement.id === 'chat-input';
     const draft = $('chat-input') ? $('chat-input').value : state.chatDraft || '';
     const scrolledUp = (() => { const l = view.querySelector('.thread'); return l && l.scrollHeight - l.scrollTop - l.clientHeight > 80; })();
-    const summaries = chatSummaries();
+    let summaries;
+    try { summaries = chatSummaries(); } catch (e) {
+      localStorage.removeItem(CHAT_KEY()); state.chat = null;
+      view.innerHTML = emptyState("Chats got out of sync.", ' Reloading them…', '');
+      setTimeout(() => renderChats(), 50);
+      return;
+    }
     const open = state.openChat && summaries.find((c) => c.id === state.openChat);
     view.innerHTML = `<div class="chat-app${open ? ' has-open' : ''}">
       <aside class="chat-list" aria-label="Chats">
@@ -1599,6 +1666,14 @@
       </form>`;
   };
 
+  // Scout writes **bold**, *italic*, `code` and "- " bullets; show formatting, not symbols.
+  const rich = (raw) => esc(raw)
+    .replace(/^[ \t]*[-*•][ \t]+/gm, '• ')
+    .replace(/^#{1,6}[ \t]+/gm, '')
+    .replace(/\*\*(.+?)\*\*|__(.+?)__/g, (_, a, b) => `<b>${a || b}</b>`)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*(?!\s)([^*\n]+?)\*/g, '<i>$1</i>');
+
   const bubbleHtml = (m, open) => {
     if (m.meta && m.meta.kind === 'system') return `<div class="day"><span class="sys">${esc(m.message)}</span></div>`;
     const me = state.chat.me;
@@ -1615,7 +1690,7 @@
     }
     return `<div class="bubble-row ${mine ? 'mine' : 'theirs'}"><div class="bubble ${mine ? 'mine' : scout ? 'scout' : 'theirs'}">
       ${scout ? `<span class="who scout-who">✦ Scout${meta.for ? ' · for ' + esc(meta.for) : ''}</span>` : !mine && open.kind !== 'dm' ? `<span class="who" style="color:${avColor(m.from)}">${esc(m.from)}</span>` : ''}
-      <p>${esc(m.message)}</p>
+      <p>${rich(m.message)}</p>
       ${m.leadTab && m.leadRow > 1 ? `<button class="lead-card" type="button" data-lead="${esc(m.leadTab)}|${m.leadRow}|${esc(m.business)}"><b>${esc(m.business)}</b><span>${esc((TABS[m.leadTab] || {}).title || m.leadTab)} · open</span></button>` : ''}
       ${actionHtml ? `<div class="actions-box">${actionHtml}</div>` : ''}
       <span class="stamp">${esc(new Date(m.sent).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }))} ${mine ? ticks(m, open.members) : ''}</span>

@@ -275,3 +275,6 @@ details.all .facts{margin-top:12px}
   .chat-back{display:inline-flex}
   .bubble-row{max-width:88%}
 }
+.chip.on{background:var(--ink);color:var(--cream);border-color:var(--ink)}
+.brief{display:flex;flex-direction:column;gap:14px}
+.brief .chips{margin-bottom:6px}
