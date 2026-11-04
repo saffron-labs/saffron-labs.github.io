@@ -1880,6 +1880,13 @@
           if (answer.rejected.length && !answer.actions.length) msg = `Sorry: ${answer.rejected[0]}`;
           else if (answer.rejected.length) msg += `\n(I couldn't do one part: ${answer.rejected[0]})`;
           saved = await reply(msg, answer.actions, null, question);
+          const wa = answer.actions.find((a) => a.type === 'whatsapp_draft');
+          if (wa && !answer.actions.some(AI.needsConfirm)) {
+            const waRow = findRow(wa.tab, wa.row, wa.business);
+            const digits = waRow ? phoneDigits(str(waRow, TABS[wa.tab].phone)) : '';
+            if (digits) setTimeout(() => window.open(`https://wa.me/${digits}?text=${encodeURIComponent(wa.text)}`, '_blank', 'noopener'), 500);
+            else toast(`${wa.business} has no phone number in the sheet.`, true);
+          }
           const nav = answer.actions.find((a) => a.type === 'open_lead' || a.type === 'create_pitch');
           if (nav && !answer.actions.some(AI.needsConfirm)) {
             const row = findRow(nav.tab, nav.row, nav.business);
