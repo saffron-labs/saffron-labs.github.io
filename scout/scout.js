@@ -1031,7 +1031,7 @@
     if (!aiLoading) {
       aiLoading = new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'scout-ai.js?v=10';
+        s.src = 'scout-ai.js?v=11';
         s.onload = () => resolve(window.ScoutAI);
         s.onerror = () => { aiLoading = null; reject(new Error("Couldn't load the scouting tools. Check your connection.")); };
         document.head.appendChild(s);
@@ -1484,10 +1484,11 @@
     ];
     const intel = el.querySelector('[data-panel="intel"]');
     intel.innerHTML = '<h3>Live intel</h3>' + CARDS.map(([k, t]) => `<article class="card idle" data-card="${k}"><header>${t}<i></i></header><div class="body muted">Waiting</div></article>`).join('');
+    const postTiles = (list, big) => (list || []).filter((m) => m.image).map((m) => `<a class="ig-tile${big ? ' big' : ''}" href="${esc(m.link || '#')}" target="_blank" rel="noopener" title="${esc(m.caption || '')}"><img src="${esc(m.image)}" alt="Instagram post ${esc(m.when || '')}" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add('broken')">${m.video ? '<span class="vid">▶</span>' : ''}${big ? `<span class="cap">${esc(m.when)} · ♥ ${m.likes} · 💬 ${m.comments}${m.caption ? '<br>' + esc(m.caption) : ''}</span>` : ''}</a>`).join('');
     const bar = (label, v) => `<div class="meter"><span>${label}</span><div><b style="width:${v ?? 0}%" class="${v >= 90 ? 'g' : v >= 50 ? 'a' : 'r'}"></b></div><em>${v ?? '?'}</em></div>`;
     const render = {
       google_place: (d) => `<div class="big">${d.rating ?? '–'}<small>★ · ${d.reviews ?? '?'} reviews</small></div><div class="muted">${esc(d.status === 'OPERATIONAL' ? 'Open for business' : d.status || 'Status unknown')}${d.website ? '' : ' · no website listed'}</div>${d.mapsUrl ? `<a href="${esc(d.mapsUrl)}" target="_blank" rel="noopener">Open in Maps</a>` : ''}`,
-      instagram: (d) => d.missing ? '<div class="muted">Not a public business account</div>' : `<div class="muted">@${esc(d.handle)}</div><div class="big">${Number(d.followers || 0).toLocaleString('en-IN')}<small> followers</small></div><div class="muted">${d.posts ?? '?'} posts · last ${esc(d.last || 'unknown')} · ~${d.avgLikes} likes</div>${d.bio ? `<div class="muted">${esc(d.bio)}</div>` : ''}`,
+      instagram: (d) => d.missing ? '<div class="muted">Not a public business account</div>' : `<div class="muted">@${esc(d.handle)}</div><div class="big">${Number(d.followers || 0).toLocaleString('en-IN')}<small> followers</small></div><div class="muted">${d.posts ?? '?'} posts · last ${esc(d.last || 'unknown')} · ~${d.avgLikes} likes</div>${d.bio ? `<div class="muted">${esc(d.bio)}</div>` : ''}${d.recent && d.recent.length ? `<div class="ig-strip">${postTiles(d.recent)}</div>` : ''}`,
       page_speed: (d) => bar('Speed', d.performance) + bar('SEO', d.seo) + bar('Access.', d.accessibility) + (d.lcp ? `<div class="muted">Main content in ${esc(d.lcp)}</div>` : ''),
       domain_age: (d) => d.registered ? `<div class="big">${d.years}<small> years old</small></div><div class="muted">${esc(d.domain)} · registered ${esc(d.registered)}</div>` : `<div class="muted">${esc(d.domain || '')}: date not published</div>`,
       competitors: (d) => (d.list && d.list.length ? `<ul class="plain">${d.list.map((c) => `<li><span>${esc(c.name)}</span><em>${c.rating ?? '–'}★ ${c.reviews ?? ''}</em></li>`).join('')}</ul>` : '<div class="muted">None found nearby</div>'),
@@ -1523,12 +1524,14 @@
     const cardProgress = ({ tool, state: st, result }) => { if (tool !== 'think') setCard(tool, st === 'run' ? 'run' : st, result); };
     getSession().then((x) => x.session.prefetch(cardProgress)).catch((e) => CARDS.forEach(([k]) => setCard(k, 'fail', { text: e.message })));
 
+    const toEnd = () => requestAnimationFrame(() => feed.scrollTo({ top: feed.scrollHeight, behavior: 'smooth' }));
     const add = (cls, html) => {
       const d = document.createElement('div');
       d.className = cls;
       d.innerHTML = html;
       feed.appendChild(d);
-      feed.scrollTop = feed.scrollHeight;
+      d.querySelectorAll('img').forEach((img) => img.addEventListener('load', toEnd));
+      toEnd();
       return d;
     };
 
@@ -1552,13 +1555,22 @@
           li.className = 'step ' + st;
           li.innerHTML = `<span class="tick">${st === 'done' ? '✓' : st === 'fail' ? '✕' : ''}</span>${esc(label)}`;
           if (st === 'run') status.textContent = tool === 'think' ? 'Writing the answer…' : `Checking ${label.toLowerCase()}…`;
-          feed.scrollTop = feed.scrollHeight;
+          toEnd();
         };
         const out = await session.ask(question, turns.slice(-6), progress);
         setTimeout(() => steps.classList.add('fold'), 700);
         turns.push({ role: 'user', text: question }, { role: 'agent', text: out.say });
         const sources = out.lookups.map((l) => `<span class="chip ${l.ok ? '' : 'bad'}" title="${esc(l.text.slice(0, 300))}">${esc(LOOKUP_LABEL[l.tool] || l.tool)}${l.ok ? '' : ' ✕'}</span>`).join('');
         const card = add('a-scout', `<div>${esc(out.say || 'Sorry, I did not get that.').replace(/\n/g, '<br>')}</div>${sources ? `<div class="a-src">Live from: ${sources}</div>` : ''}`);
+        const igHit = out.lookups.filter((l) => l.tool === 'instagram' && l.ok && l.data && l.data.recent && l.data.recent.length).pop();
+        if (igHit) {
+          const wantAll = /posts|recent|latest few|last (3|three|few)/i.test(question);
+          const fig = document.createElement('div');
+          fig.className = 'ig-fig';
+          fig.innerHTML = postTiles(wantAll ? igHit.data.recent : igHit.data.recent.slice(0, 1), !wantAll);
+          fig.querySelectorAll('img').forEach((img) => img.addEventListener('load', toEnd));
+          card.appendChild(fig);
+        }
         (out.actions || []).filter((a) => AI.needsConfirm(a) || a.type === 'whatsapp_draft').forEach((a) => {
           const b = document.createElement('button');
           b.type = 'button';
@@ -1582,6 +1594,8 @@
         });
         if (out.rejected && out.rejected.length) add('a-note', esc(out.rejected[0]));
         status.textContent = 'Ready.';
+        toEnd();
+        setTimeout(toEnd, 400);
       } catch (error) {
         add('a-note', esc(error.message || 'Something went wrong.'));
         status.textContent = 'That did not work. Try again.';
