@@ -664,7 +664,7 @@
         ${editable.length ? `<div><p class="block-title">Update</p><form class="form" data-form>${editable.map((s, i) => fieldHtml(s, original[s.h], 'f' + i)).join('')}</form></div>` : ''}
         ${rest ? `<details class="all"><summary>All details</summary><div class="facts">${rest}</div></details>` : ''}
         <div class="quick">
-          ${tab !== 'Clients' ? '<button class="btn btn-accent" type="button" data-pitch>Pitch deck</button>' : ''}
+          ${tab !== 'Clients' ? '<button class="btn btn-accent" type="button" data-pitch>Pitch deck</button><button class="btn" type="button" data-assist>Start Assist</button>' : ''}
           <button class="btn btn-outline" type="button" data-share>Send to teammate</button>
           ${canMovePipeline ? '<button class="btn btn-outline" type="button" data-move="Pipeline">Move to Pipeline</button>' : ''}
           ${canMakeClient ? '<button class="btn btn-outline" type="button" data-move="Clients">Make client</button>' : ''}</div>
@@ -738,6 +738,8 @@
     };
 
     const pitchButton = drawer.querySelector('[data-pitch]');
+    const assistButton = drawer.querySelector('[data-assist]');
+    if (assistButton) assistButton.onclick = () => openAssist(tab, row);
     if (pitchButton) pitchButton.onclick = () => { if (closeDrawer()) openPitch(tab, row, opener); };
     const shareButton = drawer.querySelector('[data-share]');
     if (shareButton) shareButton.onclick = () => {
@@ -1027,7 +1029,7 @@
     if (!aiLoading) {
       aiLoading = new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'scout-ai.js?v=1';
+        s.src = 'scout-ai.js?v=2';
         s.onload = () => resolve(window.ScoutAI);
         s.onerror = () => { aiLoading = null; reject(new Error("Couldn't load the scouting tools. Check your connection.")); };
         document.head.appendChild(s);
@@ -1278,6 +1280,108 @@
   // ---------- Pitch decks ----------
 
   const PITCH_STAGES = [['gathering', 'Reading the lead'], ['competitors', 'Checking competitors'], ['writing', 'Writing the deck']];
+
+  // ---------- Scout Assist: typed, live help while on a call ----------
+  const LOOKUP_LABEL = { google_place: 'Google listing', competitors: 'Competitors', web_search: 'Web', site_text: 'Their website', page_speed: 'Site speed', domain_age: 'Domain age' };
+
+  const openAssist = (tab, row) => {
+    closeDrawer();
+    const name = str(row, 'Business Name');
+    const turns = [];
+    let busy = false;
+    const el = document.createElement('div');
+    el.className = 'assist';
+    el.innerHTML = `
+      <div class="assist-top">
+        <div class="assist-title"><strong>${esc(name)}</strong><span>${esc(tab)} · Scout Assist</span></div>
+        <button type="button" class="btn btn-ghost-light" data-close>End assist</button>
+      </div>
+      <div class="assist-body">
+        <div class="orb" data-orb aria-hidden="true"><i></i><i></i><i></i><b></b></div>
+        <div class="assist-status" data-status>Ready. Ask me anything about ${esc(name)}.</div>
+        <div class="assist-feed" data-feed aria-live="polite"></div>
+      </div>
+      <div class="assist-quick" data-quick>
+        ${['Quick summary', 'How are their reviews?', 'Is their website any good?', 'Who are their competitors?', 'Suggest an opening line', 'Write a WhatsApp follow-up'].map((q) => `<button type="button" data-q="${esc(q)}">${esc(q)}</button>`).join('')}
+      </div>
+      <form class="assist-form" data-form>
+        <input data-input type="text" autocomplete="off" placeholder="Type what you need, e.g. “mark interested, call back Friday”" aria-label="Ask Scout Assist" />
+        <button class="btn btn-accent" type="submit">Ask</button>
+      </form>`;
+    document.body.appendChild(el);
+    document.body.classList.add('assist-open');
+    const feed = el.querySelector('[data-feed]');
+    const status = el.querySelector('[data-status]');
+    const input = el.querySelector('[data-input]');
+    const orb = el.querySelector('[data-orb]');
+    const close = () => { document.removeEventListener('keydown', onKey); el.remove(); document.body.classList.remove('assist-open'); };
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', onKey);
+    el.querySelector('[data-close]').onclick = close;
+    input.focus();
+
+    const add = (cls, html) => {
+      const d = document.createElement('div');
+      d.className = cls;
+      d.innerHTML = html;
+      feed.appendChild(d);
+      feed.scrollTop = feed.scrollHeight;
+      return d;
+    };
+
+    const ask = async (question) => {
+      if (busy || !question.trim()) return;
+      busy = true;
+      input.value = '';
+      el.querySelector('[data-quick]').hidden = true;
+      add('a-you', esc(question));
+      orb.classList.add('thinking');
+      status.textContent = 'Looking things up…';
+      try {
+        const [AI, settings] = await Promise.all([loadAi(), aiSettings()]);
+        await Promise.all(Object.keys(TABS).map((t) => ensureTab(t).catch(() => null)));
+        const tabs = {};
+        Object.keys(TABS).forEach((t) => (tabs[t] = (state.tabs[t] && state.tabs[t].rows) || []));
+        const world = { me: state.chat.me, members: state.chat.members.filter((x) => normName(x) !== normName(state.chat.me)), tabs, social: state.social };
+        const fresh = findRow(tab, row.row, name) || row;
+        const out = await AI.assist(settings, world, fresh, turns.slice(-6), question);
+        turns.push({ role: 'user', text: question }, { role: 'agent', text: out.say });
+        const sources = out.lookups.map((l) => `<span class="chip ${l.ok ? '' : 'bad'}" title="${esc(l.text.slice(0, 300))}">${esc(LOOKUP_LABEL[l.tool] || l.tool)}${l.ok ? '' : ' ✕'}</span>`).join('');
+        const card = add('a-scout', `<div>${esc(out.say || 'Sorry, I did not get that.').replace(/\n/g, '<br>')}</div>${sources ? `<div class="a-src">Live from: ${sources}</div>` : ''}`);
+        (out.actions || []).filter((a) => AI.needsConfirm(a) || a.type === 'whatsapp_draft').forEach((a) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'a-act';
+          b.textContent = a.type === 'whatsapp_draft' ? 'Open WhatsApp draft' : `Apply: ${AI.describeAction(a)}`;
+          b.onclick = async () => {
+            b.disabled = true;
+            try {
+              if (a.type === 'whatsapp_draft') {
+                const digits = phoneDigits(str(row, TABS[tab].phone));
+                if (!digits) throw new Error('No phone number in the sheet.');
+                window.open(`https://wa.me/${digits}?text=${encodeURIComponent(a.text)}`, '_blank', 'noopener');
+              } else {
+                await runAction(a);
+              }
+              b.textContent = '✓ Done';
+            } catch (error) { b.disabled = false; toast(error.message, true); }
+          };
+          card.appendChild(b);
+        });
+        if (out.rejected && out.rejected.length) add('a-note', esc(out.rejected[0]));
+        status.textContent = 'Ready.';
+      } catch (error) {
+        add('a-note', esc(error.message || 'Something went wrong.'));
+        status.textContent = 'That did not work. Try again.';
+      }
+      orb.classList.remove('thinking');
+      busy = false;
+      input.focus();
+    };
+
+    el.querySelector('[data-form]').onsubmit = (e) => { e.preventDefault(); ask(input.value); };
+    el.querySelectorAll('[data-q]').forEach((b) => (b.onclick = () => ask(b.dataset.q)));
+  };
 
   const openPitch = (tab, row, opener) => {
     const name = str(row, 'Business Name');
