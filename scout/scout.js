@@ -1286,6 +1286,86 @@
   // ---------- Scout Assist: typed, live help while on a call ----------
   const LOOKUP_LABEL = { google_place: 'Google listing', instagram: 'Instagram', competitors: 'Competitors', web_search: 'Web', site_text: 'Their website', page_speed: 'Site speed', domain_age: 'Domain age' };
 
+  // Rotating particle globe with HUD rings; spins and pulses faster while Scout is working.
+  const drawOrb = (canvas) => {
+    const ctx = canvas.getContext('2d');
+    const N = 520;
+    const pts = Array.from({ length: N }, (_, i) => {
+      const y = 1 - (i / (N - 1)) * 2;
+      const r = Math.sqrt(1 - y * y);
+      const a = i * 2.399963;
+      return { x: Math.cos(a) * r, y, z: Math.sin(a) * r, j: Math.random() * 6.28 };
+    });
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let spin = 0, energy = 0, t = 0;
+    const W = canvas.width, C = W / 2;
+    const frame = () => {
+      if (!canvas.isConnected) return;
+      const busy = canvas.classList.contains('thinking');
+      energy += ((busy ? 1 : 0) - energy) * 0.06;
+      const dt = reduce ? 0 : 1;
+      t += dt * (0.016 + energy * 0.05);
+      spin += dt * (0.004 + energy * 0.03);
+      ctx.clearRect(0, 0, W, W);
+      const R = C * 0.5 * (1 + Math.sin(t * 3) * 0.03 * (0.4 + energy));
+      // outer HUD rings
+      ctx.lineWidth = 2;
+      [[0.93, 0.0, 60, 'rgba(246,183,60,.85)', 1], [0.8, 0.5, 18, 'rgba(92,225,255,.75)', -1.6], [0.68, 1.1, 90, 'rgba(124,92,255,.7)', 2.2]].forEach(([k, off, dash, col, sp]) => {
+        ctx.beginPath();
+        ctx.setLineDash([dash, dash * 0.6]);
+        ctx.strokeStyle = col;
+        ctx.lineDashOffset = -(t * 60 * sp + off * 100);
+        ctx.arc(C, C, C * k, 0, 6.2832);
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+      for (let i = 0; i < 72; i++) {
+        const a = (i / 72) * 6.2832 + spin * 0.3;
+        const long = i % 6 === 0;
+        ctx.strokeStyle = long ? 'rgba(246,183,60,.9)' : 'rgba(255,255,255,.28)';
+        ctx.lineWidth = long ? 2.5 : 1;
+        ctx.beginPath();
+        ctx.moveTo(C + Math.cos(a) * C * 0.97, C + Math.sin(a) * C * 0.97);
+        ctx.lineTo(C + Math.cos(a) * C * (long ? 0.89 : 0.93), C + Math.sin(a) * C * (long ? 0.89 : 0.93));
+        ctx.stroke();
+      }
+      // pulse wave while working
+      if (energy > 0.05) {
+        const p = (t * 1.5) % 1;
+        ctx.strokeStyle = `rgba(92,225,255,${(1 - p) * 0.5 * energy})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(C, C, R * (1 + p * 0.9), 0, 6.2832);
+        ctx.stroke();
+      }
+      // globe
+      const cs = Math.cos(spin), sn = Math.sin(spin), tilt = 0.35, ct = Math.cos(tilt), st = Math.sin(tilt);
+      const proj = pts.map((p) => {
+        const wob = 1 + Math.sin(t * 6 + p.j) * 0.05 * energy;
+        const x1 = (p.x * cs - p.z * sn) * wob, z1 = (p.x * sn + p.z * cs) * wob;
+        const y2 = p.y * ct - z1 * st, z2 = p.y * st + z1 * ct;
+        return { x: C + x1 * R, y: C + y2 * R * wob, z: z2 };
+      }).sort((a, b) => a.z - b.z);
+      proj.forEach((q) => {
+        const d = (q.z + 1) / 2;
+        const warm = d > 0.55;
+        ctx.fillStyle = warm ? `rgba(246,${150 + d * 90 | 0},60,${0.25 + d * 0.75})` : `rgba(92,${200 + d * 40 | 0},255,${0.15 + d * 0.6})`;
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, 1.1 + d * 2.1, 0, 6.2832);
+        ctx.fill();
+      });
+      const g = ctx.createRadialGradient(C, C, 0, C, C, R * 0.8);
+      g.addColorStop(0, `rgba(255,236,190,${0.22 + energy * 0.25})`);
+      g.addColorStop(1, 'rgba(124,92,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(C, C, R * 0.8, 0, 6.2832);
+      ctx.fill();
+      requestAnimationFrame(frame);
+    };
+    frame();
+  };
+
   const openAssist = (tab, row) => {
     closeDrawer();
     const name = str(row, 'Business Name');
@@ -1299,7 +1379,7 @@
         <button type="button" class="btn btn-ghost-light" data-close>End assist</button>
       </div>
       <div class="assist-body">
-        <div class="orb" data-orb aria-hidden="true"><i></i><i></i><i></i><b></b></div>
+        <canvas class="orb" data-orb width="440" height="440" aria-hidden="true"></canvas>
         <div class="assist-status" data-status>Ready. Ask me anything about ${esc(name)}.</div>
         <div class="assist-feed" data-feed aria-live="polite"></div>
       </div>
@@ -1316,6 +1396,7 @@
     const status = el.querySelector('[data-status]');
     const input = el.querySelector('[data-input]');
     const orb = el.querySelector('[data-orb]');
+    drawOrb(orb);
     const close = () => { document.removeEventListener('keydown', onKey); el.remove(); document.body.classList.remove('assist-open'); };
     const onKey = (e) => { if (e.key === 'Escape') close(); };
     document.addEventListener('keydown', onKey);
