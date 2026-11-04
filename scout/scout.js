@@ -1656,9 +1656,11 @@
     }).join('');
     const lead = state.shareLead;
     return `<header class="chat-head"><button class="btn btn-outline btn-sm chat-back" type="button" data-back aria-label="Back to chats">←</button>${avatar(open.kind, open.name)}<div><b>${esc(open.name)}</b><span class="meta">${esc(open.kind === 'dm' ? 'Direct message' : open.members.join(', '))}</span></div></header>
+      ${(() => { const p = [...msgs].reverse().find((x) => x.meta && x.meta.pinned && !x.meta.deleted); return p ? `<div class="pin-banner">📌 <b>${esc(p.from)}</b>: ${esc(p.message.slice(0, 120))}</div>` : ''; })()}
       <div class="thread" role="log" aria-live="polite">${rows || '<div class="chat-empty"><p>No messages yet. Say hi, or type / for Scout.</p></div>'}${state.scoutThinking === open.id ? '<div class="bubble scout thinking">Scout is thinking…</div>' : ''}</div>
       <form class="composer" data-composer>
         <div class="cmd-menu" data-cmds hidden></div>
+        ${state.replyTo ? `<div class="reply-bar"><div><b>Replying to ${esc(state.replyTo.from)}</b><span>${esc(state.replyTo.message.slice(0, 100))}</span></div><button type="button" class="chip-x" data-cancel-reply aria-label="Cancel reply">✕</button></div>` : ''}
         ${lead ? `<div class="lead-chip">Sharing <b>${esc(lead.business)}</b> <button type="button" class="chip-x" data-unlink aria-label="Don't share the lead">✕</button></div>` : ''}
         <div class="composer-row"><button class="slash" type="button" data-slash aria-label="Commands">/</button>
         <textarea id="chat-input" rows="1" placeholder="Message · / for Scout" aria-label="Message">${esc(draft)}</textarea>
@@ -1688,13 +1690,20 @@
         ? forMe ? `<button class="btn btn-primary btn-sm" type="button" data-review="${esc(m.id)}">Review ${actions.length === 1 ? 'change' : actions.length + ' changes'}</button>` : `<span class="meta">Waiting for ${esc(meta.for)} to approve</span>`
         : `<span class="state ${meta.state === 'done' ? 'ok' : meta.state === 'failed' ? 'bad' : ''}">${meta.state === 'done' ? '✓ ' : meta.state === 'failed' ? '⚠ ' : ''}${esc(meta.result || (meta.state === 'cancelled' ? 'Cancelled' : ''))}</span>`;
     }
+    const deleted = meta.deleted === true;
+    const reactions = Object.entries(meta.reactions || {}).filter(([, n]) => n.length);
+    const quote = meta.replyTo && !deleted ? `<div class="quote"><b>${esc(meta.replyTo.from)}</b><span>${esc(meta.replyTo.text)}</span></div>` : '';
+    const reactHtml = reactions.length ? `<div class="reactions">${reactions.map(([e, n]) => `<span title="${esc(n.join(', '))}">${esc(e)}${n.length > 1 ? ' ' + n.length : ''}</span>`).join('')}</div>` : '';
     return `<div class="bubble-row ${mine ? 'mine' : 'theirs'}"><div class="bubble ${mine ? 'mine' : scout ? 'scout' : 'theirs'}">
+      ${m.local || deleted ? '' : `<button class="more" type="button" data-more="${esc(m.id)}" aria-label="Message options">⋯</button>`}
+      ${meta.pinned ? '<span class="meta">📌 Pinned</span>' : ''}
+      ${quote}
       ${scout ? `<span class="who scout-who">✦ Scout${meta.for ? ' · for ' + esc(meta.for) : ''}</span>` : !mine && open.kind !== 'dm' ? `<span class="who" style="color:${avColor(m.from)}">${esc(m.from)}</span>` : ''}
-      <p>${rich(m.message)}</p>
+      ${deleted ? '<p class="deleted">This message was deleted</p>' : `<p>${rich(m.message)}</p>`}
       ${m.leadTab && m.leadRow > 1 ? `<button class="lead-card" type="button" data-lead="${esc(m.leadTab)}|${m.leadRow}|${esc(m.business)}"><b>${esc(m.business)}</b><span>${esc((TABS[m.leadTab] || {}).title || m.leadTab)} · open</span></button>` : ''}
       ${actionHtml ? `<div class="actions-box">${actionHtml}</div>` : ''}
       <span class="stamp">${esc(new Date(m.sent).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }))} ${mine ? ticks(m, open.members) : ''}</span>
-    </div>${m.local === 'failed' ? `<button class="retry" type="button" data-retry-msg="${esc(m.id)}">Not sent · retry</button>` : ''}</div>`;
+    </div>${reactHtml}${m.local === 'failed' ? `<button class="retry" type="button" data-retry-msg="${esc(m.id)}">Not sent · retry</button>` : ''}</div>`;
   };
 
   const wireConversation = (open, focused, scrolledUp) => {
@@ -1729,6 +1738,9 @@
     state.openFresh = false;
     if (input.value.startsWith('/')) loadAi().then(showMenu).catch(() => {});
     view.querySelector('[data-slash]').onclick = () => { input.value = input.value.startsWith('/') ? '' : '/'; state.chatDraft = input.value; input.focus(); loadAi().then(showMenu).catch(() => {}); };
+    const cancelReply = view.querySelector('[data-cancel-reply]');
+    if (cancelReply) cancelReply.onclick = () => { state.replyTo = null; renderChats(true); };
+    view.querySelectorAll('[data-more]').forEach((b) => (b.onclick = (e) => { e.stopPropagation(); openMessageMenu(b.dataset.more, b); }));
     view.querySelector('[data-back]').onclick = () => { state.openChat = null; restartPolling(); renderChats(true); };
     const unlink = view.querySelector('[data-unlink]');
     if (unlink) unlink.onclick = () => { state.shareLead = null; renderChats(true); };
@@ -1786,6 +1798,44 @@
     deliver(m, { meta: m.meta, asScout: m.from === 'Scout' }).catch(() => {});
   };
 
+  const chatAct = async (id, op, emoji) => {
+    try {
+      const data = await api('teamAct', { id, op, emoji: emoji || '' });
+      const i = state.chat.messages.findIndex((m) => m.id === id);
+      if (i >= 0 && data.message) state.chat.messages[i] = data.message;
+      saveChatCache();
+      renderChats(true);
+    } catch (error) { toast(error.message, true); }
+  };
+
+  const openMessageMenu = (id, anchor) => {
+    document.querySelectorAll('.msg-menu').forEach((n) => n.remove());
+    const m = state.chat.messages.find((x) => x.id === id);
+    if (!m) return;
+    const mine = normName(m.from) === normName(state.chat.me);
+    const pinned = m.meta && m.meta.pinned;
+    const menu = document.createElement('div');
+    menu.className = 'msg-menu';
+    menu.innerHTML = `<div class="emoji-row">${['👍', '❤️', '😂', '🙏', '🔥', '🎉'].map((e) => `<button type="button" data-emoji="${e}">${e}</button>`).join('')}</div>
+      <button type="button" data-do="reply">↩ Reply</button><button type="button" data-do="copy">⧉ Copy</button>
+      <button type="button" data-do="pin">${pinned ? '📌 Unpin' : '📌 Pin'}</button>${mine ? '<button type="button" data-do="delete" class="danger">🗑 Delete for everyone</button>' : ''}`;
+    document.body.appendChild(menu);
+    const r = anchor.getBoundingClientRect();
+    menu.style.top = Math.min(window.innerHeight - menu.offsetHeight - 8, r.bottom + 4) + 'px';
+    menu.style.left = Math.max(8, Math.min(window.innerWidth - menu.offsetWidth - 8, r.right - menu.offsetWidth)) + 'px';
+    const close = () => { menu.remove(); document.removeEventListener('click', close); };
+    setTimeout(() => document.addEventListener('click', close), 0);
+    menu.querySelectorAll('[data-emoji]').forEach((b) => (b.onclick = () => { close(); chatAct(id, 'react', b.dataset.emoji); }));
+    menu.querySelectorAll('[data-do]').forEach((b) => (b.onclick = async () => {
+      close();
+      const what = b.dataset.do;
+      if (what === 'reply') { state.replyTo = m; renderChats(true); const i = $('chat-input'); if (i) i.focus(); }
+      else if (what === 'copy') { try { await navigator.clipboard.writeText(m.message); toast('Copied'); } catch (e) { toast("Couldn't copy", true); } }
+      else if (what === 'pin') chatAct(id, pinned ? 'unpin' : 'pin');
+      else if (what === 'delete' && confirm('Delete this message for everyone?')) chatAct(id, 'delete');
+    }));
+  };
+
   const submitChat = async (open, raw) => {
     const text = raw.trim();
     if (!text || state.scoutThinking) return;
@@ -1795,7 +1845,9 @@
     state.shareLead = null;
     const AI = await loadAi().catch(() => null);
     const parsed = AI ? AI.parseInput(text) : { kind: 'text' };
-    postMessage(open.id, text, { lead }).catch(() => {});
+    const quoted = state.replyTo;
+    state.replyTo = null;
+    postMessage(open.id, text, { lead, meta: quoted ? { kind: 'chat', replyTo: { id: quoted.id, from: quoted.from, text: quoted.message.slice(0, 160) } } : null }).catch(() => {});
     if (parsed.kind === 'text') return;
     state.scoutThinking = open.id;
     renderChats(true);
