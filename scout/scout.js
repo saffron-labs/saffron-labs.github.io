@@ -75,7 +75,7 @@
     { id: 'scout', title: 'Scout' },
     ...Object.keys(TABS).map((id) => ({ id, title: TABS[id].title })),
     { id: 'social', title: 'Social' },
-    { id: 'inbox', title: 'Inbox' },
+    { id: 'inbox', title: 'Chats' },
   ];
 
   // ---------- state ----------
@@ -282,8 +282,9 @@
     state.tabs = {};
     state.summary = null;
     state.social = null;
-    state.team = null;
-    clearInterval(teamTimer);
+    state.chat = null;
+    state.openChat = null;
+    clearInterval(chatTimer);
     saveSession(null);
     showLogin(message);
   };
@@ -304,7 +305,7 @@
     $('tabs').innerHTML = SECTIONS.map((s) => {
       const t = state.tabs[s.id];
       const open = t && t.rows ? t.rows.filter((r) => !CLOSED.includes(str(r, TABS[s.id].status))).length : null;
-      const unread = s.id === 'inbox' && state.team ? state.team.unread : 0;
+      const unread = s.id === 'inbox' ? totalUnread() : 0;
       return `<button class="tab" type="button" data-section="${s.id}" ${s.id === state.section ? 'aria-current="page"' : ''}>${esc(s.title)}${
         unread ? `<span class="tab-badge" aria-label="${unread} unread">${unread > 9 ? '9+' : unread}</span>` : open !== null ? `<span class="count">${open}</span>` : ''
       }</button>`;
@@ -328,7 +329,7 @@
     if (section === 'today') renderToday();
     else if (section === 'scout') renderScout();
     else if (section === 'social') renderSocial();
-    else if (section === 'inbox') renderInbox();
+    else if (section === 'inbox') { state.openFresh = !!state.openChat; renderChats(); restartPolling(); }
     else renderTab(section);
     window.scrollTo(0, 0);
   };
@@ -741,6 +742,8 @@
     if (shareButton) shareButton.onclick = () => {
       if (!closeDrawer()) return;
       state.shareLead = { tab, row: row.row, business: name };
+      if (!state.openChat) state.openChat = TEAM_CHAT;
+      state.openFresh = true;
       go('inbox');
     };
 
@@ -1415,134 +1418,470 @@
     generate();
   };
 
-  // ---------- Team inbox ----------
+  // ---------- Team chats ----------
+  // Same chats as the app: list on the left, conversation on the right, "/" commands and Scout.
+  // Kept in this browser between visits; only changes since the last sync are downloaded.
 
-  let teamTimer = null;
-  const loadTeam = async () => {
+  const CHAT_KEY = () => `saffron-scout-chats-${(state.session && state.session.name || '').toLowerCase()}`;
+  const TEAM_CHAT = 'team';
+  const normName = (v) => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const dmId = (a, b) => 'dm:' + [normName(a), normName(b)].sort().join('|');
+  let chatTimer = null;
+  let chatBusy = false;
+
+  const loadChatCache = () => {
     try {
-      const data = await api('teamInbox', { appVersion: 'web' });
-      const before = state.team ? state.team.unread : 0;
-      state.team = data;
-      if (data.unread !== before || state.section === 'inbox') renderTabs();
-      if (data.unread > before && state.section !== 'inbox') toast(`New message${data.unread - before > 1 ? 's' : ''} in your inbox`);
-      document.title = data.unread ? `(${data.unread}) Saffron Scout` : 'Saffron Scout';
-      return data;
+      const c = JSON.parse(localStorage.getItem(CHAT_KEY()) || 'null');
+      if (c && Array.isArray(c.messages)) return c;
+    } catch (e) { /* fall back to a fresh sync */ }
+    return { me: state.session.name, members: [], chats: [], messages: [], cursor: 0 };
+  };
+  const saveChatCache = () => {
+    try {
+      const c = state.chat;
+      localStorage.setItem(CHAT_KEY(), JSON.stringify({ ...c, messages: c.messages.slice(-1500) }));
+    } catch (e) { /* storage full or blocked: the sheet still has everything */ }
+  };
+  const mergeMsgs = (current, incoming) => {
+    const byId = new Map(current.map((m) => [m.id, m]));
+    incoming.forEach((m) => {
+      const old = byId.get(m.id);
+      if (!old || old.local || m.updated >= old.updated) byId.set(m.id, m);
+    });
+    return [...byId.values()].sort((a, b) => a.sent - b.sent);
+  };
+  const isUnread = (m, me) =>
+    !m.local && normName(m.from) !== normName(me) && !(m.from === 'Scout' && m.meta && normName(m.meta.for) === normName(me)) &&
+    !(m.readBy || []).some((n) => normName(n) === normName(me));
+
+  const chatSummaries = () => {
+    const c = state.chat;
+    const me = c.me;
+    const dms = c.members.filter((m) => normName(m) !== normName(me)).map((m) => ({ id: dmId(me, m), name: m, members: [me, m], kind: 'dm' }));
+    const all = [...(c.chats.length ? c.chats : [{ id: TEAM_CHAT, name: 'Saffron Team', members: [], kind: 'team' }]), ...dms];
+    return all.map((ch) => {
+      const list = c.messages.filter((m) => m.chat === ch.id);
+      return { ...ch, last: list[list.length - 1] || null, unread: list.filter((m) => isUnread(m, me)).length };
+    }).sort((a, b) => ((b.last && b.last.sent) || (b.kind === 'team' ? 1 : 0)) - ((a.last && a.last.sent) || (a.kind === 'team' ? 1 : 0)));
+  };
+  const totalUnread = () => (state.chat ? chatSummaries().reduce((s, c) => s + c.unread, 0) : 0);
+
+  const syncChats = async () => {
+    if (chatBusy || !state.session) return;
+    chatBusy = true;
+    try {
+      state.chat = state.chat || loadChatCache();
+      const before = totalUnread();
+      const data = await api('teamSync', { since: Math.max(0, state.chat.cursor - 2000), appVersion: 'web' });
+      state.chat = { ...state.chat, me: data.me, members: data.members, chats: data.chats, cursor: data.cursor, messages: mergeMsgs(state.chat.messages, data.messages) };
+      saveChatCache();
+      const after = totalUnread();
+      document.title = after ? `(${after}) Saffron Scout` : 'Saffron Scout';
+      renderTabs();
+      if (after > before && state.section !== 'inbox') toast(`New message${after - before > 1 ? 's' : ''} in Chats`);
+      if (state.section === 'inbox') renderChats(true);
     } catch (error) {
       if (error instanceof SessionExpired) handleError(error);
-      throw error;
+      else state.chatError = error.message;
+    } finally {
+      chatBusy = false;
     }
   };
   const startTeamPolling = () => {
-    clearInterval(teamTimer);
-    loadTeam().catch(() => {});
-    teamTimer = setInterval(() => { if (!document.hidden) loadTeam().catch(() => {}); }, 60000);
+    clearInterval(chatTimer);
+    state.chat = loadChatCache();
+    syncChats();
+    chatTimer = setInterval(() => { if (!document.hidden) syncChats(); }, state.openChat ? 8000 : 45000);
   };
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && state.session) loadTeam().catch(() => {}); });
+  const restartPolling = () => {
+    clearInterval(chatTimer);
+    chatTimer = setInterval(() => { if (!document.hidden) syncChats(); }, state.section === 'inbox' && state.openChat ? 8000 : 45000);
+  };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && state.session) syncChats(); });
 
-  const whenText = (ms) => {
+  const timeShort = (ms) => {
     if (!ms) return '';
     const d = new Date(ms);
-    const time = d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
-    return d.toDateString() === new Date().toDateString() ? time : `${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}, ${time}`;
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+    const y = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    if (d.toDateString() === y.toDateString()) return 'Yesterday';
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  };
+  const dayName = (ms) => {
+    const d = new Date(ms);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) return 'Today';
+    const y = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    if (d.toDateString() === y.toDateString()) return 'Yesterday';
+    return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+  };
+  const avatar = (kind, name) => kind === 'team' || kind === 'group'
+    ? `<span class="av av-group" aria-hidden="true">${kind === 'team' ? '◆' : '#'}</span>`
+    : kind === 'scout' ? '<span class="av av-scout" aria-hidden="true">✦</span>'
+    : `<span class="av" style="background:${avColor(name)}" aria-hidden="true">${esc((name || '?').slice(0, 1).toUpperCase())}</span>`;
+  const avColor = (name) => {
+    const p = ['#5E1220', '#2B5C9E', '#2F7D4A', '#B7791F', '#7A3E9D', '#A94425'];
+    let h = 0;
+    for (const ch of String(name).toLowerCase()) h = (h * 31 + ch.charCodeAt(0)) | 0;
+    return p[Math.abs(h) % p.length];
+  };
+  const ticks = (m, members) => {
+    if (m.local === 'sending') return '<span class="tick" title="Sending">🕓</span>';
+    if (m.local === 'failed') return '<span class="tick fail" title="Not sent">!</span>';
+    const me = state.chat.me;
+    const others = members.filter((x) => normName(x) !== normName(me));
+    const readers = (m.readBy || []).filter((x) => normName(x) !== normName(me));
+    const all = others.length && others.every((o) => readers.some((r) => normName(r) === normName(o)));
+    return `<span class="tick${all ? ' read' : ''}" title="${all ? 'Read' : readers.length ? 'Read by some' : 'Sent'}">${readers.length ? '✓✓' : '✓'}</span>`;
   };
 
-  const renderInbox = async (force) => {
+  const renderChats = async (soft) => {
     const view = $('view');
-    if (!state.team || force) {
-      view.innerHTML = `<div class="view-head"><div><p class="eyebrow">Team</p><h2>Inbox</h2></div></div>${skeletons(3)}`;
-      try {
-        await loadTeam();
-      } catch (error) {
-        if (state.section !== 'inbox') return;
-        view.innerHTML = `<div class="view-head"><div><p class="eyebrow">Team</p><h2>Inbox</h2></div></div>` + emptyState(
-          "Couldn't load messages.",
-          /unknown action/i.test(error.message) ? ' The sheet script needs the team update (Team.gs) before messages work.' : ' ' + error.message,
-          '<br><button class="btn btn-outline" type="button" data-retry>Try again</button>');
-        const retry = view.querySelector('[data-retry]');
-        if (retry) retry.onclick = () => renderInbox(true);
+    if (!state.chat) state.chat = loadChatCache();
+    if (!state.chat.cursor && !soft) {
+      view.innerHTML = `<div class="view-head"><div><p class="eyebrow">Team</p><h2>Chats</h2></div></div>${skeletons(3)}`;
+      await syncChats();
+      if (!state.chat.cursor && state.section === 'inbox') {
+        view.innerHTML = `<div class="view-head"><div><p class="eyebrow">Team</p><h2>Chats</h2></div></div>` + emptyState("Couldn't load chats.", ' ' + (state.chatError || ''), '<br><button class="btn btn-outline" type="button" data-retry>Try again</button>');
+        view.querySelector('[data-retry]').onclick = () => renderChats();
+      }
+      return;
+    }
+    if (state.section !== 'inbox') return;
+    const focused = document.activeElement && document.activeElement.id === 'chat-input';
+    const draft = $('chat-input') ? $('chat-input').value : state.chatDraft || '';
+    const scrolledUp = (() => { const l = view.querySelector('.thread'); return l && l.scrollHeight - l.scrollTop - l.clientHeight > 80; })();
+    const summaries = chatSummaries();
+    const open = state.openChat && summaries.find((c) => c.id === state.openChat);
+    view.innerHTML = `<div class="chat-app${open ? ' has-open' : ''}">
+      <aside class="chat-list" aria-label="Chats">
+        <div class="chat-list-head"><h2>Chats</h2><button class="btn btn-accent btn-sm" type="button" data-new-group>New group</button></div>
+        ${summaries.map((c) => {
+          const last = c.last;
+          const who = !last ? '' : last.meta && last.meta.kind === 'system' ? '' : normName(last.from) === normName(state.chat.me) ? 'You: ' : last.from === 'Scout' ? 'Scout: ' : c.kind === 'dm' ? '' : last.from + ': ';
+          return `<button class="chat-row${c.id === state.openChat ? ' on' : ''}" type="button" data-chat="${esc(c.id)}">
+            ${avatar(c.kind, c.name)}
+            <span class="chat-row-text"><span class="chat-row-top"><b>${esc(c.name)}</b><span class="meta${c.unread ? ' hot' : ''}">${esc(last ? timeShort(last.sent) : '')}</span></span>
+            <span class="chat-row-top"><span class="chat-prev">${esc(last ? who + last.message.replace(/\s+/g, ' ') : c.kind === 'dm' ? 'Say hi 👋' : 'No messages yet')}</span>${c.unread ? `<span class="unread">${c.unread}</span>` : ''}</span></span>
+          </button>`;
+        }).join('')}
+      </aside>
+      <section class="chat-pane" aria-label="Conversation">${open ? conversationHtml(open, draft) : '<div class="chat-empty"><span class="av av-scout big">✦</span><p>Pick a chat. In any chat, type <b>/</b> for Scout commands or start with <b>@scout</b> to ask a question.</p></div>'}</section>
+    </div>`;
+    view.querySelectorAll('[data-chat]').forEach((b) => (b.onclick = () => { state.openChat = b.dataset.chat; state.chatDraft = ''; restartPolling(); renderChats(true); }));
+    view.querySelector('[data-new-group]').onclick = openNewGroup;
+    if (open) wireConversation(open, focused, scrolledUp);
+  };
+
+  const conversationHtml = (open, draft) => {
+    const msgs = state.chat.messages.filter((m) => m.chat === open.id);
+    let lastDay = '';
+    const rows = msgs.map((m) => {
+      const day = new Date(m.sent).toDateString();
+      const sep = day !== lastDay ? `<div class="day"><span>${esc(dayName(m.sent))}</span></div>` : '';
+      lastDay = day;
+      return sep + bubbleHtml(m, open);
+    }).join('');
+    const lead = state.shareLead;
+    return `<header class="chat-head"><button class="btn btn-outline btn-sm chat-back" type="button" data-back aria-label="Back to chats">←</button>${avatar(open.kind, open.name)}<div><b>${esc(open.name)}</b><span class="meta">${esc(open.kind === 'dm' ? 'Direct message' : open.members.join(', '))}</span></div></header>
+      <div class="thread" role="log" aria-live="polite">${rows || '<div class="chat-empty"><p>No messages yet. Say hi, or type / for Scout.</p></div>'}${state.scoutThinking === open.id ? '<div class="bubble scout thinking">Scout is thinking…</div>' : ''}</div>
+      <form class="composer" data-composer>
+        <div class="cmd-menu" data-cmds hidden></div>
+        ${lead ? `<div class="lead-chip">Sharing <b>${esc(lead.business)}</b> <button type="button" class="chip-x" data-unlink aria-label="Don't share the lead">✕</button></div>` : ''}
+        <div class="composer-row"><button class="slash" type="button" data-slash aria-label="Commands">/</button>
+        <textarea id="chat-input" rows="1" placeholder="Message · / for Scout" aria-label="Message">${esc(draft)}</textarea>
+        <button class="btn btn-primary send" type="submit" aria-label="Send">➤</button></div>
+      </form>`;
+  };
+
+  const bubbleHtml = (m, open) => {
+    if (m.meta && m.meta.kind === 'system') return `<div class="day"><span class="sys">${esc(m.message)}</span></div>`;
+    const me = state.chat.me;
+    const scout = m.from === 'Scout';
+    const mine = !scout && normName(m.from) === normName(me);
+    const meta = m.meta || {};
+    const actions = meta.actions || [];
+    const forMe = normName(meta.for) === normName(me);
+    let actionHtml = '';
+    if (scout && actions.length) {
+      actionHtml = meta.state === 'waiting'
+        ? forMe ? `<button class="btn btn-primary btn-sm" type="button" data-review="${esc(m.id)}">Review ${actions.length === 1 ? 'change' : actions.length + ' changes'}</button>` : `<span class="meta">Waiting for ${esc(meta.for)} to approve</span>`
+        : `<span class="state ${meta.state === 'done' ? 'ok' : meta.state === 'failed' ? 'bad' : ''}">${meta.state === 'done' ? '✓ ' : meta.state === 'failed' ? '⚠ ' : ''}${esc(meta.result || (meta.state === 'cancelled' ? 'Cancelled' : ''))}</span>`;
+    }
+    return `<div class="bubble-row ${mine ? 'mine' : 'theirs'}"><div class="bubble ${mine ? 'mine' : scout ? 'scout' : 'theirs'}">
+      ${scout ? `<span class="who scout-who">✦ Scout${meta.for ? ' · for ' + esc(meta.for) : ''}</span>` : !mine && open.kind !== 'dm' ? `<span class="who" style="color:${avColor(m.from)}">${esc(m.from)}</span>` : ''}
+      <p>${esc(m.message)}</p>
+      ${m.leadTab && m.leadRow > 1 ? `<button class="lead-card" type="button" data-lead="${esc(m.leadTab)}|${m.leadRow}|${esc(m.business)}"><b>${esc(m.business)}</b><span>${esc((TABS[m.leadTab] || {}).title || m.leadTab)} · open</span></button>` : ''}
+      ${actionHtml ? `<div class="actions-box">${actionHtml}</div>` : ''}
+      <span class="stamp">${esc(new Date(m.sent).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }))} ${mine ? ticks(m, open.members) : ''}</span>
+    </div>${m.local === 'failed' ? `<button class="retry" type="button" data-retry-msg="${esc(m.id)}">Not sent · retry</button>` : ''}</div>`;
+  };
+
+  const wireConversation = (open, focused, scrolledUp) => {
+    const view = $('view');
+    const thread = view.querySelector('.thread');
+    if (!scrolledUp) thread.scrollTop = thread.scrollHeight;
+    const input = $('chat-input');
+    const menu = view.querySelector('[data-cmds]');
+    const grow = () => { input.style.height = 'auto'; input.style.height = Math.min(140, input.scrollHeight) + 'px'; };
+    grow();
+    const showMenu = () => {
+      const list = window.ScoutAI ? window.ScoutAI.matchingCommands(input.value) : [];
+      menu.hidden = !list.length;
+      menu.innerHTML = list.map((c) => `<button type="button" data-cmd="${esc(c.hint)}"><b>/${esc(c.name)}</b>${c.args ? ` <i>${esc(c.args)}</i>` : ''}<span>${esc(c.description)}</span></button>`).join('');
+      menu.querySelectorAll('[data-cmd]').forEach((b) => (b.onclick = () => { input.value = b.dataset.cmd; state.chatDraft = input.value; showMenu(); input.focus(); }));
+    };
+    input.oninput = () => { state.chatDraft = input.value; grow(); if (input.value.startsWith('/')) loadAi().then(showMenu).catch(() => {}); else menu.hidden = true; };
+    input.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); view.querySelector('[data-composer]').requestSubmit(); } };
+    if (focused || state.openFresh) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+    state.openFresh = false;
+    if (input.value.startsWith('/')) loadAi().then(showMenu).catch(() => {});
+    view.querySelector('[data-slash]').onclick = () => { input.value = input.value.startsWith('/') ? '' : '/'; state.chatDraft = input.value; input.focus(); loadAi().then(showMenu).catch(() => {}); };
+    view.querySelector('[data-back]').onclick = () => { state.openChat = null; restartPolling(); renderChats(true); };
+    const unlink = view.querySelector('[data-unlink]');
+    if (unlink) unlink.onclick = () => { state.shareLead = null; renderChats(true); };
+    view.querySelector('[data-composer]').onsubmit = (e) => { e.preventDefault(); submitChat(open, input.value); };
+    view.querySelectorAll('[data-review]').forEach((b) => (b.onclick = () => openApproval(b.dataset.review)));
+    view.querySelectorAll('[data-retry-msg]').forEach((b) => (b.onclick = () => retryMsg(b.dataset.retryMsg)));
+    view.querySelectorAll('[data-lead]').forEach((b) => (b.onclick = async () => {
+      const [tab, row, business] = b.dataset.lead.split('|');
+      try { await ensureTab(tab); } catch (error) { handleError(error); return; }
+      const found = findRow(tab, Number(row), business);
+      if (found) openRow(tab, found, b); else toast(`${business} isn't in ${TABS[tab].title} any more.`, true);
+    }));
+    // Opening the chat reads it.
+    const unread = state.chat.messages.filter((m) => m.chat === open.id && isUnread(m, state.chat.me));
+    if (unread.length) {
+      unread.forEach((m) => (m.readBy = [...(m.readBy || []), state.chat.me]));
+      saveChatCache();
+      renderTabs();
+      api('teamRead', { chat: open.id }).catch(() => {});
+    }
+  };
+
+  const localId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+  const deliver = async (local, extra) => {
+    try {
+      const data = await api('teamSend', { chat: local.chat, message: local.message, clientId: local.id, leadTab: local.leadTab, leadRow: local.leadRow || '', business: local.business, ...extra });
+      state.chat.messages = mergeMsgs(state.chat.messages.filter((m) => m.id !== local.id), [data.message]);
+      saveChatCache();
+      if (state.section === 'inbox') renderChats(true);
+      return data.message;
+    } catch (error) {
+      local.local = 'failed';
+      if (state.section === 'inbox') renderChats(true);
+      handleError(error);
+      throw error;
+    }
+  };
+  const postMessage = (chat, text, opts) => {
+    const o = opts || {};
+    const local = {
+      id: localId(), chat, sent: Date.now(), from: o.asScout ? 'Scout' : state.chat.me, message: text,
+      leadTab: o.lead ? o.lead.tab : '', leadRow: o.lead ? o.lead.row : 0, business: o.lead ? o.lead.business : '',
+      readBy: [state.chat.me], meta: o.asScout ? { ...(o.meta || {}), kind: 'scout', for: state.chat.me } : o.meta || null, updated: Date.now(), local: 'sending',
+    };
+    state.chat.messages.push(local);
+    if (state.section === 'inbox') renderChats(true);
+    return deliver(local, { meta: o.meta || null, asScout: !!o.asScout });
+  };
+  const retryMsg = (id) => {
+    const m = state.chat.messages.find((x) => x.id === id);
+    if (!m) return;
+    m.local = 'sending';
+    renderChats(true);
+    deliver(m, { meta: m.meta, asScout: m.from === 'Scout' }).catch(() => {});
+  };
+
+  const submitChat = async (open, raw) => {
+    const text = raw.trim();
+    if (!text || state.scoutThinking) return;
+    state.chatDraft = '';
+    $('chat-input').value = '';
+    const lead = state.shareLead;
+    state.shareLead = null;
+    const AI = await loadAi().catch(() => null);
+    const parsed = AI ? AI.parseInput(text) : { kind: 'text' };
+    postMessage(open.id, text, { lead }).catch(() => {});
+    if (parsed.kind === 'text') return;
+    state.scoutThinking = open.id;
+    renderChats(true);
+    try {
+      await Promise.all(Object.keys(TABS).map((t) => ensureTab(t).catch(() => null)));
+      await loadSocial().catch(() => null);
+      const tabs = {};
+      Object.keys(TABS).forEach((t) => (tabs[t] = (state.tabs[t] && state.tabs[t].rows) || []));
+      const reply = (msg, actions, leadRef, question) => postMessage(open.id, msg, {
+        asScout: true, lead: leadRef || null,
+        meta: { kind: 'scout', actions: (actions || []).filter(AI.needsConfirm), state: (actions || []).some(AI.needsConfirm) ? 'waiting' : '', question },
+      });
+      let saved;
+      if (parsed.kind === 'command' && parsed.name !== 'brief') {
+        const local = AI.runLocalCommand(parsed.name, parsed.args, tabs, state.social);
+        if (!local) saved = await reply(`I don't know /${parsed.name}. Type /help to see what I can do.`, [], null, text);
+        else if (local.idea) saved = await reply(`Add this Instagram post idea?\n“${local.idea}”`, [{ type: 'add_idea', text: local.idea }], null, text);
+        else if (local.text) saved = await reply(local.text, [], local.lead, text);
+        else parsed.question = local.ask;
+      }
+      if (!saved) {
+        const question = parsed.kind === 'ask' ? parsed.question : parsed.question || AI.runLocalCommand('brief', '', tabs, null).ask;
+        const recent = state.chat.messages.filter((m) => m.chat === open.id && !(m.meta && m.meta.kind === 'system')).slice(-15).map((m) => `${m.from}: ${m.message.replace(/\s+/g, ' ').slice(0, 200)}`).join('\n');
+        const history = state.chat.messages.filter((m) => m.chat === open.id && m.from === 'Scout' && m.meta && normName(m.meta.for) === normName(state.chat.me)).slice(-4)
+          .flatMap((m) => [...(m.meta.question ? [{ role: 'user', text: m.meta.question }] : []), { role: 'agent', text: m.message }]);
+        try {
+          const settings = await aiSettings();
+          const answer = await AI.askAgent(settings, { me: state.chat.me, members: state.chat.members.filter((x) => normName(x) !== normName(state.chat.me)), tabs, social: state.social }, history, question, 'chat', recent);
+          let msg = answer.say || 'Sorry, I did not get that.';
+          if (answer.rejected.length && !answer.actions.length) msg = `Sorry: ${answer.rejected[0]}`;
+          else if (answer.rejected.length) msg += `\n(I couldn't do one part: ${answer.rejected[0]})`;
+          saved = await reply(msg, answer.actions, null, question);
+          const nav = answer.actions.find((a) => a.type === 'open_lead' || a.type === 'create_pitch');
+          if (nav && !answer.actions.some(AI.needsConfirm)) {
+            const row = findRow(nav.tab, nav.row, nav.business);
+            if (row) setTimeout(() => (nav.type === 'create_pitch' ? openPitch(nav.tab, row, null) : openRow(nav.tab, row, null)), 500);
+          }
+        } catch (error) {
+          if (error instanceof SessionExpired) throw error;
+          saved = await reply(/429/.test(error.message) ? 'The free Gemini limit is used up for now. Try again in a bit.' : `I couldn't answer that: ${error.message}`, [], null, question);
+        }
+      }
+      state.scoutThinking = null;
+      if (saved && saved.meta && saved.meta.state === 'waiting') openApproval(saved.id);
+    } catch (error) {
+      handleError(error);
+    } finally {
+      state.scoutThinking = null;
+      if (state.section === 'inbox') renderChats(true);
+    }
+  };
+
+  // ---------- approval box ----------
+
+  const openApproval = (id) => {
+    const m = state.chat.messages.find((x) => x.id === id);
+    if (!m || !m.meta || m.meta.state !== 'waiting' || !window.ScoutAI) return;
+    const AI = window.ScoutAI;
+    const box = document.createElement('div');
+    box.className = 'approval';
+    box.innerHTML = `<div class="approval-card" role="dialog" aria-modal="true" aria-labelledby="ap-title">
+      <div class="approval-head"><span class="av av-scout">✦</span><div><h3 id="ap-title">Approve ${m.meta.actions.length === 1 ? 'this change' : m.meta.actions.length + ' changes'}?</h3><p class="meta">Scout saves to the sheet only after you approve.</p></div></div>
+      <ul>${m.meta.actions.map((a) => `<li>${esc(AI.describeAction(a))}</li>`).join('')}</ul>
+      <p class="form-error" data-err style="color:var(--danger)"></p>
+      <div class="quick"><button class="btn btn-outline" type="button" data-no>Cancel</button><button class="btn btn-primary" type="button" data-yes>Approve</button></div></div>`;
+    document.body.appendChild(box);
+    const close = () => { box.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = (e) => { if (e.key === 'Escape') cancel(); };
+    document.addEventListener('keydown', onKey);
+    const setState = async (st, result) => {
+      m.meta = { ...m.meta, state: st, result };
+      renderChats(true);
+      const data = await api('teamSetMeta', { id: m.id, meta: { state: st, result } }).catch(() => null);
+      if (data && data.message) { state.chat.messages = mergeMsgs(state.chat.messages, [data.message]); saveChatCache(); renderChats(true); }
+    };
+    const cancel = () => { close(); setState('cancelled', 'Cancelled. Nothing changed.'); };
+    box.querySelector('[data-no]').onclick = cancel;
+    box.onclick = (e) => { if (e.target === box) cancel(); };
+    box.querySelector('[data-yes]').onclick = async (e) => {
+      e.target.disabled = true;
+      e.target.textContent = 'Saving…';
+      const done = [], failed = [];
+      for (const a of m.meta.actions) {
+        try { await runAction(a); done.push(AI.describeAction(a)); } catch (error) { failed.push(`${AI.describeAction(a)}: ${error.message}`); }
+      }
+      close();
+      await setState(failed.length ? 'failed' : 'done', failed.length ? `${done.length ? 'Saved: ' + done.join('; ') + '\n' : ''}Failed: ${failed.join('; ')}` : `Saved: ${done.join('; ')}`);
+      toast(failed.length ? 'Some changes failed' : 'Saved to the sheet', failed.length > 0);
+    };
+    box.querySelector('[data-yes]').focus();
+  };
+
+  const runAction = async (a) => {
+    const tag = `(via Scout, ${state.chat.me})`;
+    const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    switch (a.type) {
+      case 'update_lead': {
+        await ensureTab(a.tab);
+        const row = findRow(a.tab, a.row, a.business);
+        if (!row) throw new Error(`${a.business} moved in the sheet; ask again`);
+        const changes = {};
+        a.changes.forEach((c) => (changes[c.column] = c.value));
+        const noteHeader = TABS[a.tab].editable.some((s) => s.h === 'Remarks') ? 'Remarks' : 'Notes';
+        if (noteHeader in row.values) {
+          if (typeof changes[noteHeader] === 'string' && changes[noteHeader]) changes[noteHeader] += ' ' + tag;
+          else if (!(noteHeader in changes)) {
+            const cur = str(row, noteHeader);
+            changes[noteHeader] = `${cur ? cur + '\n' : ''}${today}: ${a.changes.map((c) => `${c.column}: ${c.value === true ? 'yes' : c.value === false ? 'no' : c.value}`).join(', ')} ${tag}`;
+          }
+        }
+        await api('update', { tab: a.tab, row: row.row, businessName: a.business, changes });
+        Object.assign(row.values, changes);
+        state.summary = null;
         return;
       }
-      if (state.section !== 'inbox') return;
+      case 'move_lead': {
+        await api('move', { fromTab: a.tab, row: a.row, businessName: a.business, to: a.to });
+        delete state.tabs[a.tab];
+        delete state.tabs[a.to];
+        state.summary = null;
+        return;
+      }
+      case 'set_post_status':
+      case 'post_note': {
+        const social = await loadSocial(true);
+        const post = (social.posts || []).find((p) => String(p.values['Post ID']) === a.postId);
+        if (!post) throw new Error('post not found');
+        const changes = a.type === 'set_post_status' ? { Status: a.status } : { 'Owner note': `${a.text} ${tag}` };
+        await api('socialUpdatePost', { postId: a.postId, expectedStatus: String(post.values.Status || '').trim(), changes });
+        state.social = null;
+        return;
+      }
+      case 'add_idea':
+        await api('socialAddSuggestion', { suggestion: a.text, referenceLink: '', photoBase64: '', addedBy: state.chat.me });
+        state.social = null;
+        return;
+      case 'send_message': {
+        const chat = a.to === 'Everyone' ? TEAM_CHAT : dmId(state.chat.me, a.to);
+        await postMessage(chat, a.text, { lead: a.tab ? { tab: a.tab, row: a.row, business: a.business } : null });
+        return;
+      }
+      default:
+        return;
     }
-    const t = state.team;
-    const recipients = [...(t.members || []), 'Everyone'];
-    const lead = state.shareLead;
-    const draft = state.inboxDraft || '';
-    const to = recipients.includes(state.inboxTo) ? state.inboxTo : recipients[0];
-    view.innerHTML = `
-      <div class="view-head"><div><p class="eyebrow">Team · signed in as ${esc(t.me)}</p><h2>Inbox</h2></div>
-        <button class="btn btn-outline btn-sm" type="button" data-refresh>Refresh</button></div>
-      <div class="two-col inbox-layout">
-        <form class="panel form" data-compose style="grid-template-columns:1fr">
-          <p class="block-title" style="margin:0">New message</p>
-          ${lead ? `<div class="lead-chip">About <b>${esc(lead.business)}</b> <button type="button" class="chip-x" data-unlink aria-label="Remove the lead from this message">✕</button></div>` : ''}
-          <div class="field"><span class="field-label" style="font:500 11px/1 'DM Mono';letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">To</span>
-            <div class="chips" role="radiogroup" aria-label="Send to" style="margin:0">${recipients.map((r) =>
-              `<button class="chip" type="button" role="radio" data-to="${esc(r)}" aria-pressed="${r === to}" aria-checked="${r === to}">${esc(r)}</button>`).join('')}</div></div>
-          <div class="field"><label for="msg">Message</label><textarea id="msg" placeholder="${esc(to ? 'Message ' + (to === 'Everyone' ? 'everyone' : to) : 'Message')}">${esc(draft)}</textarea></div>
-          <p class="form-error" data-err style="color:var(--danger);margin:0"></p>
-          <button class="btn btn-primary" type="submit">Send</button>
-        </form>
-        <div class="list">${t.messages.length ? t.messages.map((m, i) => {
-          const fromMe = !m.incoming;
-          const who = fromMe ? `You → ${m.to === 'Everyone' ? 'everyone' : m.to}` : m.to === 'Everyone' ? `${m.from} → everyone` : m.from;
-          return `<div class="panel msg${m.read ? '' : ' msg-unread'}">
-            <div class="card-top"><strong style="color:var(--wine)">${esc(who)}</strong><span class="meta">${esc(whenText(m.sent))}</span></div>
-            <p style="margin:6px 0 0;white-space:pre-line">${esc(m.message)}</p>
-            ${m.leadTab && m.leadRow > 1 ? `<button class="btn btn-outline btn-sm" type="button" data-open-msg="${i}" style="margin-top:10px">Open ${esc(m.business || 'lead')}</button>` : ''}
-          </div>`;
-        }).join('') : emptyState('No messages yet.', ' Send one here, or open a lead and use "Send to teammate".')}</div>
-      </div>`;
-    view.querySelector('[data-refresh]').onclick = () => renderInbox(true);
-    const form = view.querySelector('[data-compose]');
-    const textarea = form.querySelector('#msg');
-    textarea.oninput = () => { state.inboxDraft = textarea.value; };
-    form.querySelectorAll('[data-to]').forEach((b) => (b.onclick = () => { state.inboxTo = b.dataset.to; state.inboxDraft = textarea.value; renderInbox(); }));
-    const unlink = form.querySelector('[data-unlink]');
-    if (unlink) unlink.onclick = () => { state.shareLead = null; state.inboxDraft = textarea.value; renderInbox(); };
+  };
+
+  const openNewGroup = () => {
+    const others = state.chat.members.filter((m) => normName(m) !== normName(state.chat.me));
+    const box = document.createElement('div');
+    box.className = 'approval';
+    box.innerHTML = `<form class="approval-card" role="dialog" aria-modal="true" aria-labelledby="ng-title">
+      <h3 id="ng-title">New group</h3>
+      <div class="field"><label for="ng-name">Group name</label><input id="ng-name" maxlength="60" placeholder="e.g. Kochi sales"></div>
+      <fieldset class="field" style="border:0;padding:0;margin:0"><legend style="font:500 11px/1 'DM Mono';letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Members</legend>
+      ${others.map((n) => `<label class="check" style="text-transform:none;font:15px 'DM Sans';color:var(--ink);letter-spacing:0"><input type="checkbox" value="${esc(n)}"> ${esc(n)}</label>`).join('')}</fieldset>
+      <p class="form-error" data-err style="color:var(--danger)"></p>
+      <div class="quick"><button class="btn btn-outline" type="button" data-no>Cancel</button><button class="btn btn-primary" type="submit">Create group</button></div></form>`;
+    document.body.appendChild(box);
+    const form = box.querySelector('form');
+    form.querySelector('#ng-name').focus();
+    box.querySelector('[data-no]').onclick = () => box.remove();
+    box.onclick = (e) => { if (e.target === box) box.remove(); };
     form.onsubmit = async (e) => {
       e.preventDefault();
+      const title = form.querySelector('#ng-name').value.trim();
+      const members = [...form.querySelectorAll('input[type=checkbox]:checked')].map((c) => c.value);
       const err = form.querySelector('[data-err]');
-      const message = textarea.value.trim();
-      if (!message) { err.textContent = 'Write a message first.'; textarea.focus(); return; }
-      const button = form.querySelector('button[type=submit]');
-      button.disabled = true; button.textContent = 'Sending…'; err.textContent = '';
+      if (!title) { err.textContent = 'Give the group a name.'; return; }
+      if (!members.length) { err.textContent = 'Pick at least one person.'; return; }
       try {
-        await api('teamSend', { to, message, leadTab: lead ? lead.tab : '', leadRow: lead ? lead.row : '', business: lead ? lead.business : '' });
-        state.inboxDraft = ''; state.shareLead = null;
-        toast(`Sent to ${to === 'Everyone' ? 'everyone' : to}`);
-        renderInbox(true);
-      } catch (error) {
-        handleError(error);
-        err.textContent = `Not sent. ${error.message} Your message is still here.`;
-        button.disabled = false; button.textContent = 'Send';
-      }
+        const data = await api('teamCreateGroup', { title, members });
+        box.remove();
+        state.openChat = data.chat.id;
+        await syncChats();
+        renderChats(true);
+      } catch (error) { err.textContent = error.message; }
     };
-    view.querySelectorAll('[data-open-msg]').forEach((b) => {
-      b.onclick = async () => {
-        const m = t.messages[Number(b.dataset.openMsg)];
-        try {
-          await ensureTab(m.leadTab);
-        } catch (error) { handleError(error); return; }
-        const row = findRow(m.leadTab, m.leadRow, m.business);
-        if (row) openRow(m.leadTab, row, b);
-        else toast(`${m.business || 'That lead'} isn't in ${TABS[m.leadTab].title} any more.`, true);
-      };
-    });
-    // Opening the inbox reads what's here.
-    const unreadIds = t.messages.filter((m) => m.incoming && !m.read).map((m) => m.id);
-    if (unreadIds.length) {
-      setTimeout(() => {
-        if (state.section !== 'inbox') return;
-        api('teamMarkRead', { ids: unreadIds }).then(() => {
-          t.messages.forEach((m) => { if (unreadIds.includes(m.id)) m.read = true; });
-          t.unread = Math.max(0, t.unread - unreadIds.length);
-          document.title = t.unread ? `(${t.unread}) Saffron Scout` : 'Saffron Scout';
-          renderTabs();
-          view.querySelectorAll('.msg-unread').forEach((el) => el.classList.remove('msg-unread'));
-        }).catch(() => {});
-      }, 1500);
-    }
   };
 
   // ---------- boot ----------
