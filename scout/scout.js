@@ -1031,7 +1031,7 @@
     if (!aiLoading) {
       aiLoading = new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'scout-ai.js?v=8';
+        s.src = 'scout-ai.js?v=9';
         s.onload = () => resolve(window.ScoutAI);
         s.onerror = () => { aiLoading = null; reject(new Error("Couldn't load the scouting tools. Check your connection.")); };
         document.head.appendChild(s);
@@ -1487,7 +1487,7 @@
     const bar = (label, v) => `<div class="meter"><span>${label}</span><div><b style="width:${v ?? 0}%" class="${v >= 90 ? 'g' : v >= 50 ? 'a' : 'r'}"></b></div><em>${v ?? '?'}</em></div>`;
     const render = {
       google_place: (d) => `<div class="big">${d.rating ?? '–'}<small>★ · ${d.reviews ?? '?'} reviews</small></div><div class="muted">${esc(d.status === 'OPERATIONAL' ? 'Open for business' : d.status || 'Status unknown')}${d.website ? '' : ' · no website listed'}</div>${d.mapsUrl ? `<a href="${esc(d.mapsUrl)}" target="_blank" rel="noopener">Open in Maps</a>` : ''}`,
-      instagram: (d) => d.missing ? '<div class="muted">Not a public business account</div>' : `<div class="big">${Number(d.followers || 0).toLocaleString('en-IN')}<small> followers</small></div><div class="muted">${d.posts ?? '?'} posts · last ${esc(d.last || 'unknown')} · ~${d.avgLikes} likes</div>${d.bio ? `<div class="muted">${esc(d.bio)}</div>` : ''}`,
+      instagram: (d) => d.missing ? '<div class="muted">Not a public business account</div>' : `<div class="muted">@${esc(d.handle)}</div><div class="big">${Number(d.followers || 0).toLocaleString('en-IN')}<small> followers</small></div><div class="muted">${d.posts ?? '?'} posts · last ${esc(d.last || 'unknown')} · ~${d.avgLikes} likes</div>${d.bio ? `<div class="muted">${esc(d.bio)}</div>` : ''}`,
       page_speed: (d) => bar('Speed', d.performance) + bar('SEO', d.seo) + bar('Access.', d.accessibility) + (d.lcp ? `<div class="muted">Main content in ${esc(d.lcp)}</div>` : ''),
       domain_age: (d) => d.registered ? `<div class="big">${d.years}<small> years old</small></div><div class="muted">${esc(d.domain)} · registered ${esc(d.registered)}</div>` : `<div class="muted">${esc(d.domain || '')}: date not published</div>`,
       competitors: (d) => (d.list && d.list.length ? `<ul class="plain">${d.list.map((c) => `<li><span>${esc(c.name)}</span><em>${c.rating ?? '–'}★ ${c.reviews ?? ''}</em></li>`).join('')}</ul>` : '<div class="muted">None found nearby</div>'),
