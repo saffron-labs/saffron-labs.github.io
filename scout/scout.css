@@ -415,3 +415,9 @@ body.chat-full{overflow:hidden}
 .ig-tile.broken{display:none}
 
 .ig-tile.text{aspect-ratio:auto;min-height:0}.ig-strip .ig-tile.text{aspect-ratio:1;overflow:hidden}.ig-strip .ig-tile.text .cap{font-size:10.5px;padding:6px}
+
+/* Keep the message box pinned: the thread scrolls, the composer never leaves the screen */
+.chat-app{grid-template-rows:minmax(0,1fr)}
+.chat-list,.chat-pane{min-height:0}
+.thread{min-height:0}
+.composer{flex:none}
