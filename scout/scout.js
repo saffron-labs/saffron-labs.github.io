@@ -1031,7 +1031,7 @@
     if (!aiLoading) {
       aiLoading = new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'scout-ai.js?v=5';
+        s.src = 'scout-ai.js?v=6';
         s.onload = () => resolve(window.ScoutAI);
         s.onerror = () => { aiLoading = null; reject(new Error("Couldn't load the scouting tools. Check your connection.")); };
         document.head.appendChild(s);
@@ -1575,9 +1575,10 @@
                 paintLead();
               }
               b.textContent = '✓ Done';
-            } catch (error) { b.disabled = false; toast(error.message, true); }
+            } catch (error) { b.disabled = false; b.textContent = 'Retry: ' + AI.describeAction(a); toast(error.message, true); }
           };
           card.appendChild(b);
+          if (a.type === 'send_message') { b.textContent = 'Sending…'; b.onclick().then(() => { if (!b.disabled) b.textContent = 'Retry: ' + AI.describeAction(a); else b.textContent = '✓ Sent'; }); }
         });
         if (out.rejected && out.rejected.length) add('a-note', esc(out.rejected[0]));
         status.textContent = 'Ready.';
