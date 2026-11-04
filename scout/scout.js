@@ -1023,13 +1023,15 @@
     return { status: data.status, text: data.text };
   };
 
+  window.ScoutInstagram = (username) => api('webInstagram', { username });
+
   let aiLoading = null;
   const loadAi = () => {
     if (window.ScoutAI) return Promise.resolve(window.ScoutAI);
     if (!aiLoading) {
       aiLoading = new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'scout-ai.js?v=2';
+        s.src = 'scout-ai.js?v=3';
         s.onload = () => resolve(window.ScoutAI);
         s.onerror = () => { aiLoading = null; reject(new Error("Couldn't load the scouting tools. Check your connection.")); };
         document.head.appendChild(s);
@@ -1282,7 +1284,7 @@
   const PITCH_STAGES = [['gathering', 'Reading the lead'], ['competitors', 'Checking competitors'], ['writing', 'Writing the deck']];
 
   // ---------- Scout Assist: typed, live help while on a call ----------
-  const LOOKUP_LABEL = { google_place: 'Google listing', competitors: 'Competitors', web_search: 'Web', site_text: 'Their website', page_speed: 'Site speed', domain_age: 'Domain age' };
+  const LOOKUP_LABEL = { google_place: 'Google listing', instagram: 'Instagram', competitors: 'Competitors', web_search: 'Web', site_text: 'Their website', page_speed: 'Site speed', domain_age: 'Domain age' };
 
   const openAssist = (tab, row) => {
     closeDrawer();
