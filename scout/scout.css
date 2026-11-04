@@ -413,3 +413,5 @@ body.chat-full{overflow:hidden}
 .ig-tile .cap{display:block;padding:7px 9px;font-size:12px;line-height:1.35;color:#dff6ff;background:rgba(4,8,20,.85)}
 .ig-tile .vid{position:absolute;top:6px;right:8px;font-size:12px;color:#fff;text-shadow:0 0 4px #000}
 .ig-tile.broken{display:none}
+
+.ig-tile.text{aspect-ratio:auto;min-height:0}.ig-strip .ig-tile.text{aspect-ratio:1;overflow:hidden}.ig-strip .ig-tile.text .cap{font-size:10.5px;padding:6px}

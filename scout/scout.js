@@ -1031,7 +1031,7 @@
     if (!aiLoading) {
       aiLoading = new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'scout-ai.js?v=11';
+        s.src = 'scout-ai.js?v=12';
         s.onload = () => resolve(window.ScoutAI);
         s.onerror = () => { aiLoading = null; reject(new Error("Couldn't load the scouting tools. Check your connection.")); };
         document.head.appendChild(s);
@@ -1484,7 +1484,7 @@
     ];
     const intel = el.querySelector('[data-panel="intel"]');
     intel.innerHTML = '<h3>Live intel</h3>' + CARDS.map(([k, t]) => `<article class="card idle" data-card="${k}"><header>${t}<i></i></header><div class="body muted">Waiting</div></article>`).join('');
-    const postTiles = (list, big) => (list || []).filter((m) => m.image).map((m) => `<a class="ig-tile${big ? ' big' : ''}" href="${esc(m.link || '#')}" target="_blank" rel="noopener" title="${esc(m.caption || '')}"><img src="${esc(m.image)}" alt="Instagram post ${esc(m.when || '')}" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add('broken')">${m.video ? '<span class="vid">▶</span>' : ''}${big ? `<span class="cap">${esc(m.when)} · ♥ ${m.likes} · 💬 ${m.comments}${m.caption ? '<br>' + esc(m.caption) : ''}</span>` : ''}</a>`).join('');
+    const postTiles = (list, big) => (list || []).map((m) => !m.image ? `<a class="ig-tile text" href="${esc(m.link || '#')}" target="_blank" rel="noopener"><span class="cap">${esc(m.when)} · ♥ ${m.likes} · 💬 ${m.comments}<br>${esc(m.caption || 'No caption')}<br><u>Open on Instagram</u> (Instagram sent no image for this post)</span></a>` : `<a class="ig-tile${big ? ' big' : ''}" href="${esc(m.link || '#')}" target="_blank" rel="noopener" title="${esc(m.caption || '')}"><img src="${esc(m.image)}" alt="Instagram post ${esc(m.when || '')}" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add('broken')">${m.video ? '<span class="vid">▶</span>' : ''}${big ? `<span class="cap">${esc(m.when)} · ♥ ${m.likes} · 💬 ${m.comments}${m.caption ? '<br>' + esc(m.caption) : ''}</span>` : ''}</a>`).join('');
     const bar = (label, v) => `<div class="meter"><span>${label}</span><div><b style="width:${v ?? 0}%" class="${v >= 90 ? 'g' : v >= 50 ? 'a' : 'r'}"></b></div><em>${v ?? '?'}</em></div>`;
     const render = {
       google_place: (d) => `<div class="big">${d.rating ?? '–'}<small>★ · ${d.reviews ?? '?'} reviews</small></div><div class="muted">${esc(d.status === 'OPERATIONAL' ? 'Open for business' : d.status || 'Status unknown')}${d.website ? '' : ' · no website listed'}</div>${d.mapsUrl ? `<a href="${esc(d.mapsUrl)}" target="_blank" rel="noopener">Open in Maps</a>` : ''}`,
