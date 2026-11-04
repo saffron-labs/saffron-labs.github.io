@@ -1711,7 +1711,19 @@
       menu.innerHTML = list.map((c) => `<button type="button" data-cmd="${esc(c.hint)}"><b>/${esc(c.name)}</b>${c.args ? ` <i>${esc(c.args)}</i>` : ''}<span>${esc(c.description)}</span></button>`).join('');
       menu.querySelectorAll('[data-cmd]').forEach((b) => (b.onclick = () => { input.value = b.dataset.cmd; state.chatDraft = input.value; showMenu(); input.focus(); }));
     };
-    input.oninput = () => { state.chatDraft = input.value; grow(); if (input.value.startsWith('/')) loadAi().then(showMenu).catch(() => {}); else menu.hidden = true; };
+    // Typing "@" lists Scout and this chat's people; picking one fills in the name.
+    const showMentions = () => {
+      const m = /(?:^|\s)@([A-Za-z]*)$/.exec(input.value);
+      if (!m) return false;
+      const names = ['Scout', ...(open.members && open.members.length ? open.members : state.chat.members)]
+        .filter((n, i, all) => normName(n) !== normName(state.chat.me) && all.findIndex((x) => normName(x) === normName(n)) === i)
+        .filter((n) => n.toLowerCase().startsWith(m[1].toLowerCase()));
+      menu.hidden = !names.length;
+      menu.innerHTML = names.map((n) => `<button type="button" data-mention="${esc(n)}"><b>@${esc(n)}</b><span>${n === 'Scout' ? 'Ask Scout, or give it a task' : 'Mention teammate'}</span></button>`).join('');
+      menu.querySelectorAll('[data-mention]').forEach((b) => (b.onclick = () => { input.value = input.value.replace(/@[A-Za-z]*$/, '@' + b.dataset.mention + ' '); state.chatDraft = input.value; menu.hidden = true; input.focus(); }));
+      return true;
+    };
+    input.oninput = () => { state.chatDraft = input.value; grow(); if (showMentions()) return; if (input.value.startsWith('/')) loadAi().then(showMenu).catch(() => {}); else menu.hidden = true; };
     input.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); view.querySelector('[data-composer]').requestSubmit(); } };
     if (focused || state.openFresh) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
     state.openFresh = false;
