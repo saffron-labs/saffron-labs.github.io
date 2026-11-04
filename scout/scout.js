@@ -1031,7 +1031,7 @@
     if (!aiLoading) {
       aiLoading = new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'scout-ai.js?v=7';
+        s.src = 'scout-ai.js?v=8';
         s.onload = () => resolve(window.ScoutAI);
         s.onerror = () => { aiLoading = null; reject(new Error("Couldn't load the scouting tools. Check your connection.")); };
         document.head.appendChild(s);
