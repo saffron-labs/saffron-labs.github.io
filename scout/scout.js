@@ -1031,7 +1031,7 @@
     if (!aiLoading) {
       aiLoading = new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'scout-ai.js?v=3';
+        s.src = 'scout-ai.js?v=4';
         s.onload = () => resolve(window.ScoutAI);
         s.onerror = () => { aiLoading = null; reject(new Error("Couldn't load the scouting tools. Check your connection.")); };
         document.head.appendChild(s);
@@ -1322,6 +1322,24 @@
     el.querySelector('[data-close]').onclick = close;
     input.focus();
 
+    // Load the tools and start fetching the basics while Adriel is still typing.
+    let sessionPromise = null;
+    const getSession = () => {
+      if (!sessionPromise) {
+        sessionPromise = (async () => {
+          const [AI, settings] = await Promise.all([loadAi(), aiSettings()]);
+          await Promise.all(Object.keys(TABS).map((t) => ensureTab(t).catch(() => null)));
+          const tabs = {};
+          Object.keys(TABS).forEach((t) => (tabs[t] = (state.tabs[t] && state.tabs[t].rows) || []));
+          const world = { me: state.chat.me, members: state.chat.members.filter((x) => normName(x) !== normName(state.chat.me)), tabs, social: state.social };
+          return { AI, session: AI.createAssistSession(settings, world, findRow(tab, row.row, name) || row) };
+        })();
+        sessionPromise.catch(() => { sessionPromise = null; });
+      }
+      return sessionPromise;
+    };
+    getSession().then((x) => x.session.prefetch()).catch(() => {});
+
     const add = (cls, html) => {
       const d = document.createElement('div');
       d.className = cls;
@@ -1340,13 +1358,19 @@
       orb.classList.add('thinking');
       status.textContent = 'Looking things up…';
       try {
-        const [AI, settings] = await Promise.all([loadAi(), aiSettings()]);
-        await Promise.all(Object.keys(TABS).map((t) => ensureTab(t).catch(() => null)));
-        const tabs = {};
-        Object.keys(TABS).forEach((t) => (tabs[t] = (state.tabs[t] && state.tabs[t].rows) || []));
-        const world = { me: state.chat.me, members: state.chat.members.filter((x) => normName(x) !== normName(state.chat.me)), tabs, social: state.social };
-        const fresh = findRow(tab, row.row, name) || row;
-        const out = await AI.assist(settings, world, fresh, turns.slice(-6), question);
+        const { AI, session } = await getSession();
+        const steps = add('a-steps', '');
+        const marks = {};
+        const progress = ({ tool, label, state: st }) => {
+          let li = marks[tool];
+          if (!li) { li = document.createElement('div'); marks[tool] = li; steps.appendChild(li); }
+          li.className = 'step ' + st;
+          li.innerHTML = `<span class="tick">${st === 'done' ? '✓' : st === 'fail' ? '✕' : ''}</span>${esc(label)}`;
+          status.textContent = st === 'run' ? (tool === 'think' ? 'Writing the answer…' : `Checking ${label.toLowerCase()}…`) : status.textContent;
+          feed.scrollTop = feed.scrollHeight;
+        };
+        const out = await session.ask(question, turns.slice(-6), progress);
+        setTimeout(() => steps.classList.add('fold'), 700);
         turns.push({ role: 'user', text: question }, { role: 'agent', text: out.say });
         const sources = out.lookups.map((l) => `<span class="chip ${l.ok ? '' : 'bad'}" title="${esc(l.text.slice(0, 300))}">${esc(LOOKUP_LABEL[l.tool] || l.tool)}${l.ok ? '' : ' ✕'}</span>`).join('');
         const card = add('a-scout', `<div>${esc(out.say || 'Sorry, I did not get that.').replace(/\n/g, '<br>')}</div>${sources ? `<div class="a-src">Live from: ${sources}</div>` : ''}`);
