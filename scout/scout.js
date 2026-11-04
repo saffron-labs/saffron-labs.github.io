@@ -1031,7 +1031,7 @@
     if (!aiLoading) {
       aiLoading = new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'scout-ai.js?v=4';
+        s.src = 'scout-ai.js?v=5';
         s.onload = () => resolve(window.ScoutAI);
         s.onerror = () => { aiLoading = null; reject(new Error("Couldn't load the scouting tools. Check your connection.")); };
         document.head.appendChild(s);
@@ -1368,28 +1368,41 @@
 
   const openAssist = (tab, row) => {
     closeDrawer();
+    const cfg = TABS[tab];
     const name = str(row, 'Business Name');
+    const noteHeader = cfg.editable.some((x) => x.h === 'Remarks') ? 'Remarks' : 'Notes';
     const turns = [];
     let busy = false;
     const el = document.createElement('div');
     el.className = 'assist';
+    el.dataset.view = 'chat';
+    const phone = phoneDigits(str(row, cfg.phone));
     el.innerHTML = `
       <div class="assist-top">
-        <div class="assist-title"><strong>${esc(name)}</strong><span>${esc(tab)} · Scout Assist</span></div>
+        <div class="assist-title"><strong>${esc(name)}</strong><span>${esc(cfg.title)} · Scout Assist</span></div>
+        <div class="assist-tabs" role="tablist">
+          <button type="button" data-view-btn="lead">Lead</button><button type="button" data-view-btn="chat" class="on">Assist</button><button type="button" data-view-btn="intel">Intel</button>
+        </div>
         <button type="button" class="btn btn-ghost-light" data-close>End assist</button>
       </div>
-      <div class="assist-body">
-        <canvas class="orb" data-orb width="440" height="440" aria-hidden="true"></canvas>
-        <div class="assist-status" data-status>Ready. Ask me anything about ${esc(name)}.</div>
-        <div class="assist-feed" data-feed aria-live="polite"></div>
-      </div>
-      <div class="assist-quick" data-quick>
-        ${['Quick summary', 'How are their reviews?', 'Is their website any good?', 'Who are their competitors?', 'Suggest an opening line', 'Write a WhatsApp follow-up'].map((q) => `<button type="button" data-q="${esc(q)}">${esc(q)}</button>`).join('')}
-      </div>
-      <form class="assist-form" data-form>
-        <input data-input type="text" autocomplete="off" placeholder="Type what you need, e.g. “mark interested, call back Friday”" aria-label="Ask Scout Assist" />
-        <button class="btn btn-accent" type="submit">Ask</button>
-      </form>`;
+      <div class="assist-grid">
+        <section class="panel panel-lead" data-panel="lead" aria-label="Lead console"></section>
+        <section class="assist-center" data-panel="chat">
+          <div class="assist-body">
+            <canvas class="orb" data-orb width="440" height="440" aria-hidden="true"></canvas>
+            <div class="assist-status" data-status>Ready. Ask me anything about ${esc(name)}.</div>
+            <div class="assist-feed" data-feed aria-live="polite"></div>
+          </div>
+          <div class="assist-quick" data-quick>
+            ${['Quick summary', 'How are their reviews?', 'Is their website any good?', 'Who are their competitors?', 'Suggest an opening line', 'Write a WhatsApp follow-up'].map((q) => `<button type="button" data-q="${esc(q)}">${esc(q)}</button>`).join('')}
+          </div>
+          <form class="assist-form" data-form>
+            <input data-input type="text" autocomplete="off" placeholder="Type what you need, e.g. “mark interested, call back Friday”" aria-label="Ask Scout Assist" />
+            <button class="btn btn-accent" type="submit">Ask</button>
+          </form>
+        </section>
+        <section class="panel panel-intel" data-panel="intel" aria-label="Live intel"></section>
+      </div>`;
     document.body.appendChild(el);
     document.body.classList.add('assist-open');
     const feed = el.querySelector('[data-feed]');
@@ -1401,9 +1414,97 @@
     const onKey = (e) => { if (e.key === 'Escape') close(); };
     document.addEventListener('keydown', onKey);
     el.querySelector('[data-close]').onclick = close;
+    el.querySelectorAll('[data-view-btn]').forEach((b) => (b.onclick = () => {
+      el.dataset.view = b.dataset.viewBtn;
+      el.querySelectorAll('[data-view-btn]').forEach((x) => x.classList.toggle('on', x === b));
+    }));
     input.focus();
 
-    // Load the tools and start fetching the basics while Adriel is still typing.
+    // ---- left: lead console (works without the AI) ----
+    const save = async (changes, ok) => {
+      try {
+        await api('update', { tab, row: row.row, businessName: name, changes });
+        Object.assign(row.values, changes);
+        state.summary = null;
+        toast(ok || 'Saved to the sheet');
+        paintLead();
+        return true;
+      } catch (error) { toast(error.message || 'Could not save', true); return false; }
+    };
+    const logLine = (text) => {
+      const cur = str(row, noteHeader);
+      const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+      return `${cur ? cur + '\n' : ''}${today}: ${text} (via Assist, ${state.chat.me})`;
+    };
+    const paintLead = () => {
+      const p = el.querySelector('[data-panel="lead"]');
+      const statusNow = str(row, cfg.status);
+      const fu = str(row, 'Next Follow-up');
+      const fuDays = daysFromToday(fu);
+      const notes = str(row, noteHeader).split('\n').filter(Boolean).slice(-3).reverse();
+      const where = cfg.location.map((h) => str(row, h)).filter(Boolean).join(', ');
+      p.innerHTML = `
+        <h3>Lead console</h3>
+        <div class="kv"><span>${esc(where || '—')}</span><span>${esc(str(row, cfg.service) || '')}</span></div>
+        <div class="act-row">
+          ${phone ? `<a class="pbtn" href="tel:+${phone}">Call</a><a class="pbtn" target="_blank" rel="noopener" href="https://wa.me/${phone}">WhatsApp</a>` : '<span class="muted">No phone in the sheet</span>'}
+        </div>
+        <h4>Status</h4>
+        <div class="chips">${cfg.statuses.map((s) => `<button type="button" class="pchip${s === statusNow ? ' on' : ''}" data-status-set="${esc(s)}">${esc(s)}</button>`).join('')}</div>
+        ${tab !== 'Clients' ? `<h4>Next follow-up <em>${fu ? `${esc(shortDate(fu))}${fuDays !== null ? (fuDays < 0 ? ' · overdue' : fuDays === 0 ? ' · today' : ` · in ${fuDays}d`) : ''}` : 'not set'}</em></h4>
+        <div class="chips">
+          <button type="button" class="pchip" data-fu="1">Tomorrow</button><button type="button" class="pchip" data-fu="3">In 3 days</button><button type="button" class="pchip" data-fu="7">Next week</button>
+          <input type="date" data-fu-date value="${esc(fu)}" aria-label="Pick follow-up date" />
+        </div>` : ''}
+        <h4>Log a note</h4>
+        <form class="note-form" data-note-form><input data-note-input type="text" placeholder="e.g. owner busy, call after 4pm" autocomplete="off" aria-label="Note" /><button class="pbtn" type="submit">Log</button></form>
+        ${notes.length ? `<h4>Recent notes</h4><ul class="notes">${notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}`;
+      p.querySelectorAll('[data-status-set]').forEach((b) => (b.onclick = () => {
+        const s = b.dataset.statusSet;
+        if (s === statusNow) return;
+        const changes = { [cfg.status]: s };
+        if (cfg.status === 'Status' && s !== 'Not contacted') changes['Reached Out'] = true;
+        save(changes, `Status → ${s}`);
+      }));
+      p.querySelectorAll('[data-fu]').forEach((b) => (b.onclick = () => save({ 'Next Follow-up': isoPlusDays(Number(b.dataset.fu)) }, 'Follow-up set')));
+      const dateInput = p.querySelector('[data-fu-date]');
+      if (dateInput) dateInput.onchange = () => dateInput.value && save({ 'Next Follow-up': dateInput.value }, 'Follow-up set');
+      p.querySelector('[data-note-form]').onsubmit = async (e) => {
+        e.preventDefault();
+        const v = p.querySelector('[data-note-input]').value.trim();
+        if (v) await save({ [noteHeader]: logLine(v) }, 'Note logged');
+      };
+    };
+    paintLead();
+
+    // ---- right: live intel cards, filled as lookups finish ----
+    const CARDS = [
+      ['google_place', 'Google listing'], ['instagram', 'Instagram'], ['page_speed', 'Site speed'],
+      ['domain_age', 'Domain'], ['competitors', 'Competitors'], ['web_search', 'Web'],
+    ];
+    const intel = el.querySelector('[data-panel="intel"]');
+    intel.innerHTML = '<h3>Live intel</h3>' + CARDS.map(([k, t]) => `<article class="card idle" data-card="${k}"><header>${t}<i></i></header><div class="body muted">Waiting</div></article>`).join('');
+    const bar = (label, v) => `<div class="meter"><span>${label}</span><div><b style="width:${v ?? 0}%" class="${v >= 90 ? 'g' : v >= 50 ? 'a' : 'r'}"></b></div><em>${v ?? '?'}</em></div>`;
+    const render = {
+      google_place: (d) => `<div class="big">${d.rating ?? '–'}<small>★ · ${d.reviews ?? '?'} reviews</small></div><div class="muted">${esc(d.status === 'OPERATIONAL' ? 'Open for business' : d.status || 'Status unknown')}${d.website ? '' : ' · no website listed'}</div>${d.mapsUrl ? `<a href="${esc(d.mapsUrl)}" target="_blank" rel="noopener">Open in Maps</a>` : ''}`,
+      instagram: (d) => d.missing ? '<div class="muted">Not a public business account</div>' : `<div class="big">${Number(d.followers || 0).toLocaleString('en-IN')}<small> followers</small></div><div class="muted">${d.posts ?? '?'} posts · last ${esc(d.last || 'unknown')} · ~${d.avgLikes} likes</div>${d.bio ? `<div class="muted">${esc(d.bio)}</div>` : ''}`,
+      page_speed: (d) => bar('Speed', d.performance) + bar('SEO', d.seo) + bar('Access.', d.accessibility) + (d.lcp ? `<div class="muted">Main content in ${esc(d.lcp)}</div>` : ''),
+      domain_age: (d) => d.registered ? `<div class="big">${d.years}<small> years old</small></div><div class="muted">${esc(d.domain)} · registered ${esc(d.registered)}</div>` : `<div class="muted">${esc(d.domain || '')}: date not published</div>`,
+      competitors: (d) => (d.list && d.list.length ? `<ul class="plain">${d.list.map((c) => `<li><span>${esc(c.name)}</span><em>${c.rating ?? '–'}★ ${c.reviews ?? ''}</em></li>`).join('')}</ul>` : '<div class="muted">None found nearby</div>'),
+      web_search: (d) => `<ul class="plain">${(d.results || []).map((r) => `<li><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title)}</a><em>${esc(r.host)}</em></li>`).join('')}</ul>`,
+    };
+    const setCard = (tool, st, result) => {
+      const c = intel.querySelector(`[data-card="${tool}"]`);
+      if (!c || (st !== 'run' && !result)) return;
+      c.className = 'card ' + st;
+      const body = c.querySelector('.body') || c.appendChild(Object.assign(document.createElement('div'), { className: 'body' }));
+      body.className = 'body';
+      if (st === 'run') { body.className = 'body muted'; body.textContent = 'Fetching…'; }
+      else if (st === 'done' && result && result.data && render[tool]) body.innerHTML = render[tool](result.data);
+      else { body.className = 'body muted'; body.textContent = result ? result.text.slice(0, 120) : 'Not available'; }
+    };
+
+    // ---- centre: chat ----
     let sessionPromise = null;
     const getSession = () => {
       if (!sessionPromise) {
@@ -1419,7 +1520,8 @@
       }
       return sessionPromise;
     };
-    getSession().then((x) => x.session.prefetch()).catch(() => {});
+    const cardProgress = ({ tool, state: st, result }) => { if (tool !== 'think') setCard(tool, st === 'run' ? 'run' : st, result); };
+    getSession().then((x) => x.session.prefetch(cardProgress)).catch((e) => CARDS.forEach(([k]) => setCard(k, 'fail', { text: e.message })));
 
     const add = (cls, html) => {
       const d = document.createElement('div');
@@ -1442,12 +1544,14 @@
         const { AI, session } = await getSession();
         const steps = add('a-steps', '');
         const marks = {};
-        const progress = ({ tool, label, state: st }) => {
+        const progress = (step) => {
+          const { tool, label, state: st } = step;
+          cardProgress(step);
           let li = marks[tool];
           if (!li) { li = document.createElement('div'); marks[tool] = li; steps.appendChild(li); }
           li.className = 'step ' + st;
           li.innerHTML = `<span class="tick">${st === 'done' ? '✓' : st === 'fail' ? '✕' : ''}</span>${esc(label)}`;
-          status.textContent = st === 'run' ? (tool === 'think' ? 'Writing the answer…' : `Checking ${label.toLowerCase()}…`) : status.textContent;
+          if (st === 'run') status.textContent = tool === 'think' ? 'Writing the answer…' : `Checking ${label.toLowerCase()}…`;
           feed.scrollTop = feed.scrollHeight;
         };
         const out = await session.ask(question, turns.slice(-6), progress);
@@ -1464,11 +1568,11 @@
             b.disabled = true;
             try {
               if (a.type === 'whatsapp_draft') {
-                const digits = phoneDigits(str(row, TABS[tab].phone));
-                if (!digits) throw new Error('No phone number in the sheet.');
-                window.open(`https://wa.me/${digits}?text=${encodeURIComponent(a.text)}`, '_blank', 'noopener');
+                if (!phone) throw new Error('No phone number in the sheet.');
+                window.open(`https://wa.me/${phone}?text=${encodeURIComponent(a.text)}`, '_blank', 'noopener');
               } else {
                 await runAction(a);
+                paintLead();
               }
               b.textContent = '✓ Done';
             } catch (error) { b.disabled = false; toast(error.message, true); }
