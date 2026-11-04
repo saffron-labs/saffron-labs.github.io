@@ -1434,7 +1434,7 @@
       const c = JSON.parse(localStorage.getItem(CHAT_KEY()) || 'null');
       if (c && Array.isArray(c.messages)) return c;
     } catch (e) { /* fall back to a fresh sync */ }
-    return { me: state.session.name, members: [], chats: [], messages: [], cursor: 0 };
+    return { me: state.session.name, members: [], chats: [], messages: [], cursor: 0, epoch: '0' };
   };
   const saveChatCache = () => {
     try {
@@ -1472,8 +1472,8 @@
     try {
       state.chat = state.chat || loadChatCache();
       const before = totalUnread();
-      const data = await api('teamSync', { since: Math.max(0, state.chat.cursor - 2000), appVersion: 'web' });
-      state.chat = { ...state.chat, me: data.me, members: data.members, chats: data.chats, cursor: data.cursor, messages: mergeMsgs(state.chat.messages, data.messages) };
+      const data = await api('teamSync', { since: Math.max(0, state.chat.cursor - 2000), epoch: state.chat.epoch || '0', appVersion: 'web' });
+      state.chat = { ...state.chat, me: data.me, members: data.members, chats: data.chats, cursor: data.cursor, epoch: data.epoch || '0', messages: (data.epoch || '0') !== (state.chat.epoch || '0') ? data.messages : mergeMsgs(state.chat.messages, data.messages) };
       saveChatCache();
       const after = totalUnread();
       document.title = after ? `(${after}) Saffron Scout` : 'Saffron Scout';
@@ -1556,7 +1556,7 @@
     const open = state.openChat && summaries.find((c) => c.id === state.openChat);
     view.innerHTML = `<div class="chat-app${open ? ' has-open' : ''}">
       <aside class="chat-list" aria-label="Chats">
-        <div class="chat-list-head"><h2>Chats</h2><button class="btn btn-accent btn-sm" type="button" data-new-group>New group</button></div>
+        <div class="chat-list-head"><h2>Chats</h2><span><button class="btn btn-sm" type="button" data-clear-chats>Clear all</button> <button class="btn btn-accent btn-sm" type="button" data-new-group>New group</button></span></div>
         ${summaries.map((c) => {
           const last = c.last;
           const who = !last ? '' : last.meta && last.meta.kind === 'system' ? '' : normName(last.from) === normName(state.chat.me) ? 'You: ' : last.from === 'Scout' ? 'Scout: ' : c.kind === 'dm' ? '' : last.from + ': ';
@@ -1571,6 +1571,10 @@
     </div>`;
     view.querySelectorAll('[data-chat]').forEach((b) => (b.onclick = () => { state.openChat = b.dataset.chat; state.chatDraft = ''; restartPolling(); renderChats(true); }));
     view.querySelector('[data-new-group]').onclick = openNewGroup;
+    view.querySelector('[data-clear-chats]').onclick = async () => {
+      if (!confirm('Clear ALL team chats and groups for everyone? This cannot be undone.')) return;
+      try { await clearAllChats(); toast('All chats cleared'); } catch (error) { toast(error.message); }
+    };
     if (open) wireConversation(open, focused, scrolledUp);
   };
 
@@ -1846,9 +1850,22 @@
         await postMessage(chat, a.text, { lead: a.tab ? { tab: a.tab, row: a.row, business: a.business } : null });
         return;
       }
+      case 'create_group':
+        await api('teamCreateGroup', { title: a.title, members: a.members });
+        await syncChats();
+        return;
+      case 'clear_chats':
+        await clearAllChats();
+        return;
       default:
         return;
     }
+  };
+
+  const clearAllChats = async () => {
+    await api('teamResetChats', {});
+    state.chat = { ...state.chat, messages: [], chats: [], cursor: 0, epoch: '' };
+    await syncChats();
   };
 
   const openNewGroup = () => {
