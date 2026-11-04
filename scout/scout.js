@@ -322,6 +322,7 @@
 
   const go = (section, fromHash) => {
     state.section = section;
+    document.body.classList.toggle('chat-full', section === 'inbox');
     if (!fromHash) history.replaceState(null, '', '#' + section);
     renderTabs();
     const active = $('tabs').querySelector('[aria-current="page"]');

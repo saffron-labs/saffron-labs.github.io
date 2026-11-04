@@ -309,3 +309,9 @@ details.all .facts{margin-top:12px}
 .who{filter:none}
 :root[data-theme="dark"] .chip.on,:root[data-theme="dark"] .chip[aria-pressed="true"],:root[data-theme="dark"] .toast{color:#17100e}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .chip.on,:root:not([data-theme="light"]) .chip[aria-pressed="true"],:root:not([data-theme="light"]) .toast{color:#17100e}}
+
+/* chats fill the window, like WhatsApp Web */
+body.chat-full .view{max-width:none;padding:0}
+body.chat-full .chat-app{height:calc(100vh - 116px);height:calc(100svh - 116px);border:0;border-radius:0;grid-template-columns:minmax(300px,30%) minmax(0,1fr)}
+body.chat-full{overflow:hidden}
+@media(max-width:700px){body.chat-full .chat-app{grid-template-columns:1fr;height:calc(100svh - 116px)}}
