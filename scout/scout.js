@@ -75,6 +75,7 @@
     { id: 'scout', title: 'Scout' },
     ...Object.keys(TABS).map((id) => ({ id, title: TABS[id].title })),
     { id: 'social', title: 'Social' },
+    { id: 'todo', title: 'To-do' },
     { id: 'inbox', title: 'Chats' },
   ];
 
@@ -285,6 +286,8 @@
     state.chat = null;
     state.openChat = null;
     clearInterval(chatTimer);
+    clearInterval(todoTimer);
+    state.todo = { loaded: false, loading: false, error: '', me: '', members: [], groups: [], tasks: [], scope: 'mine', view: 'priority', group: '', prio: '', q: '', showDone: false };
     saveSession(null);
     showLogin(message);
   };
@@ -299,15 +302,16 @@
     const fromHash = decodeURIComponent(location.hash.slice(1));
     go(SECTIONS.some((s) => s.id === fromHash) ? fromHash : 'today', true);
     startTeamPolling();
+    startTodoPolling();
   };
 
   const renderTabs = () => {
     $('tabs').innerHTML = SECTIONS.map((s) => {
       const t = state.tabs[s.id];
       const open = t && t.rows ? t.rows.filter((r) => !CLOSED.includes(str(r, TABS[s.id].status))).length : null;
-      const unread = s.id === 'inbox' ? totalUnread() : 0;
+      const unread = s.id === 'inbox' ? totalUnread() : s.id === 'todo' ? todoAttention() : 0;
       return `<button class="tab" type="button" data-section="${s.id}" ${s.id === state.section ? 'aria-current="page"' : ''}>${esc(s.title)}${
-        unread ? `<span class="tab-badge" aria-label="${unread} unread">${unread > 9 ? '9+' : unread}</span>` : open !== null ? `<span class="count">${open}</span>` : ''
+        unread ? `<span class="tab-badge" aria-label="${unread} ${s.id === 'todo' ? 'need attention' : 'unread'}">${unread > 9 ? '9+' : unread}</span>` : open !== null ? `<span class="count">${open}</span>` : ''
       }</button>`;
     }).join('');
   };
@@ -330,6 +334,7 @@
     if (section === 'today') renderToday();
     else if (section === 'scout') renderScout();
     else if (section === 'social') renderSocial();
+    else if (section === 'todo') renderTodo();
     else if (section === 'inbox') { state.openFresh = !!state.openChat; renderChats(); restartPolling(); }
     else renderTab(section);
     window.scrollTo(0, 0);
@@ -2376,6 +2381,441 @@
         renderChats(true);
       } catch (error) { err.textContent = error.message; }
     };
+  };
+
+  // ---------- To-do ----------
+
+  const T_PRIORITIES = ['Urgent', 'High', 'Medium', 'Low'];
+  const T_COLORS = { Urgent: '#d92d20', High: '#ee7a1b', Medium: '#c9a227', Low: '#5b9a78' };
+  const T_ICONS = { Urgent: '▲▲', High: '▲', Medium: '●', Low: '▼' };
+  const T_STATUSES = ['To do', 'Doing', 'Done'];
+  const T_EVERYONE = 'Everyone';
+  const T_AVATARS = ['#b5495c', '#2b5c9e', '#2f7d4a', '#8a5cc2', '#d2691e', '#1f8f8f', '#c9a227'];
+  const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+  state.todo = { loaded: false, loading: false, error: '', me: '', members: [], groups: [], tasks: [], scope: 'mine', view: 'priority', group: '', prio: '', q: '', showDone: false };
+  let todoTimer = null;
+
+  const sameName = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+  const assignedTo = (t, name) => t.assignees.some((a) => sameName(a, T_EVERYONE) || sameName(a, name));
+  const groupColor = (name) => ((state.todo.groups.find((g) => sameName(g.name, name))) || {}).color || '#7a6a6e';
+  const prioRank = (p) => Math.max(0, T_PRIORITIES.indexOf(p));
+  const avatarColor = (name) => {
+    let h = 0;
+    for (const ch of String(name).toLowerCase()) h = (h * 31 + ch.charCodeAt(0)) % 997;
+    return T_AVATARS[h % T_AVATARS.length];
+  };
+  const avatarHtml = (name) =>
+    sameName(name, T_EVERYONE)
+      ? '<span class="t-av" style="background:var(--wine)" title="Everyone">★</span>'
+      : `<span class="t-av" style="background:${avatarColor(name)}" title="${esc(name)}">${esc(String(name).trim().charAt(0).toUpperCase())}</span>`;
+  const taskDays = (t) => (t.due ? daysFromToday(t.due) : null);
+  const nextWeekday = (index) => {
+    const day = new Date(todayIso() + 'T00:00:00Z').getUTCDay();
+    return isoPlusDays(((index - day + 7) % 7) || 7);
+  };
+  const nextMondayIso = () => {
+    const day = new Date(todayIso() + 'T00:00:00Z').getUTCDay();
+    return isoPlusDays(((8 - day) % 7) || 7);
+  };
+  const todoAttention = () => {
+    const t = state.todo;
+    return t.loaded ? t.tasks.filter((x) => x.status !== 'Done' && assignedTo(x, t.me) && (taskDays(x) ?? 1) <= 0).length : 0;
+  };
+
+  // "call Dev tomorrow urgent for Adriel" -> title, priority, due, assignees (same rules as the app).
+  const parseQuickAdd = (input, members, me) => {
+    const st = { text: ` ${String(input).trim()} ` };
+    const take = (re) => {
+      const m = re.exec(st.text);
+      if (m) st.text = st.text.slice(0, m.index) + ' ' + st.text.slice(m.index + m[0].length);
+      return m;
+    };
+    let priority = '', due = '';
+    const assignees = [];
+    if (take(/\b(?:urgent(?:ly)?|asap|critical|p0)\b/i)) priority = 'Urgent';
+    else if (take(/\b(?:high priority|priority high|important|p1)\b/i)) priority = 'High';
+    else if (take(/\b(?:medium priority|priority medium|p2)\b/i)) priority = 'Medium';
+    else if (take(/\b(?:low priority|priority low|no rush|whenever|p3)\b/i)) priority = 'Low';
+    const today = todayIso();
+    if (take(/\bday after tomorrow\b/i)) due = isoPlusDays(2);
+    else if (take(/\b(?:tomorrow|tmrw|tmr)\b/i)) due = isoPlusDays(1);
+    else if (take(/\b(?:today|tonight|eod)\b/i)) due = today;
+    else if (take(/\bnext week\b/i)) due = nextMondayIso();
+    else {
+      const iso = take(/\b(\d{4}-\d{2}-\d{2})\b/);
+      const inDays = iso ? null : take(/\bin (\d{1,2}) (day|days|week|weeks)\b/i);
+      const mon = MONTHS.join('|');
+      const dm = iso || inDays ? null : take(new RegExp(`\\b(?:on |by )?(\\d{1,2})(?:st|nd|rd|th)? (${mon})[a-z]*\\b`, 'i'));
+      const md = iso || inDays || dm ? null : take(new RegExp(`\\b(?:on |by )?(${mon})[a-z]* (\\d{1,2})(?:st|nd|rd|th)?\\b`, 'i'));
+      const wd = iso || inDays || dm || md ? null : take(new RegExp(`\\b(?:on |by |next |this )?(${WEEKDAYS.join('|')})\\b`, 'i'));
+      if (iso) due = iso[1];
+      else if (inDays) due = isoPlusDays(Number(inDays[1]) * (/^week/i.test(inDays[2]) ? 7 : 1));
+      else if (dm || md) {
+        const day = Number(dm ? dm[1] : md[2]);
+        const month = MONTHS.indexOf((dm ? dm[2] : md[1]).toLowerCase().slice(0, 3));
+        const year = Number(today.slice(0, 4));
+        const pad = (n) => String(n).padStart(2, '0');
+        let cand = `${year}-${pad(month + 1)}-${pad(day)}`;
+        if (cand < today) cand = `${year + 1}-${pad(month + 1)}-${pad(day)}`;
+        if (month >= 0 && new Date(cand + 'T00:00:00Z').getUTCDate() === day) due = cand;
+      } else if (wd) due = nextWeekday(WEEKDAYS.indexOf(wd[1].toLowerCase()));
+    }
+    const names = [...members.map((m) => m.split(' ')[0].replace(/[^a-z0-9]/gi, '')), 'everyone', 'all', 'team', 'me'];
+    const who = new RegExp(`(?:\\bfor\\b|\\bassign(?:ed)?(?: to)?\\b|@)\\s*(${names.join('|')})\\b`, 'ig');
+    for (let m = who.exec(st.text); m; m = who.exec(st.text)) {
+      const w = m[1].toLowerCase();
+      if (w === 'everyone' || w === 'all' || w === 'team') assignees.push(T_EVERYONE);
+      else if (w === 'me') assignees.push(me);
+      else {
+        const member = members.find((x) => x.split(' ')[0].toLowerCase() === w);
+        if (member && !assignees.includes(member)) assignees.push(member);
+      }
+    }
+    if (assignees.length) st.text = st.text.replace(who, ' ');
+    let title = st.text.replace(/\s+/g, ' ').replace(/^[\s,.;:–-]+|[\s,.;:–-]+$/g, '').replace(/\b(?:by|on|at|due)$/i, '').trim();
+    title = title.charAt(0).toUpperCase() + title.slice(1);
+    return { title: title || String(input).trim(), priority, due, assignees };
+  };
+
+  const loadTodo = async (force) => {
+    const t = state.todo;
+    if (t.loading || !state.session) return;
+    if (!force && t.loaded && Date.now() - (t.at || 0) < 15000) return;
+    t.loading = true;
+    try {
+      const data = await api('taskList', {});
+      Object.assign(t, { me: data.me, members: data.members || [], groups: data.groups || [], tasks: data.tasks || [], loaded: true, error: '', at: Date.now() });
+    } catch (error) {
+      if (error instanceof SessionExpired) { handleError(error); return; }
+      t.error = error.message;
+    } finally {
+      t.loading = false;
+    }
+    renderTabs();
+    if (state.section === 'todo') renderTodoBody();
+  };
+  const startTodoPolling = () => {
+    clearInterval(todoTimer);
+    loadTodo(true);
+    todoTimer = setInterval(() => { if (!document.hidden) loadTodo(true); }, 60000);
+  };
+
+  // Optimistic save: show the change at once, roll back if the sheet refuses it.
+  const todoSave = async (task, optimistic) => {
+    const t = state.todo;
+    const snapshot = t.tasks.map((x) => ({ ...x }));
+    if (optimistic) optimistic();
+    renderTabs();
+    if (state.section === 'todo') renderTodoBody();
+    try {
+      const data = await api('taskSave', { task });
+      const i = t.tasks.findIndex((x) => x.id === data.task.id);
+      if (i >= 0) t.tasks[i] = data.task;
+      else t.tasks.unshift(data.task);
+      if (!t.groups.some((g) => sameName(g.name, data.task.group))) loadTodo(true);
+      return data.task;
+    } catch (error) {
+      t.tasks = snapshot;
+      handleError(error);
+      return null;
+    } finally {
+      renderTabs();
+      if (state.section === 'todo') renderTodoBody();
+    }
+  };
+
+  const toggleTodo = (id) => {
+    const task = state.todo.tasks.find((x) => x.id === id);
+    if (!task) return;
+    const status = task.status === 'Done' ? 'To do' : 'Done';
+    todoSave({ id, status }, () => { Object.assign(task, { status, doneAt: status === 'Done' ? Date.now() : 0, doneBy: status === 'Done' ? state.todo.me : '' }); });
+  };
+
+  const dueInfo = (iso) => {
+    const d = daysFromToday(iso);
+    if (d === null) return null;
+    if (d < 0) return { text: d === -1 ? 'Yesterday' : `${-d}d overdue`, cls: 'due-over' };
+    if (d === 0) return { text: 'Today', cls: 'due-today' };
+    if (d === 1) return { text: 'Tomorrow', cls: 'due-soon' };
+    return { text: shortDate(iso), cls: 'due-soon' };
+  };
+
+  const taskHtml = (task, showGroup) => {
+    const done = task.status === 'Done';
+    const color = T_COLORS[task.priority] || T_COLORS.Medium;
+    const due = task.due && !done ? dueInfo(task.due) : null;
+    return `<div class="task${done ? ' done' : ''}" style="--pc:${color}">
+      <button class="t-check" type="button" data-toggle="${esc(task.id)}" role="checkbox" aria-checked="${done}" aria-label="${done ? 'Mark as not done' : 'Mark as done'}">${done ? '✓' : ''}</button>
+      <button class="t-main" type="button" data-open="${esc(task.id)}">
+        <span class="t-title">${esc(task.title)}</span>
+        <span class="t-meta">
+          ${!done && (task.priority === 'Urgent' || task.priority === 'High') ? `<span class="pill t-prio">${T_ICONS[task.priority]} ${esc(task.priority)}</span>` : ''}
+          ${due ? `<span class="pill ${due.cls}">${esc(due.text)}</span>` : ''}
+          ${showGroup ? `<span class="t-group"><i style="background:${esc(groupColor(task.group))}"></i>${esc(task.group)}</span>` : ''}
+          ${task.notes ? '<span class="t-note" title="Has notes">☰</span>' : ''}
+          ${task.leadRow ? `<span class="t-note" title="${esc(task.business || 'Linked lead')}">⛓</span>` : ''}
+        </span>
+      </button>
+      <span class="t-avs" aria-label="Assigned to ${esc(task.assignees.join(', '))}">${task.assignees.slice(0, 3).map(avatarHtml).join('')}${task.assignees.length > 3 ? `<span class="meta">+${task.assignees.length - 3}</span>` : ''}</span>
+    </div>`;
+  };
+
+  const todoSections = (open, scoped) => {
+    const t = state.todo;
+    const byUrgency = (a, b) => prioRank(a.priority) - prioRank(b.priority) || (a.due || '9999').localeCompare(b.due || '9999') || b.created - a.created;
+    const byDue = (a, b) => (a.due || '9999').localeCompare(b.due || '9999') || prioRank(a.priority) - prioRank(b.priority) || b.created - a.created;
+    if (t.view === 'priority') {
+      return T_PRIORITIES.map((p) => ({ key: p, title: p, color: T_COLORS[p], tasks: open.filter((x) => x.priority === p).sort(byUrgency) })).filter((s) => s.tasks.length);
+    }
+    if (t.view === 'group') {
+      const names = [...t.groups.map((g) => g.name), ...scoped.map((x) => x.group)].filter((n, i, all) => all.findIndex((m) => sameName(m, n)) === i);
+      return names.map((name) => {
+        const inGroup = scoped.filter((x) => sameName(x.group, name));
+        return { key: name, title: name, color: groupColor(name), tasks: open.filter((x) => sameName(x.group, name)).sort(byUrgency), progress: { done: inGroup.filter((x) => x.status === 'Done').length, total: inGroup.length } };
+      }).filter((s) => s.tasks.length);
+    }
+    const buckets = [
+      ['Overdue', '#d92d20', (d) => d !== null && d < 0], ['Today', '#c9a227', (d) => d === 0], ['Tomorrow', '#2b5c9e', (d) => d === 1],
+      ['This week', '#2b5c9e', (d) => d !== null && d > 1 && d <= 7], ['Later', '#7a6a6e', (d) => d !== null && d > 7], ['No date', '#a89a9d', (d) => d === null],
+    ];
+    return buckets.map(([title, color, test]) => ({ key: title, title, color, tasks: open.filter((x) => test(taskDays(x))).sort(byDue) })).filter((s) => s.tasks.length);
+  };
+
+  const renderTodoBody = () => {
+    const body = $('todo-body');
+    if (!body || state.section !== 'todo') return;
+    const t = state.todo;
+    if (!t.loaded) {
+      body.innerHTML = t.error ? emptyState("Couldn't load the to-do list.", ' ' + t.error, '<br><button class="btn btn-outline" type="button" data-retry>Try again</button>') : skeletons(3);
+      const retry = body.querySelector('[data-retry]');
+      if (retry) retry.onclick = () => loadTodo(true);
+      return;
+    }
+    const q = t.q.trim().toLowerCase();
+    const scoped = t.tasks.filter((x) => {
+      if (t.scope === 'mine' && !assignedTo(x, t.me)) return false;
+      if (t.scope !== 'mine' && t.scope !== 'all' && !assignedTo(x, t.scope)) return false;
+      if (t.group && !sameName(x.group, t.group)) return false;
+      if (t.prio && x.priority !== t.prio) return false;
+      return !q || `${x.title} ${x.notes} ${x.group} ${x.assignees.join(' ')} ${x.business}`.toLowerCase().includes(q);
+    });
+    const open = scoped.filter((x) => x.status !== 'Done');
+    const done = scoped.filter((x) => x.status === 'Done').sort((a, b) => b.doneAt - a.doneAt);
+    const weekAgo = Date.now() - 7 * 86400000;
+    const stats = {
+      open: open.length,
+      today: open.filter((x) => taskDays(x) === 0).length,
+      over: open.filter((x) => (taskDays(x) ?? 1) < 0).length,
+      week: done.filter((x) => x.doneAt >= weekAgo).length,
+    };
+    const pct = scoped.length ? Math.round((done.length / scoped.length) * 100) : 0;
+    const sections = todoSections(open, scoped);
+    const people = t.members.filter((m) => !sameName(m, t.me));
+    const chip = (attrs, label, on, style) => `<button class="chip" type="button" ${attrs} aria-pressed="${on}"${style ? ` style="${style}"` : ''}>${label}</button>`;
+    body.innerHTML = `
+      ${t.error ? `<p class="form-error" style="color:var(--danger)">${esc(t.error)}</p>` : ''}
+      <div class="stats">
+        <div class="stat"><b>${stats.open}</b><span>Open</span></div>
+        <div class="stat"><b>${stats.today}</b><span>Due today</span></div>
+        <div class="stat${stats.over ? ' hot' : ''}"><b>${stats.over}</b><span>Overdue</span></div>
+        <div class="stat"><b>${stats.week}</b><span>Done · 7 days</span></div>
+      </div>
+      <div class="t-progress" role="img" aria-label="${pct}% done"><i style="width:${pct}%"></i></div>
+      <div class="chips" aria-label="Whose tasks">
+        ${chip('data-scope="mine"', 'Mine', t.scope === 'mine')}${chip('data-scope="all"', 'Everyone', t.scope === 'all')}
+        ${people.map((n) => chip(`data-scope="${esc(n)}"`, `${avatarHtml(n)} ${esc(n)}`, sameName(t.scope, n))).join('')}
+      </div>
+      <div class="toolbar">
+        <div class="t-seg" role="tablist">${[['priority', 'Priority'], ['group', 'Groups'], ['due', 'Due']].map(([k, l]) => `<button type="button" role="tab" data-view="${k}" aria-selected="${t.view === k}">${l}</button>`).join('')}</div>
+      </div>
+      <div class="chips" aria-label="Filter">
+        ${T_PRIORITIES.map((p) => chip(`data-prio="${p}"`, `<i class="t-dot" style="background:${T_COLORS[p]}"></i>${p}`, t.prio === p)).join('')}
+        ${t.groups.map((g) => chip(`data-group="${esc(g.name)}"`, `<i class="t-dot" style="background:${esc(g.color)}"></i>${esc(g.name)}`, sameName(t.group, g.name))).join('')}
+      </div>
+      ${!sections.length && !done.length
+        ? emptyState(scoped.length === 0 && t.tasks.length ? 'Nothing matches' : 'No tasks yet', scoped.length === 0 && t.tasks.length ? ' Try another person, group or priority.' : ' Type above or press the mic and say it, for example "call Dev tomorrow urgent for Adriel".')
+        : ''}
+      ${sections.map((s) => `<section class="t-section">
+        <h3><i class="t-dot" style="background:${esc(s.color)}"></i>${esc(s.title)} <span class="meta">${s.tasks.length}</span>
+          ${s.progress ? `<span class="t-gprog"><span class="t-gtrack"><i style="width:${s.progress.total ? Math.round((s.progress.done / s.progress.total) * 100) : 0}%;background:${esc(s.color)}"></i></span><span class="meta">${s.progress.done}/${s.progress.total}</span></span>` : ''}</h3>
+        <div class="t-list">${s.tasks.map((x) => taskHtml(x, t.view !== 'group')).join('')}</div>
+      </section>`).join('')}
+      ${done.length ? `<section class="t-section"><h3><button class="t-fold" type="button" data-showdone aria-expanded="${t.showDone}">${t.showDone ? '▾' : '▸'} Done <span class="meta">${done.length}</span></button></h3>
+        ${t.showDone ? `<div class="t-list">${done.map((x) => taskHtml(x, true)).join('')}</div>` : ''}</section>` : ''}`;
+    body.querySelectorAll('[data-scope]').forEach((b) => (b.onclick = () => { t.scope = b.dataset.scope; renderTodoBody(); }));
+    body.querySelectorAll('[data-view]').forEach((b) => (b.onclick = () => { t.view = b.dataset.view; renderTodoBody(); }));
+    body.querySelectorAll('[data-prio]').forEach((b) => (b.onclick = () => { t.prio = t.prio === b.dataset.prio ? '' : b.dataset.prio; renderTodoBody(); }));
+    body.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => { t.group = sameName(t.group, b.dataset.group) ? '' : b.dataset.group; renderTodoBody(); }));
+    body.querySelectorAll('[data-toggle]').forEach((b) => (b.onclick = () => toggleTodo(b.dataset.toggle)));
+    body.querySelectorAll('[data-open]').forEach((b) => (b.onclick = () => openTodoEditor(b.dataset.open, null, b)));
+    const fold = body.querySelector('[data-showdone]');
+    if (fold) fold.onclick = () => { t.showDone = !t.showDone; renderTodoBody(); };
+  };
+
+  // Voice typing through the browser's speech recognition (Chrome, Edge, Safari). Hidden where unsupported.
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const attachMic = (button, input, onText) => {
+    if (!button) return;
+    if (!SpeechRec) { button.hidden = true; return; }
+    let rec = null;
+    const stop = () => { if (rec) { try { rec.stop(); } catch (e) { /* already stopped */ } } };
+    button.onclick = () => {
+      if (rec) { stop(); return; }
+      rec = new SpeechRec();
+      rec.lang = 'en-IN';
+      rec.interimResults = true;
+      rec.continuous = false;
+      const base = input.value ? input.value.replace(/\s+$/, '') + ' ' : '';
+      button.classList.add('live');
+      button.setAttribute('aria-label', 'Stop listening');
+      rec.onresult = (e) => {
+        const text = [...e.results].map((r) => r[0].transcript).join(' ');
+        input.value = base + text;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      rec.onerror = (e) => {
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') toast('Allow the microphone for this page to dictate.', true);
+        else if (e.error !== 'aborted' && e.error !== 'no-speech') toast('Voice typing stopped. You can type instead.', true);
+      };
+      rec.onend = () => {
+        rec = null;
+        button.classList.remove('live');
+        button.setAttribute('aria-label', 'Dictate with the microphone');
+        if (onText) onText();
+      };
+      try { rec.start(); } catch (e) { rec = null; button.classList.remove('live'); }
+    };
+  };
+
+  const openTodoEditor = (id, draft, opener) => {
+    const t = state.todo;
+    const task = id ? t.tasks.find((x) => x.id === id) : null;
+    const base = task || draft || {};
+    const form = {
+      title: base.title || '', notes: base.notes || '', priority: base.priority || 'Medium', status: base.status || 'To do',
+      due: base.due || '', group: base.group || 'General', assignees: base.assignees && base.assignees.length ? [...base.assignees] : [t.me],
+    };
+    openDrawer(`
+      <div class="drawer-head"><div class="grow"><p class="eyebrow">${task ? 'Edit task' : 'New task'}</p><h2 id="drawer-title">${task ? esc(task.title) : 'Add a task'}</h2>
+        ${task ? `<span class="meta">Added by ${esc(task.createdBy || 'someone')}${task.status === 'Done' && task.doneBy ? ' · done by ' + esc(task.doneBy) : ''}</span>` : ''}</div>
+        <button class="btn btn-outline icon-btn" type="button" data-close aria-label="Close">✕</button></div>
+      <div class="drawer-body">
+        <div class="field"><label for="te-title">Title</label>
+          <div class="t-row"><input id="te-title" maxlength="200" placeholder="What needs doing?" value="${esc(form.title)}"><button class="t-mic" type="button" id="te-mic" aria-label="Dictate with the microphone" title="Dictate">🎤</button></div></div>
+        <div class="field"><label>Priority</label><div class="chips" id="te-prio">${T_PRIORITIES.map((p) => `<button class="chip" type="button" data-p="${p}" aria-pressed="${form.priority === p}"><i class="t-dot" style="background:${T_COLORS[p]}"></i>${p}</button>`).join('')}</div></div>
+        <div class="field"><label>Assign to</label><div class="chips" id="te-who">${[...t.members, T_EVERYONE].map((n) => `<button class="chip" type="button" data-who="${esc(n)}" aria-pressed="${form.assignees.some((a) => sameName(a, n))}">${avatarHtml(n)} ${esc(n)}${sameName(n, t.me) ? ' (me)' : ''}</button>`).join('')}</div></div>
+        <div class="field"><label for="te-due">Due</label>
+          <div class="t-row"><input id="te-due" type="date" value="${esc(form.due)}">
+            <button class="chip" type="button" data-dq="0">Today</button><button class="chip" type="button" data-dq="1">Tomorrow</button><button class="chip" type="button" data-dq="mon">Next week</button><button class="chip" type="button" data-dq="">No date</button></div></div>
+        <div class="field"><label>Group</label><div class="chips" id="te-group">${t.groups.map((g) => `<button class="chip" type="button" data-g="${esc(g.name)}" aria-pressed="${sameName(form.group, g.name)}"><i class="t-dot" style="background:${esc(g.color)}"></i>${esc(g.name)}</button>`).join('')}</div>
+          <input id="te-newgroup" maxlength="30" placeholder="Or create a new group" aria-label="New group name"></div>
+        ${task ? `<div class="field"><label>Status</label><div class="chips" id="te-status">${T_STATUSES.map((s) => `<button class="chip" type="button" data-s="${s}" aria-pressed="${form.status === s}">${s}</button>`).join('')}</div></div>` : ''}
+        <div class="field"><label for="te-notes">Notes</label><textarea id="te-notes" maxlength="4000" placeholder="Details, links, what done looks like">${esc(form.notes)}</textarea></div>
+        ${task && task.leadRow && task.leadTab ? `<div><button class="btn btn-outline" type="button" data-lead>Open lead${task.business ? ': ' + esc(task.business) : ''}</button></div>` : ''}
+      </div>
+      <div class="drawer-foot">${task ? '<button class="btn btn-danger" type="button" data-del>Delete</button>' : ''}<span class="status-text" data-err></span>
+        <button class="btn btn-outline" type="button" data-close-foot>Cancel</button>
+        <button class="btn btn-primary" type="button" data-save>${task ? 'Save changes' : 'Add task'}</button></div>`, opener);
+    const d = $('drawer');
+    const mark = (wrap, attr, val) => wrap.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset[attr] === val)));
+    d.querySelector('#te-prio').onclick = (e) => { const b = e.target.closest('[data-p]'); if (b) { form.priority = b.dataset.p; mark(d.querySelector('#te-prio'), 'p', form.priority); } };
+    d.querySelector('#te-group').onclick = (e) => { const b = e.target.closest('[data-g]'); if (b) { form.group = b.dataset.g; d.querySelector('#te-newgroup').value = ''; mark(d.querySelector('#te-group'), 'g', form.group); } };
+    const st = d.querySelector('#te-status');
+    if (st) st.onclick = (e) => { const b = e.target.closest('[data-s]'); if (b) { form.status = b.dataset.s; mark(st, 's', form.status); } };
+    d.querySelector('#te-who').onclick = (e) => {
+      const b = e.target.closest('[data-who]');
+      if (!b) return;
+      const n = b.dataset.who;
+      if (sameName(n, T_EVERYONE)) form.assignees = form.assignees.some((a) => sameName(a, T_EVERYONE)) ? [t.me] : [T_EVERYONE];
+      else {
+        const rest = form.assignees.filter((a) => !sameName(a, T_EVERYONE));
+        const next = rest.some((a) => sameName(a, n)) ? rest.filter((a) => !sameName(a, n)) : [...rest, n];
+        form.assignees = next.length ? next : [t.me];
+      }
+      d.querySelectorAll('#te-who .chip').forEach((c) => c.setAttribute('aria-pressed', String(form.assignees.some((a) => sameName(a, c.dataset.who)))));
+    };
+    d.querySelectorAll('[data-dq]').forEach((b) => (b.onclick = () => {
+      const v = b.dataset.dq;
+      d.querySelector('#te-due').value = v === '' ? '' : v === 'mon' ? nextMondayIso() : isoPlusDays(Number(v));
+    }));
+    attachMic(d.querySelector('#te-mic'), d.querySelector('#te-title'));
+    drawerDirty = () => d.querySelector('#te-title').value.trim() !== form.title.trim() && !!d.querySelector('#te-title').value.trim() && !task;
+    const lead = d.querySelector('[data-lead]');
+    if (lead) lead.onclick = () => { closeDrawer(true); go(task.leadTab); };
+    const close = () => closeDrawer(true);
+    d.querySelector('[data-close-foot]').onclick = close;
+    const del = d.querySelector('[data-del]');
+    if (del) del.onclick = async () => {
+      if (!confirm(`Delete "${task.title}"?`)) return;
+      const snapshot = t.tasks.map((x) => ({ ...x }));
+      t.tasks = t.tasks.filter((x) => x.id !== task.id);
+      close(); renderTabs(); renderTodoBody();
+      try { await api('taskDelete', { id: task.id }); } catch (error) { t.tasks = snapshot; renderTabs(); renderTodoBody(); handleError(error); }
+    };
+    const save = d.querySelector('[data-save]');
+    save.onclick = async () => {
+      const err = d.querySelector('[data-err]');
+      const title = d.querySelector('#te-title').value.trim();
+      if (!title) { err.textContent = 'Write what needs doing first.'; d.querySelector('#te-title').focus(); return; }
+      save.disabled = true;
+      err.textContent = 'Saving…';
+      let group = form.group;
+      const newGroup = d.querySelector('#te-newgroup').value.trim();
+      try {
+        if (newGroup) { const g = await api('taskGroupSave', { groupName: newGroup }); t.groups = g.groups || t.groups; group = (t.groups.find((x) => sameName(x.name, newGroup)) || { name: newGroup }).name; }
+        const fields = { title, notes: d.querySelector('#te-notes').value.trim(), priority: form.priority, status: form.status, due: d.querySelector('#te-due').value, group, assignees: form.assignees };
+        const data = await api('taskSave', { task: task ? { ...fields, id: task.id } : fields });
+        const i = t.tasks.findIndex((x) => x.id === data.task.id);
+        if (i >= 0) t.tasks[i] = data.task; else t.tasks.unshift(data.task);
+        closeDrawer(true);
+        renderTabs(); renderTodoBody();
+      } catch (error) {
+        save.disabled = false;
+        err.textContent = error.message;
+        if (error instanceof SessionExpired) handleError(error);
+      }
+    };
+  };
+
+  const renderTodo = () => {
+    const view = $('view');
+    const t = state.todo;
+    view.innerHTML = `<div class="view-head"><div><p class="eyebrow">Team</p><h2>To-do</h2></div>
+        <div class="quick"><button class="btn btn-accent" type="button" id="todo-new">New task</button></div></div>
+      <form class="t-add" id="todo-add" autocomplete="off">
+        <div class="t-row">
+          <button class="t-mic" type="button" id="todo-mic" aria-label="Dictate with the microphone" title="Dictate a task">🎤</button>
+          <input id="todo-input" aria-label="Add a task" placeholder='Add a task…  try "call Dev tomorrow urgent for Adriel"' maxlength="200">
+          <button class="btn btn-primary" type="submit">Add</button>
+        </div>
+        <p class="t-preview" id="todo-preview" aria-live="polite"></p>
+      </form>
+      <div class="toolbar"><input id="todo-search" type="search" class="t-search" aria-label="Search tasks" placeholder="Search tasks" value="${esc(t.q)}"></div>
+      <div id="todo-body"></div>`;
+    const input = $('todo-input');
+    const preview = () => {
+      const p = input.value.trim() ? parseQuickAdd(input.value, t.members, t.me) : null;
+      const bits = p ? [p.priority, p.due && (daysFromToday(p.due) === 0 ? 'Today' : daysFromToday(p.due) === 1 ? 'Tomorrow' : shortDate(p.due)), p.assignees.length && 'For ' + p.assignees.join(', ')].filter(Boolean) : [];
+      $('todo-preview').innerHTML = bits.map((b) => `<span class="pill due-today">${esc(b)}</span>`).join(' ');
+    };
+    input.addEventListener('input', preview);
+    attachMic($('todo-mic'), input, preview);
+    $('todo-add').onsubmit = async (e) => {
+      e.preventDefault();
+      if (!input.value.trim()) return;
+      const p = parseQuickAdd(input.value, t.members, t.me);
+      const fields = { title: p.title, priority: p.priority || t.prio || 'Medium', due: p.due, assignees: p.assignees.length ? p.assignees : t.scope !== 'mine' && t.scope !== 'all' ? [t.scope] : [t.me], group: t.group || 'General' };
+      input.value = ''; preview();
+      const temp = { id: 'local-' + Date.now(), notes: '', status: 'To do', createdBy: t.me, created: Date.now(), doneAt: 0, doneBy: '', leadTab: '', leadRow: 0, business: '', ...fields };
+      await todoSave(fields, () => t.tasks.unshift(temp));
+      loadTodo(true);
+    };
+    $('todo-new').onclick = () => openTodoEditor(null, { assignees: t.scope !== 'mine' && t.scope !== 'all' ? [t.scope] : [t.me], group: t.group || 'General', priority: t.prio || 'Medium' }, $('todo-new'));
+    $('todo-search').addEventListener('input', (e) => { t.q = e.target.value; renderTodoBody(); });
+    renderTodoBody();
+    loadTodo(true);
   };
 
   // ---------- boot ----------
