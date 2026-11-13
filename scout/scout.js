@@ -76,6 +76,7 @@
     ...Object.keys(TABS).map((id) => ({ id, title: TABS[id].title })),
     { id: 'social', title: 'Social' },
     { id: 'todo', title: 'To-do' },
+    { id: 'calendar', title: 'Calendar' },
     { id: 'inbox', title: 'Chats' },
   ];
 
@@ -335,6 +336,7 @@
     else if (section === 'scout') renderScout();
     else if (section === 'social') renderSocial();
     else if (section === 'todo') renderTodo();
+    else if (section === 'calendar') renderCalendar();
     else if (section === 'inbox') { state.openFresh = !!state.openChat; renderChats(); restartPolling(); }
     else renderTab(section);
     window.scrollTo(0, 0);
@@ -2411,6 +2413,15 @@
       ? '<span class="t-av" style="background:var(--wine)" title="Everyone">★</span>'
       : `<span class="t-av" style="background:${avatarColor(name)}" title="${esc(name)}">${esc(String(name).trim().charAt(0).toUpperCase())}</span>`;
   const taskDays = (t) => (t.due ? daysFromToday(t.due) : null);
+  // Times are "HH:MM" (24-hour), shown as "5:30 pm".
+  const isTime = (v) => /^([01]\d|2[0-3]):[0-5]\d$/.test(v || '');
+  const fmtTime = (hhmm) => {
+    if (!isTime(hhmm)) return '';
+    const [h, m] = hhmm.split(':').map(Number);
+    return `${h % 12 || 12}${m ? ':' + String(m).padStart(2, '0') : ''} ${h < 12 ? 'am' : 'pm'}`;
+  };
+  const nowTime = () => new Intl.DateTimeFormat('en-GB', { timeZone: TIME_ZONE, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
+  const whenKey = (due, time) => `${due || '9999-99-99'} ${isTime(time) ? time : '99:99'}`;
   const nextWeekday = (index) => {
     const day = new Date(todayIso() + 'T00:00:00Z').getUTCDay();
     return isoPlusDays(((index - day + 7) % 7) || 7);
@@ -2432,8 +2443,23 @@
       if (m) st.text = st.text.slice(0, m.index) + ' ' + st.text.slice(m.index + m[0].length);
       return m;
     };
-    let priority = '', due = '';
+    let priority = '', due = '', time = '';
     const assignees = [];
+    // Times first, so "5:30" or "at 5pm" is never read as a date. "at 5" alone means 5 pm.
+    const clock = take(/\b(?:at |by )?(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)(?=\s|$|[,.;!?])/i) ||
+      take(/\b(?:at |by )?([01]?\d|2[0-3])[:.]([0-5]\d)\b/i) ||
+      take(/\bat (\d{1,2})\b(?! ?(?:day|days|week|weeks|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))/i);
+    if (clock) {
+      let hour = Number(clock[1]);
+      const minute = Number(clock[2] || 0);
+      const mer = (clock[3] || '').toLowerCase().replace(/\./g, '');
+      if (mer === 'pm' && hour < 12) hour += 12;
+      else if (mer === 'am' && hour === 12) hour = 0;
+      else if (!mer && clock[2] === undefined && hour >= 1 && hour <= 7) hour += 12;
+      if (hour <= 23 && minute <= 59) time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    } else if (take(/\b(?:at )?noon\b/i)) time = '12:00';
+    else if (take(/\bin the morning\b/i)) time = '09:00';
+    else if (take(/\bin the evening\b/i)) time = '18:00';
     if (take(/\b(?:urgent(?:ly)?|asap|critical|p0)\b/i)) priority = 'Urgent';
     else if (take(/\b(?:high priority|priority high|important|p1)\b/i)) priority = 'High';
     else if (take(/\b(?:medium priority|priority medium|p2)\b/i)) priority = 'Medium';
@@ -2441,7 +2467,8 @@
     const today = todayIso();
     if (take(/\bday after tomorrow\b/i)) due = isoPlusDays(2);
     else if (take(/\b(?:tomorrow|tmrw|tmr)\b/i)) due = isoPlusDays(1);
-    else if (take(/\b(?:today|tonight|eod)\b/i)) due = today;
+    else if (take(/\btonight\b/i)) { due = today; if (!time) time = '20:00'; }
+    else if (take(/\b(?:today|eod)\b/i)) due = today;
     else if (take(/\bnext week\b/i)) due = nextMondayIso();
     else {
       const iso = take(/\b(\d{4}-\d{2}-\d{2})\b/);
@@ -2476,7 +2503,8 @@
     if (assignees.length) st.text = st.text.replace(who, ' ');
     let title = st.text.replace(/\s+/g, ' ').replace(/^[\s,.;:–-]+|[\s,.;:–-]+$/g, '').replace(/\b(?:by|on|at|due)$/i, '').trim();
     title = title.charAt(0).toUpperCase() + title.slice(1);
-    return { title: title || String(input).trim(), priority, due, assignees };
+    if (time && !due) due = time > nowTime() ? today : isoPlusDays(1);
+    return { title: title || String(input).trim(), priority, due, time, assignees };
   };
 
   const loadTodo = async (force) => {
@@ -2494,7 +2522,7 @@
       t.loading = false;
     }
     renderTabs();
-    if (state.section === 'todo') renderTodoBody();
+    if (state.section === 'todo' || state.section === 'calendar') renderTodoBody();
   };
   const startTodoPolling = () => {
     clearInterval(todoTimer);
@@ -2508,7 +2536,7 @@
     const snapshot = t.tasks.map((x) => ({ ...x }));
     if (optimistic) optimistic();
     renderTabs();
-    if (state.section === 'todo') renderTodoBody();
+    if (state.section === 'todo' || state.section === 'calendar') renderTodoBody();
     try {
       const data = await api('taskSave', { task });
       const i = t.tasks.findIndex((x) => x.id === data.task.id);
@@ -2522,7 +2550,7 @@
       return null;
     } finally {
       renderTabs();
-      if (state.section === 'todo') renderTodoBody();
+      if (state.section === 'todo' || state.section === 'calendar') renderTodoBody();
     }
   };
 
@@ -2533,19 +2561,20 @@
     todoSave({ id, status }, () => { Object.assign(task, { status, doneAt: status === 'Done' ? Date.now() : 0, doneBy: status === 'Done' ? state.todo.me : '' }); });
   };
 
-  const dueInfo = (iso) => {
+  const dueInfo = (iso, time) => {
     const d = daysFromToday(iso);
     if (d === null) return null;
-    if (d < 0) return { text: d === -1 ? 'Yesterday' : `${-d}d overdue`, cls: 'due-over' };
-    if (d === 0) return { text: 'Today', cls: 'due-today' };
-    if (d === 1) return { text: 'Tomorrow', cls: 'due-soon' };
-    return { text: shortDate(iso), cls: 'due-soon' };
+    const at = isTime(time) ? ' · ' + fmtTime(time) : '';
+    if (d < 0) return { text: d === -1 ? 'Yesterday' + at : `${-d}d overdue`, cls: 'due-over' };
+    if (d === 0) return { text: 'Today' + at, cls: at && time < nowTime() ? 'due-over' : 'due-today' };
+    if (d === 1) return { text: 'Tomorrow' + at, cls: 'due-soon' };
+    return { text: shortDate(iso) + at, cls: 'due-soon' };
   };
 
   const taskHtml = (task, showGroup) => {
     const done = task.status === 'Done';
     const color = T_COLORS[task.priority] || T_COLORS.Medium;
-    const due = task.due && !done ? dueInfo(task.due) : null;
+    const due = task.due && !done ? dueInfo(task.due, task.time) : null;
     return `<div class="task${done ? ' done' : ''}" style="--pc:${color}">
       <button class="t-check" type="button" data-toggle="${esc(task.id)}" role="checkbox" aria-checked="${done}" aria-label="${done ? 'Mark as not done' : 'Mark as done'}">${done ? '✓' : ''}</button>
       <button class="t-main" type="button" data-open="${esc(task.id)}">
@@ -2564,8 +2593,8 @@
 
   const todoSections = (open, scoped) => {
     const t = state.todo;
-    const byUrgency = (a, b) => prioRank(a.priority) - prioRank(b.priority) || (a.due || '9999').localeCompare(b.due || '9999') || b.created - a.created;
-    const byDue = (a, b) => (a.due || '9999').localeCompare(b.due || '9999') || prioRank(a.priority) - prioRank(b.priority) || b.created - a.created;
+    const byUrgency = (a, b) => prioRank(a.priority) - prioRank(b.priority) || whenKey(a.due, a.time).localeCompare(whenKey(b.due, b.time)) || b.created - a.created;
+    const byDue = (a, b) => whenKey(a.due, a.time).localeCompare(whenKey(b.due, b.time)) || prioRank(a.priority) - prioRank(b.priority) || b.created - a.created;
     if (t.view === 'priority') {
       return T_PRIORITIES.map((p) => ({ key: p, title: p, color: T_COLORS[p], tasks: open.filter((x) => x.priority === p).sort(byUrgency) })).filter((s) => s.tasks.length);
     }
@@ -2584,6 +2613,8 @@
   };
 
   const renderTodoBody = () => {
+    // Task changes made from the calendar redraw it too.
+    if (state.section === 'calendar') { renderCalBody(); return; }
     const body = $('todo-body');
     if (!body || state.section !== 'todo') return;
     const t = state.todo;
@@ -2695,7 +2726,7 @@
     const base = task || draft || {};
     const form = {
       title: base.title || '', notes: base.notes || '', priority: base.priority || 'Medium', status: base.status || 'To do',
-      due: base.due || '', group: base.group || 'General', assignees: base.assignees && base.assignees.length ? [...base.assignees] : [t.me],
+      due: base.due || '', time: base.due && isTime(base.time) ? base.time : '', group: base.group || 'General', assignees: base.assignees && base.assignees.length ? [...base.assignees] : [t.me],
     };
     openDrawer(`
       <div class="drawer-head"><div class="grow"><p class="eyebrow">${task ? 'Edit task' : 'New task'}</p><h2 id="drawer-title">${task ? esc(task.title) : 'Add a task'}</h2>
@@ -2709,6 +2740,9 @@
         <div class="field"><label for="te-due">Due</label>
           <div class="t-row"><input id="te-due" type="date" value="${esc(form.due)}">
             <button class="chip" type="button" data-dq="0">Today</button><button class="chip" type="button" data-dq="1">Tomorrow</button><button class="chip" type="button" data-dq="mon">Next week</button><button class="chip" type="button" data-dq="">No date</button></div></div>
+        <div class="field"><label for="te-time">Time</label>
+          <div class="t-row"><input id="te-time" type="time" step="300" value="${esc(form.time)}">
+            ${[['09:00', '9 am'], ['12:00', '12 pm'], ['15:00', '3 pm'], ['18:00', '6 pm']].map(([v, l]) => `<button class="chip" type="button" data-tq="${v}">${l}</button>`).join('')}<button class="chip" type="button" data-tq="">No time</button></div></div>
         <div class="field"><label>Group</label><div class="chips" id="te-group">${t.groups.map((g) => `<button class="chip" type="button" data-g="${esc(g.name)}" aria-pressed="${sameName(form.group, g.name)}"><i class="t-dot" style="background:${esc(g.color)}"></i>${esc(g.name)}</button>`).join('')}</div>
           <input id="te-newgroup" maxlength="30" placeholder="Or create a new group" aria-label="New group name"></div>
         ${task ? `<div class="field"><label>Status</label><div class="chips" id="te-status">${T_STATUSES.map((s) => `<button class="chip" type="button" data-s="${s}" aria-pressed="${form.status === s}">${s}</button>`).join('')}</div></div>` : ''}
@@ -2739,7 +2773,15 @@
     d.querySelectorAll('[data-dq]').forEach((b) => (b.onclick = () => {
       const v = b.dataset.dq;
       d.querySelector('#te-due').value = v === '' ? '' : v === 'mon' ? nextMondayIso() : isoPlusDays(Number(v));
+      if (v === '') d.querySelector('#te-time').value = '';
     }));
+    // A time needs a day: with no date, it means the next time that clock comes round.
+    const timeSet = (v) => {
+      d.querySelector('#te-time').value = v;
+      if (v && !d.querySelector('#te-due').value) d.querySelector('#te-due').value = v > nowTime() ? todayIso() : isoPlusDays(1);
+    };
+    d.querySelectorAll('[data-tq]').forEach((b) => (b.onclick = () => timeSet(b.dataset.tq)));
+    d.querySelector('#te-time').addEventListener('change', (e) => timeSet(e.target.value));
     attachMic(d.querySelector('#te-mic'), d.querySelector('#te-title'));
     drawerDirty = () => d.querySelector('#te-title').value.trim() !== form.title.trim() && !!d.querySelector('#te-title').value.trim() && !task;
     const lead = d.querySelector('[data-lead]');
@@ -2765,7 +2807,7 @@
       const newGroup = d.querySelector('#te-newgroup').value.trim();
       try {
         if (newGroup) { const g = await api('taskGroupSave', { groupName: newGroup }); t.groups = g.groups || t.groups; group = (t.groups.find((x) => sameName(x.name, newGroup)) || { name: newGroup }).name; }
-        const fields = { title, notes: d.querySelector('#te-notes').value.trim(), priority: form.priority, status: form.status, due: d.querySelector('#te-due').value, group, assignees: form.assignees };
+        const fields = { title, notes: d.querySelector('#te-notes').value.trim(), priority: form.priority, status: form.status, due: d.querySelector('#te-due').value, time: d.querySelector('#te-due').value && isTime(d.querySelector('#te-time').value) ? d.querySelector('#te-time').value : '', group, assignees: form.assignees };
         const data = await api('taskSave', { task: task ? { ...fields, id: task.id } : fields });
         const i = t.tasks.findIndex((x) => x.id === data.task.id);
         if (i >= 0) t.tasks[i] = data.task; else t.tasks.unshift(data.task);
@@ -2797,7 +2839,7 @@
     const input = $('todo-input');
     const preview = () => {
       const p = input.value.trim() ? parseQuickAdd(input.value, t.members, t.me) : null;
-      const bits = p ? [p.priority, p.due && (daysFromToday(p.due) === 0 ? 'Today' : daysFromToday(p.due) === 1 ? 'Tomorrow' : shortDate(p.due)), p.assignees.length && 'For ' + p.assignees.join(', ')].filter(Boolean) : [];
+      const bits = p ? [p.priority, p.due && (daysFromToday(p.due) === 0 ? 'Today' : daysFromToday(p.due) === 1 ? 'Tomorrow' : shortDate(p.due)) + (p.time ? ' · ' + fmtTime(p.time) : ''), p.assignees.length && 'For ' + p.assignees.join(', ')].filter(Boolean) : [];
       $('todo-preview').innerHTML = bits.map((b) => `<span class="pill due-today">${esc(b)}</span>`).join(' ');
     };
     input.addEventListener('input', preview);
@@ -2806,7 +2848,7 @@
       e.preventDefault();
       if (!input.value.trim()) return;
       const p = parseQuickAdd(input.value, t.members, t.me);
-      const fields = { title: p.title, priority: p.priority || t.prio || 'Medium', due: p.due, assignees: p.assignees.length ? p.assignees : t.scope !== 'mine' && t.scope !== 'all' ? [t.scope] : [t.me], group: t.group || 'General' };
+      const fields = { title: p.title, priority: p.priority || t.prio || 'Medium', due: p.due, time: p.time, assignees: p.assignees.length ? p.assignees : t.scope !== 'mine' && t.scope !== 'all' ? [t.scope] : [t.me], group: t.group || 'General' };
       input.value = ''; preview();
       const temp = { id: 'local-' + Date.now(), notes: '', status: 'To do', createdBy: t.me, created: Date.now(), doneAt: 0, doneBy: '', leadTab: '', leadRow: 0, business: '', ...fields };
       await todoSave(fields, () => t.tasks.unshift(temp));
@@ -2816,6 +2858,225 @@
     $('todo-search').addEventListener('input', (e) => { t.q = e.target.value; renderTodoBody(); });
     renderTodoBody();
     loadTodo(true);
+  };
+
+  // ---------- calendar ----------
+  // Meetings, tasks, follow-ups and client dates from the sheets, on one month view (same rules as the app).
+
+  const C_KINDS = {
+    meeting: { label: 'Meeting', plural: 'Meetings', color: '#2b5c9e' },
+    task: { label: 'Task', plural: 'Tasks', color: '#5e1220' },
+    followup: { label: 'Follow-up', plural: 'Follow-ups', color: '#8a5cc2' },
+    deadline: { label: 'Client deadline', plural: 'Deadlines', color: '#b5495c' },
+    start: { label: 'Project start', plural: 'Starts', color: '#2f7d4a' },
+  };
+  const C_FILTERS = [['all', 'All'], ['meeting', 'Meetings'], ['task', 'Tasks'], ['followup', 'Follow-ups'], ['client', 'Clients']];
+  const C_TABS = ['Pipeline', 'Clients', 'Leads', 'Global', 'International'];
+  const C_ORDER = ['meeting', 'deadline', 'task', 'followup', 'start'];
+  state.cal = { month: todayIso().slice(0, 7), sel: todayIso(), kind: 'all', mine: false, mode: 'month', open: '' };
+
+  // The sheet mixes "2026-10-21" and "19 Oct 2026".
+  const anyIso = (raw) => {
+    const v = String(raw || '').trim();
+    const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(v);
+    if (iso) return iso[0];
+    const w = /^(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})/.exec(v);
+    if (!w) return '';
+    const m = MONTHS.indexOf(w[2].toLowerCase());
+    return m < 0 ? '' : `${w[3]}-${String(m + 1).padStart(2, '0')}-${String(w[1]).padStart(2, '0')}`;
+  };
+  // "Meeting Time" is free text: "4 PM", "16:30", "4.30pm".
+  const readClock = (raw) => {
+    const m = /(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?/i.exec(String(raw || ''));
+    if (!m || (!m[3] && m[2] === undefined)) return '';
+    let h = Number(m[1]);
+    const min = Number(m[2] || 0);
+    const mer = (m[3] || '').toLowerCase().replace(/\./g, '');
+    if (mer === 'pm' && h < 12) h += 12;
+    if (mer === 'am' && h === 12) h = 0;
+    return h > 23 || min > 59 ? '' : `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+  };
+  const calOpen = (row) => !CLOSED.includes(str(row, TABS[row.tab].status));
+
+  const calEvents = () => {
+    const out = [];
+    const rows = (tab) => (state.tabs[tab] && state.tabs[tab].rows) || [];
+    const fromRow = (row, kind, date, timeText) => {
+      const cfg = TABS[row.tab];
+      const clock = readClock(timeText);
+      const business = str(row, 'Business Name') || 'Untitled';
+      const owner = str(row, 'Contacted By') || str(row, 'Assigned To');
+      const notes = (str(row, 'Remarks') || str(row, 'Notes')).split('\n').map((x) => x.trim()).filter(Boolean);
+      const where = [str(row, 'Area'), str(row, 'City'), str(row, 'State'), str(row, 'Country')].filter(Boolean).join(', ');
+      const details = [
+        [cfg.title, str(row, cfg.status)], ['Where', where], ['Phone', str(row, cfg.phone).replace(/^'/, '')],
+        ['Quoted', row.tab === 'Pipeline' && str(row, 'Quoted Value (₹)') ? rupees(str(row, 'Quoted Value (₹)').replace(/[^\d.]/g, '')) : ''],
+        ['Balance due', row.tab === 'Clients' && str(row, 'Balance Due (₹)') ? rupees(str(row, 'Balance Due (₹)').replace(/[^\d.]/g, '')) : ''],
+        ['Owner', owner], ['Contact', str(row, 'Contact Person')], ['Latest note', notes[notes.length - 1] || ''],
+      ].filter((x) => x[1]);
+      const prefix = { meeting: 'Meeting: ', followup: 'Follow up: ', deadline: 'Deadline: ', start: 'Start: ' }[kind];
+      out.push({
+        id: `${kind}-${row.tab}-${row.row}`, kind, date, time: clock,
+        timeText: String(timeText || '').trim() ? (clock ? fmtTime(clock) : String(timeText).trim()) : '',
+        title: prefix + business,
+        sub: kind === 'meeting' ? [str(row, cfg.status), where].filter(Boolean).join(' · ') : [cfg.title, str(row, cfg.status)].filter(Boolean).join(' · '),
+        color: C_KINDS[kind].color, people: owner ? owner.split(/[,/&]| and /).map((x) => x.trim()).filter(Boolean) : [],
+        done: false, details, phone: phoneDigits(str(row, cfg.phone)), row,
+      });
+    };
+    state.todo.tasks.forEach((t) => {
+      if (!t.due) return;
+      out.push({
+        id: 'task-' + t.id, kind: 'task', date: t.due, time: isTime(t.time) ? t.time : '', timeText: fmtTime(t.time),
+        title: t.title, sub: [t.priority, t.group, t.business].filter(Boolean).join(' · '), color: T_COLORS[t.priority] || T_COLORS.Medium,
+        people: t.assignees, done: t.status === 'Done', details: [], phone: '', task: t,
+      });
+    });
+    rows('Pipeline').forEach((r) => { const d = anyIso(str(r, 'Meeting Date')); if (d) fromRow(r, 'meeting', d, str(r, 'Meeting Time')); });
+    ['Leads', 'Global', 'International', 'Pipeline'].forEach((tab) => rows(tab).forEach((r) => {
+      const d = anyIso(str(r, 'Next Follow-up'));
+      if (d && calOpen(r)) fromRow(r, 'followup', d);
+    }));
+    rows('Clients').forEach((r) => {
+      const dl = anyIso(str(r, 'Deadline')); if (dl) fromRow(r, 'deadline', dl);
+      const st = anyIso(str(r, 'Start Date')); if (st) fromRow(r, 'start', st);
+    });
+    return out;
+  };
+  const calByTime = (a, b) => Number(a.done) - Number(b.done) || (a.time || '99:99').localeCompare(b.time || '99:99') || C_ORDER.indexOf(a.kind) - C_ORDER.indexOf(b.kind) || a.title.localeCompare(b.title);
+  const calMine = (e, me) => {
+    if (e.task) return assignedTo(e.task, me);
+    if (!e.people.length) return true;
+    const first = String(me || '').split(' ')[0];
+    return e.people.some((p) => sameName(p, T_EVERYONE) || sameName(p, me) || sameName(p.split(' ')[0], first));
+  };
+  const calLongDay = (iso) => {
+    const label = new Date(iso + 'T00:00:00Z').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+    const d = daysFromToday(iso);
+    return d === 0 ? 'Today · ' + label : d === 1 ? 'Tomorrow · ' + label : d === -1 ? 'Yesterday · ' + label : label;
+  };
+
+  const calCard = (e) => {
+    const c = state.cal;
+    const k = C_KINDS[e.kind];
+    const open = c.open === e.id;
+    return `<div class="cal-ev${e.done ? ' done' : ''}" style="--pc:${esc(e.color)}">
+      <div class="cal-time"><b>${esc(e.timeText || 'All day')}</b><span style="color:${k.color}">${esc(k.label)}</span></div>
+      <div class="cal-main">
+        <button class="cal-title" type="button" data-ev="${esc(e.id)}" aria-expanded="${open}">${esc(e.title)}</button>
+        <span class="cal-sub">${esc(e.sub)}</span>
+        ${open ? `<dl class="cal-details">${e.details.map(([l, v]) => `<dt>${esc(l)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+          <div class="cal-actions">
+            ${e.phone ? `<a class="btn btn-outline" href="tel:+${esc(e.phone)}">Call</a><a class="btn btn-outline" href="https://wa.me/${esc(e.phone)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
+            ${e.row ? `<button class="btn btn-outline" type="button" data-evrow="${esc(e.id)}">Open ${e.row.tab === 'Clients' ? 'client' : 'lead'}</button>` : ''}
+          </div>` : ''}
+      </div>
+      ${e.task ? `<button class="t-check" type="button" data-evtoggle="${esc(e.task.id)}" role="checkbox" aria-checked="${e.done}" aria-label="${e.done ? 'Mark as not done' : 'Mark as done'}">${e.done ? '✓' : ''}</button>` : ''}
+      <span class="t-avs">${e.people.slice(0, 3).map(avatarHtml).join('')}</span>
+    </div>`;
+  };
+
+  const renderCalBody = () => {
+    const body = $('cal-body');
+    if (!body || state.section !== 'calendar') return;
+    const c = state.cal;
+    const t = state.todo;
+    const all = calEvents();
+    const shown = all.filter((e) => (c.kind === 'all' || e.kind === c.kind || (c.kind === 'client' && (e.kind === 'deadline' || e.kind === 'start'))) && (!c.mine || calMine(e, t.me || state.session.name)));
+    const byDate = {};
+    shown.forEach((e) => (byDate[e.date] = byDate[e.date] || []).push(e));
+    Object.values(byDate).forEach((l) => l.sort(calByTime));
+    const today = todayIso();
+    const [y, m] = c.month.split('-').map(Number);
+    const first = new Date(Date.UTC(y, m - 1, 1));
+    const total = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const cells = [...Array(first.getUTCDay()).fill(0), ...Array.from({ length: total }, (_, i) => i + 1)];
+    while (cells.length % 7) cells.push(0);
+    const inMonth = shown.filter((e) => e.date.startsWith(c.month) && !e.done);
+    const count = (k) => inMonth.filter((e) => e.kind === k).length;
+    const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+    const loading = !t.loaded || C_TABS.some((x) => !state.tabs[x] || (!state.tabs[x].rows && !state.tabs[x].error));
+    const grid = `<div class="cal-month">
+        <div class="cal-head">
+          <button class="btn btn-outline icon-btn" type="button" data-mshift="-1" aria-label="Previous month">‹</button>
+          <div><h3>${esc(first.toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' }))}</h3>
+            <span class="meta">${plural(count('meeting'), 'meeting')} · ${plural(count('task'), 'task')} · ${plural(count('followup'), 'follow-up')}</span></div>
+          <button class="btn btn-outline icon-btn" type="button" data-mshift="1" aria-label="Next month">›</button>
+        </div>
+        <div class="cal-grid" role="grid">
+          ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => `<span class="cal-dow">${d}</span>`).join('')}
+          ${cells.map((day) => {
+            if (!day) return '<span></span>';
+            const iso = `${c.month}-${String(day).padStart(2, '0')}`;
+            const list = (byDate[iso] || []).filter((e) => !e.done);
+            const kinds = [...new Set(list.map((e) => e.kind))].slice(0, 4);
+            const cls = ['cal-day', iso === c.sel ? 'sel' : '', iso === today ? 'today' : '', iso < today ? 'past' : ''].filter(Boolean).join(' ');
+            const peek = list.slice(0, 2).map((e) => `<span class="cal-peek" style="--pc:${esc(e.color)}">${esc((e.timeText ? e.timeText + ' ' : '') + e.title.replace(/^(Meeting|Follow up|Deadline|Start): /, ''))}</span>`).join('');
+            return `<button class="${cls}" type="button" data-day="${iso}" aria-pressed="${iso === c.sel}" aria-label="${esc(calLongDay(iso))}, ${list.length} items">
+              <b>${day}</b><span class="cal-dots">${kinds.map((k) => `<i style="background:${C_KINDS[k].color}"></i>`).join('')}</span>${peek}${list.length > 2 ? `<span class="cal-more">+${list.length - 2} more</span>` : ''}</button>`;
+          }).join('')}
+        </div>
+        <div class="cal-legend">${['meeting', 'task', 'followup', 'deadline'].map((k) => `<span><i style="background:${C_KINDS[k].color}"></i>${C_KINDS[k].plural}</span>`).join('')}
+          ${c.sel !== today || c.month !== today.slice(0, 7) ? '<button class="chip" type="button" data-caltoday>Today</button>' : ''}</div>
+      </div>`;
+    const dayList = byDate[c.sel] || [];
+    const day = `<div class="cal-agenda">
+        <div class="cal-dayhead"><h3>${esc(calLongDay(c.sel))}</h3><button class="btn btn-primary" type="button" data-caladd>Add task</button></div>
+        ${dayList.length ? dayList.map(calCard).join('') : `<p class="meta cal-empty">${loading ? 'Loading…' : 'Nothing planned.'}</p>`}
+      </div>`;
+    const end = isoPlusDays(30);
+    const overdue = shown.filter((e) => e.date < today && !e.done && (e.kind === 'task' || e.kind === 'followup')).sort((a, b) => a.date.localeCompare(b.date) || calByTime(a, b));
+    const days = Object.keys(byDate).filter((d) => d >= today && d <= end).sort();
+    const upcoming = `<div class="cal-agenda wide">
+        ${overdue.length ? `<h3 class="cal-over">Overdue · ${overdue.length}</h3>${overdue.map(calCard).join('')}` : ''}
+        ${days.length ? days.map((d) => `<h3><button class="cal-daylink" type="button" data-goday="${d}">${esc(calLongDay(d))}</button></h3>${byDate[d].map(calCard).join('')}`).join('') : `<p class="meta cal-empty">${loading ? 'Loading…' : 'Nothing in the next 30 days.'}</p>`}
+      </div>`;
+    body.innerHTML = `
+      <div class="toolbar">
+        <div class="t-seg" role="tablist">${[['month', 'Month'], ['agenda', 'Upcoming']].map(([k, l]) => `<button type="button" role="tab" data-calmode="${k}" aria-selected="${c.mode === k}">${l}</button>`).join('')}</div>
+        <div class="t-seg">${[[false, 'Everyone'], [true, 'Mine']].map(([v, l]) => `<button type="button" data-calmine="${v}" aria-selected="${c.mine === v}">${l}</button>`).join('')}</div>
+      </div>
+      <div class="chips">${C_FILTERS.map(([k, l]) => `<button class="chip" type="button" data-calkind="${k}" aria-pressed="${c.kind === k}">${k !== 'all' && k !== 'client' ? `<i class="t-dot" style="background:${C_KINDS[k].color}"></i>` : ''}${l}</button>`).join('')}</div>
+      ${c.mode === 'month' ? `<div class="cal-layout">${grid}${day}</div>` : upcoming}`;
+    const rerender = () => renderCalBody();
+    body.querySelectorAll('[data-calmode]').forEach((b) => (b.onclick = () => { c.mode = b.dataset.calmode; rerender(); }));
+    body.querySelectorAll('[data-calmine]').forEach((b) => (b.onclick = () => { c.mine = b.dataset.calmine === 'true'; rerender(); }));
+    body.querySelectorAll('[data-calkind]').forEach((b) => (b.onclick = () => { c.kind = b.dataset.calkind; rerender(); }));
+    body.querySelectorAll('[data-day]').forEach((b) => (b.onclick = () => { c.sel = b.dataset.day; c.open = ''; rerender(); }));
+    body.querySelectorAll('[data-goday]').forEach((b) => (b.onclick = () => { c.sel = b.dataset.goday; c.month = c.sel.slice(0, 7); c.mode = 'month'; rerender(); }));
+    body.querySelectorAll('[data-mshift]').forEach((b) => (b.onclick = () => {
+      const d = new Date(Date.UTC(y, m - 1 + Number(b.dataset.mshift), 1));
+      c.month = d.toISOString().slice(0, 7);
+      const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+      c.sel = `${c.month}-${String(Math.min(Number(c.sel.slice(8)), last)).padStart(2, '0')}`;
+      rerender();
+    }));
+    const todayBtn = body.querySelector('[data-caltoday]');
+    if (todayBtn) todayBtn.onclick = () => { c.sel = today; c.month = today.slice(0, 7); rerender(); };
+    const add = body.querySelector('[data-caladd]');
+    if (add) add.onclick = () => openTodoEditor(null, { due: c.sel, assignees: [t.me], group: 'General', priority: 'Medium' }, add);
+    body.querySelectorAll('[data-ev]').forEach((b) => (b.onclick = () => {
+      const e = all.find((x) => x.id === b.dataset.ev);
+      if (!e) return;
+      if (e.task) openTodoEditor(e.task.id, null, b);
+      else { c.open = c.open === e.id ? '' : e.id; rerender(); }
+    }));
+    body.querySelectorAll('[data-evrow]').forEach((b) => (b.onclick = () => {
+      const e = all.find((x) => x.id === b.dataset.evrow);
+      if (e && e.row) openRow(e.row.tab, e.row, b);
+    }));
+    body.querySelectorAll('[data-evtoggle]').forEach((b) => (b.onclick = () => { toggleTodo(b.dataset.evtoggle); }));
+  };
+
+  const renderCalendar = (force) => {
+    $('view').innerHTML = `<div class="view-head"><div><p class="eyebrow">Team</p><h2>Calendar</h2></div>
+        <div class="quick"><button class="btn btn-outline" type="button" id="cal-refresh">Refresh</button></div></div>
+      <div id="cal-body"></div>`;
+    $('cal-refresh').onclick = () => renderCalendar(true);
+    renderCalBody();
+    const jobs = C_TABS.map((tab) => ensureTab(tab, force).catch(() => null));
+    jobs.push(loadTodo(true));
+    jobs.forEach((j) => Promise.resolve(j).then(() => renderCalBody()));
   };
 
   // ---------- boot ----------
