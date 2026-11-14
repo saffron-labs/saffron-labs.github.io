@@ -243,14 +243,31 @@
 
   // ---------- login ----------
 
+  // Who can reset passwords and who has a login. The script sends both at sign-in; these are
+  // only for sessions saved before that, and the script still checks on every reset.
+  const WEB_ADMINS = ['Bijo', 'Kashi'];
+  const WEB_PEOPLE = ['Adriel', 'Bijo', 'Kashi'];
+  let pendingSession = null; // signed in with a temporary password, new one not picked yet
+
+  const showLoginForm = (id) => {
+    ['login-form', 'reset-form', 'newpw-form'].forEach((f) => ($(f).hidden = f !== id));
+  };
+
   const showLogin = (message) => {
     closeDrawer(true);
     $('app').hidden = true;
     $('login').hidden = false;
+    pendingSession = null;
+    showLoginForm('login-form');
     $('login-error').textContent = message || (SCRIPT_URL ? '' : 'Not connected to the sheet yet. Ask Kashi to finish setup.');
     $('login-password').value = '';
     setTimeout(() => ($('login-name').value ? $('login-password') : $('login-name')).focus(), 0);
   };
+
+  const sessionFrom = (data) => ({
+    token: data.token, name: data.name, expires: data.expires,
+    admin: data.admin === true, people: Array.isArray(data.people) ? data.people : null,
+  });
 
   $('login-form').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -266,7 +283,16 @@
     $('login-error').textContent = '';
     try {
       const data = await api('webLogin', { name, password }, { noAuth: true });
-      state.session = { token: data.token, name: data.name, expires: data.expires };
+      if (data.mustChange) {
+        pendingSession = sessionFrom(data);
+        $('newpw-user').value = data.name;
+        $('newpw-password').value = $('newpw-confirm').value = '';
+        $('newpw-error').textContent = '';
+        showLoginForm('newpw-form');
+        setTimeout(() => $('newpw-password').focus(), 0);
+        return;
+      }
+      state.session = sessionFrom(data);
       saveSession(state.session);
       startApp();
     } catch (error) {
@@ -276,6 +302,166 @@
       button.textContent = 'Sign in';
     }
   });
+
+  $('forgot-link').addEventListener('click', () => {
+    $('reset-name').value = $('login-name').value.trim();
+    $('reset-error').textContent = '';
+    $('reset-done').hidden = true;
+    $('reset-button').hidden = false;
+    showLoginForm('reset-form');
+    setTimeout(() => $('reset-name').focus(), 0);
+  });
+  $('reset-back').addEventListener('click', () => showLogin());
+
+  $('reset-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const name = $('reset-name').value.trim();
+    if (!name) {
+      $('reset-error').textContent = 'Enter your name.';
+      return;
+    }
+    const button = $('reset-button');
+    button.disabled = true;
+    button.textContent = 'Sending…';
+    $('reset-error').textContent = '';
+    try {
+      const data = await api('webResetRequest', { name }, { noAuth: true });
+      $('reset-done').textContent = data.message || 'Request sent. Bijo or Kashi will send you a temporary password.';
+      $('reset-done').hidden = false;
+      button.hidden = true;
+      $('login-name').value = name;
+    } catch (error) {
+      $('reset-error').textContent = error.message;
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Ask for a reset';
+    }
+  });
+
+  // Shared by the first-sign-in screen and Account → Change password.
+  const checkNewPassword = (password, confirmPassword, name) => {
+    if (password.length < 8) return 'Use at least 8 characters.';
+    if (password !== confirmPassword) return "The two passwords don't match.";
+    if (normName(password) === normName(name)) return "Don't use your name as the password.";
+    return '';
+  };
+
+  $('newpw-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!pendingSession) return showLogin('Sign in again with your temporary password.');
+    const password = $('newpw-password').value;
+    const problem = checkNewPassword(password, $('newpw-confirm').value, pendingSession.name);
+    if (problem) {
+      $('newpw-error').textContent = problem;
+      return;
+    }
+    const button = $('newpw-button');
+    button.disabled = true;
+    button.textContent = 'Saving…';
+    $('newpw-error').textContent = '';
+    try {
+      const data = await api('webChangePassword', { token: pendingSession.token, password }, { noAuth: true });
+      pendingSession = null;
+      state.session = sessionFrom(data);
+      saveSession(state.session);
+      startApp();
+      toast('Password saved');
+    } catch (error) {
+      if (/session expired/i.test(error.message)) return showLogin('That took too long. Sign in again with your temporary password.');
+      $('newpw-error').textContent = error.message;
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Save password and continue';
+    }
+  });
+  $('newpw-cancel').addEventListener('click', () => {
+    if (pendingSession) api('webLogout', { token: pendingSession.token }, { noAuth: true }).catch(() => {});
+    showLogin();
+  });
+
+  // ---------- account (change password, reset a teammate's) ----------
+
+  const openAccount = (opener) => {
+    const me = state.session.name;
+    const isAdmin = state.session.admin || WEB_ADMINS.some((a) => normName(a) === normName(me));
+    const people = (state.session.people || WEB_PEOPLE).filter((p) => normName(p) !== normName(me));
+    openDrawer(`
+      <div class="drawer-head"><div class="grow">
+        <p class="eyebrow">Account</p>
+        <h2 id="drawer-title">${esc(me)}</h2>
+      </div><button class="btn btn-outline icon-btn" type="button" data-close aria-label="Close">✕</button></div>
+      <div class="drawer-body">
+        <form class="form form-stack" data-change-pw novalidate>
+          <p class="block-title">Change your password</p>
+          <input type="text" autocomplete="username" value="${esc(me)}" hidden>
+          <div class="field"><label for="acc-current">Current password</label><input id="acc-current" type="password" autocomplete="current-password" required></div>
+          <div class="field"><label for="acc-new">New password</label><input id="acc-new" type="password" autocomplete="new-password" minlength="8" required></div>
+          <div class="field"><label for="acc-confirm">Type it again</label><input id="acc-confirm" type="password" autocomplete="new-password" required></div>
+          <p class="meta" data-pw-msg role="status">At least 8 characters. You'll stay signed in here; other devices are signed out.</p>
+          <div><button class="btn btn-primary" type="submit" data-pw-save>Change password</button></div>
+        </form>
+        ${isAdmin ? `<form class="form form-stack" data-reset novalidate>
+          <p class="block-title">Reset a teammate's password</p>
+          <p class="meta">Use this when someone tapped "Forgot password?". You get a temporary password to send them on WhatsApp. They pick their own at their next sign-in, and their old sessions end.</p>
+          <div class="field"><label for="acc-who">Teammate</label><select id="acc-who" required>${people.map((p) => `<option>${esc(p)}</option>`).join('')}</select></div>
+          <div><button class="btn btn-accent" type="submit" data-reset-go>Reset password</button></div>
+          <div data-reset-result></div>
+        </form>` : ''}
+      </div>`, opener);
+
+    const drawer = $('drawer');
+    drawer.querySelector('[data-change-pw]').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const msg = drawer.querySelector('[data-pw-msg]');
+      const current = $('acc-current').value;
+      const password = $('acc-new').value;
+      const problem = !current ? 'Enter your current password.' : checkNewPassword(password, $('acc-confirm').value, me);
+      if (problem) {
+        msg.textContent = problem;
+        return;
+      }
+      const button = drawer.querySelector('[data-pw-save]');
+      button.disabled = true;
+      button.textContent = 'Saving…';
+      try {
+        const data = await api('webChangePassword', { token: state.session.token, current, password }, { noAuth: true });
+        state.session = sessionFrom(data);
+        saveSession(state.session);
+        closeDrawer(true);
+        toast('Password changed');
+      } catch (error) {
+        if (/session expired/i.test(error.message)) return signOut('Your session ended. Sign in again.');
+        msg.textContent = error.message;
+        button.disabled = false;
+        button.textContent = 'Change password';
+      }
+    });
+
+    const resetForm = drawer.querySelector('[data-reset]');
+    if (resetForm) resetForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const who = $('acc-who').value;
+      if (!who || !confirm(`Reset ${who}'s password? Their current password stops working right away.`)) return;
+      const button = drawer.querySelector('[data-reset-go]');
+      const out = drawer.querySelector('[data-reset-result]');
+      button.disabled = true;
+      button.textContent = 'Resetting…';
+      try {
+        const data = await api('webAdminReset', { who });
+        out.innerHTML = `<p class="meta">Temporary password for ${esc(data.name)}. Send it to them now; it is shown only once.</p>
+          <div class="temp-pass"><code>${esc(data.tempPassword)}</code><button class="btn btn-outline btn-sm" type="button" data-copy-temp>Copy</button></div>`;
+        out.querySelector('[data-copy-temp]').addEventListener('click', async () => {
+          try { await navigator.clipboard.writeText(data.tempPassword); toast('Copied'); } catch (e) { toast("Couldn't copy", true); }
+        });
+      } catch (error) {
+        handleError(error);
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Reset password';
+      }
+    });
+  };
+  $('account').addEventListener('click', (e) => openAccount(e.currentTarget));
 
   const signOut = (message) => {
     const token = state.session && state.session.token;
