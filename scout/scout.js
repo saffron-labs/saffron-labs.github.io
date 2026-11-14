@@ -243,6 +243,40 @@
 
   // ---------- login ----------
 
+  // Adds a show/hide button to every password box inside root.
+  const EYE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const EYE_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17.7 17.7 0 0 1-3.2 4.1M6.6 6.6C3.8 8.4 2 12 2 12s3.6 7 10 7c1.9 0 3.6-.6 5-1.5M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+  const addPasswordToggles = (root) => {
+    root.querySelectorAll('input[type="password"]').forEach((input) => {
+      if (input.parentElement.classList.contains('pw-wrap')) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'pw-wrap';
+      input.parentNode.insertBefore(wrap, input);
+      wrap.appendChild(input);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'pw-toggle';
+      button.setAttribute('aria-label', 'Show password');
+      button.setAttribute('aria-pressed', 'false');
+      button.innerHTML = EYE;
+      button.addEventListener('click', () => {
+        const show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        button.innerHTML = show ? EYE_OFF : EYE;
+        button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+        button.setAttribute('aria-pressed', String(show));
+        input.focus();
+      });
+      wrap.appendChild(button);
+    });
+  };
+  // Hide every password again (on sign-in, sign-out and screen changes).
+  const hidePasswords = (root) => {
+    root.querySelectorAll('.pw-wrap input').forEach((input) => { input.type = 'password'; });
+    root.querySelectorAll('.pw-toggle').forEach((b) => { b.innerHTML = EYE; b.setAttribute('aria-label', 'Show password'); b.setAttribute('aria-pressed', 'false'); });
+  };
+  addPasswordToggles($('login'));
+
   // Who can reset passwords and who has a login. The script sends both at sign-in; these are
   // only for sessions saved before that, and the script still checks on every reset.
   const WEB_ADMINS = ['Bijo', 'Kashi'];
@@ -251,6 +285,7 @@
 
   const showLoginForm = (id) => {
     ['login-form', 'reset-form', 'newpw-form'].forEach((f) => ($(f).hidden = f !== id));
+    hidePasswords($('login'));
   };
 
   const showLogin = (message) => {
@@ -410,6 +445,7 @@
       </div>`, opener);
 
     const drawer = $('drawer');
+    addPasswordToggles(drawer);
     drawer.querySelector('[data-change-pw]').addEventListener('submit', async (event) => {
       event.preventDefault();
       const msg = drawer.querySelector('[data-pw-msg]');

@@ -537,3 +537,14 @@ body.chat-full{overflow:hidden}
 .cal-actions .btn{min-height:34px;padding:0 12px;font-size:13px}
 .cal-day.sel .cal-dots i{box-shadow:0 0 0 1.5px var(--cream)}
 [data-reset]{border-top:1px solid var(--line);padding-top:20px}
+
+/* show/hide password */
+.pw-wrap{position:relative}
+.pw-wrap input{width:100%;padding-right:48px}
+.login .pw-wrap{margin-bottom:20px}
+.login .pw-wrap input{margin-bottom:0}
+.pw-toggle{position:absolute;top:50%;right:4px;transform:translateY(-50%);width:40px;height:40px;display:grid;place-items:center;border:0;border-radius:8px;background:none;color:var(--muted);cursor:pointer}
+.pw-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pw-toggle:hover{color:var(--ink)}
+.login .pw-toggle{color:#bfa797}
+.login .pw-toggle:hover{color:var(--saffron)}
