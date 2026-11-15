@@ -78,6 +78,7 @@
     { id: 'todo', title: 'To-do' },
     { id: 'calendar', title: 'Calendar' },
     { id: 'inbox', title: 'Chats' },
+    { id: 'ideas', title: 'App ideas' },
   ];
 
   // ---------- state ----------
@@ -559,6 +560,7 @@
     else if (section === 'social') renderSocial();
     else if (section === 'todo') renderTodo();
     else if (section === 'calendar') renderCalendar();
+    else if (section === 'ideas') renderAppIdeas();
     else if (section === 'inbox') { state.openFresh = !!state.openChat; renderChats(); restartPolling(); }
     else renderTab(section);
     window.scrollTo(0, 0);
@@ -3080,6 +3082,168 @@
     $('todo-search').addEventListener('input', (e) => { t.q = e.target.value; renderTodoBody(); });
     renderTodoBody();
     loadTodo(true);
+  };
+
+  // ---------- ideas ----------
+  // App improvement ideas (same rules as the app's Ideas screen). Approved ideas are built overnight.
+
+  const I_TYPES = ['Bug', 'Improvement', 'New feature'];
+  const I_PRIORITIES = ['Urgent', 'High', 'Medium', 'Low'];
+  const I_SCREENS = ['Home', 'Leads', 'Scout', 'Deals', 'Social', 'Chats', 'To-do', 'Calendar', 'Voice', 'Pitch deck', 'Widgets', 'Website', 'Other'];
+  const I_LABEL = { New: 'Waiting for approval', Approved: 'Approved · builds tonight', Building: 'Building now', Shipped: 'Shipped', 'Needs Bijo': 'Too big for a night', 'Not now': 'Not now', Failed: 'Build failed · retrying' };
+  const I_PILL = { New: 's-new', Approved: 'due-today', Building: 's-warm', Shipped: 's-won', 'Needs Bijo': 's-warm', 'Not now': 's-dead', Failed: 'due-over' };
+  const I_ORDER = { Building: 0, Approved: 1, New: 2, Failed: 3, 'Needs Bijo': 4, Shipped: 5, 'Not now': 6 };
+  const I_FILTERS = [
+    ['open', 'Open', (st) => ['New', 'Approved', 'Building', 'Failed'].includes(st)],
+    ['shipped', 'Shipped', (st) => st === 'Shipped'],
+    ['later', 'Bigger / later', (st) => st === 'Needs Bijo' || st === 'Not now'],
+    ['all', 'All', () => true],
+  ];
+  state.ideas = { data: null, error: '', filter: 'open', open: '', busy: '' };
+
+  const loadIdeas = async () => {
+    const t = state.ideas;
+    try {
+      t.data = await api('ideaList', {});
+      t.error = '';
+    } catch (error) {
+      if (error instanceof SessionExpired) { handleError(error); return; }
+      t.error = error.message;
+    }
+    renderIdeasBody();
+  };
+
+  const ideaReplace = (idea) => {
+    const d = state.ideas.data;
+    if (!d) return;
+    const i = d.ideas.findIndex((x) => x.id === idea.id);
+    if (i >= 0) d.ideas[i] = idea; else d.ideas.unshift(idea);
+  };
+
+  const ideaRun = async (id, action, payload) => {
+    state.ideas.busy = id;
+    renderIdeasBody();
+    try {
+      const data = await api(action, Object.assign({ id }, payload || {}));
+      if (data.idea) ideaReplace(data.idea);
+      else if (action === 'ideaDelete') state.ideas.data.ideas = state.ideas.data.ideas.filter((x) => x.id !== id);
+    } catch (error) {
+      handleError(error);
+    } finally {
+      state.ideas.busy = '';
+      renderIdeasBody();
+    }
+  };
+
+  const openIdeaEditor = (idea, opener) => {
+    const d = idea || { title: '', details: '', type: 'Improvement', priority: 'Medium', screen: '' };
+    const options = (list, value) => list.map((o) => `<option ${o === value ? 'selected' : ''}>${esc(o)}</option>`).join('');
+    openDrawer(`
+      <div class="drawer-head"><div class="grow"><h2 id="drawer-title">${idea ? 'Edit idea' : 'Suggest an improvement'}</h2></div>
+        <button class="btn btn-outline icon-btn" type="button" data-close aria-label="Close">✕</button></div>
+      <form id="idea-form" class="drawer-body" autocomplete="off">
+        <div class="field full"><label for="idea-title">What should change</label>
+          <div class="t-row"><input id="idea-title" maxlength="140" required value="${esc(d.title)}" placeholder="e.g. Show the lead's area on the card">
+          <button class="t-mic" type="button" id="idea-mic" aria-label="Dictate with the microphone">🎤</button></div></div>
+        <div class="field full"><label for="idea-details">Details</label>
+          <textarea id="idea-details" maxlength="4000" placeholder="What's wrong today, what you expect, where you saw it">${esc(d.details)}</textarea></div>
+        <div class="field"><label for="idea-type">Type</label><select id="idea-type">${options(I_TYPES, d.type)}</select></div>
+        <div class="field"><label for="idea-priority">How much it matters</label><select id="idea-priority">${options(I_PRIORITIES, d.priority)}</select></div>
+        <div class="field"><label for="idea-screen">Where (optional)</label><select id="idea-screen"><option value="">—</option>${options(I_SCREENS, d.screen)}</select></div>
+        <p class="form-error" id="idea-error" role="alert" style="color:var(--danger)"></p>
+        <button class="btn btn-primary" type="submit" id="idea-save">${idea ? 'Save changes' : 'Send idea'}</button>
+      </form>`, opener);
+    $('drawer').querySelector('[data-close]').onclick = () => closeDrawer();
+    attachMic($('idea-mic'), $('idea-title'));
+    $('idea-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const payload = {
+        id: idea ? idea.id : undefined,
+        title: $('idea-title').value.trim(), details: $('idea-details').value.trim(),
+        type: $('idea-type').value, priority: $('idea-priority').value, screen: $('idea-screen').value,
+      };
+      if (!payload.title) { $('idea-error').textContent = 'Say what you want changed first.'; return; }
+      $('idea-save').disabled = true;
+      try {
+        const data = await api('ideaSave', { idea: payload });
+        ideaReplace(data.idea);
+        closeDrawer(true);
+        toast(idea ? 'Idea updated' : 'Thanks! Idea sent.');
+        state.ideas.filter = 'open';
+        renderIdeasBody();
+      } catch (error) {
+        if (error instanceof SessionExpired) { handleError(error); return; }
+        $('idea-error').textContent = error.message;
+        $('idea-save').disabled = false;
+      }
+    };
+  };
+
+  const renderIdeasBody = () => {
+    const body = $('ideas-body');
+    if (!body || state.section !== 'ideas') return;
+    const t = state.ideas;
+    if (!t.data) {
+      body.innerHTML = t.error ? emptyState("Couldn't load ideas.", ' ' + t.error, '<br><button class="btn btn-outline" type="button" data-retry>Try again</button>') : skeletons(3);
+      const retry = body.querySelector('[data-retry]');
+      if (retry) retry.onclick = loadIdeas;
+      return;
+    }
+    const d = t.data;
+    const match = (I_FILTERS.find((f) => f[0] === t.filter) || I_FILTERS[0])[2];
+    const ideas = d.ideas.filter((x) => match(x.status)).sort((a, b) => I_ORDER[a.status] - I_ORDER[b.status] || b.score - a.score || b.created - a.created);
+    const waiting = d.ideas.filter((x) => x.status === 'New').length;
+    const btn = (attrs, label, cls) => `<button class="btn btn-sm ${cls || 'btn-outline'}" type="button" ${attrs}>${label}</button>`;
+    body.innerHTML = `
+      ${d.builderReady ? '' : '<p class="note-line">The nightly builder isn\'t connected yet (GITHUB_TOKEN in the script). Ideas are saved but nothing gets built.</p>'}
+      ${d.canApprove && waiting ? `<p class="note-line"><b>${waiting} idea${waiting === 1 ? '' : 's'} waiting for your approval.</b> Only approved ideas are built tonight.</p>` : ''}
+      <div class="chips">${I_FILTERS.map(([k, l, m]) => `<button class="chip" type="button" data-ifilter="${k}" aria-pressed="${t.filter === k}">${l} ${d.ideas.filter((x) => m(x.status)).length}</button>`).join('')}</div>
+      ${ideas.length ? '' : emptyState(t.filter === 'open' ? 'No open ideas' : 'Nothing here yet', t.filter === 'open' ? ' Suggest the first one.' : '')}
+      <div class="t-list">${ideas.map((x) => {
+        const mine = sameName(x.by, d.me);
+        const voted = x.votes.some((v) => sameName(v, d.me));
+        const busy = t.busy === x.id;
+        const editable = x.status !== 'Building' && x.status !== 'Shipped' && (d.canApprove || (mine && x.status !== 'Approved'));
+        const deletable = (mine || d.canApprove) && ['New', 'Not now', 'Failed', 'Needs Bijo'].includes(x.status);
+        const open = t.open === x.id;
+        return `<article class="card" style="cursor:default">
+          <div class="card-top">
+            <div><h3><button class="login-link" style="all:unset;cursor:pointer" type="button" data-iopen="${esc(x.id)}" aria-expanded="${open}">${esc(x.title)}</button></h3>
+              <div class="sub">${esc(x.by)}${x.screen ? ' · ' + esc(x.screen) : ''}${x.shippedIn ? ' · in ' + esc(x.shippedIn) : ''}</div></div>
+            ${btn(`data-ivote="${esc(x.id)}" aria-pressed="${voted}" ${busy || x.status === 'Shipped' ? 'disabled' : ''} aria-label="${voted ? 'Remove your +1' : '+1 this idea'}"`, `▲ ${x.votes.length}`, voted ? 'btn-accent' : 'btn-outline')}
+          </div>
+          <div class="tags"><span class="pill ${I_PILL[x.status] || ''}">${esc(I_LABEL[x.status] || x.status)}</span><span class="pill">${esc(x.priority)}</span><span class="pill">${esc(x.type)}</span></div>
+          ${x.verdict ? `<p class="note-line" style="margin:0">${esc(x.verdict)}</p>` : ''}
+          ${open ? `<p style="margin:4px 0;white-space:pre-wrap">${esc(x.details || 'No details.')}</p>${x.votes.length ? `<p class="note-line" style="margin:0">+1 from ${esc(x.votes.join(', '))}</p>` : ''}` : ''}
+          <div class="t-row" style="justify-content:flex-end">${busy ? '<span class="note-line">Working…</span>' : [
+            d.canApprove && ['New', 'Failed', 'Needs Bijo'].includes(x.status) ? btn(`data-idecide="approve" data-id="${esc(x.id)}"`, 'Approve', 'btn-accent') : '',
+            d.canApprove && ['New', 'Approved'].includes(x.status) ? btn(`data-idecide="notnow" data-id="${esc(x.id)}"`, 'Not now') : '',
+            d.canApprove && x.status === 'Not now' ? btn(`data-idecide="reopen" data-id="${esc(x.id)}"`, 'Reopen') : '',
+            editable ? btn(`data-iedit="${esc(x.id)}"`, 'Edit') : '',
+            deletable ? btn(`data-idelete="${esc(x.id)}"`, 'Delete') : '',
+          ].join('')}</div>
+        </article>`;
+      }).join('')}</div>`;
+    const find = (id) => d.ideas.find((x) => x.id === id);
+    body.querySelectorAll('[data-ifilter]').forEach((b) => (b.onclick = () => { t.filter = b.dataset.ifilter; renderIdeasBody(); }));
+    body.querySelectorAll('[data-iopen]').forEach((b) => (b.onclick = () => { t.open = t.open === b.dataset.iopen ? '' : b.dataset.iopen; renderIdeasBody(); }));
+    body.querySelectorAll('[data-ivote]').forEach((b) => (b.onclick = () => ideaRun(b.dataset.ivote, 'ideaVote')));
+    body.querySelectorAll('[data-idecide]').forEach((b) => (b.onclick = () => ideaRun(b.dataset.id, 'ideaDecide', { decision: b.dataset.idecide })));
+    body.querySelectorAll('[data-iedit]').forEach((b) => (b.onclick = () => openIdeaEditor(find(b.dataset.iedit), b)));
+    body.querySelectorAll('[data-idelete]').forEach((b) => (b.onclick = () => {
+      const x = find(b.dataset.idelete);
+      if (x && confirm('Delete this idea?\n\n' + x.title)) ideaRun(x.id, 'ideaDelete');
+    }));
+  };
+
+  const renderAppIdeas = () => {
+    $('view').innerHTML = `<div class="view-head"><div><p class="eyebrow">Make Scout better</p><h2>App ideas</h2></div>
+        <div class="quick"><button class="btn btn-accent" type="button" id="idea-new">Suggest an improvement</button></div></div>
+      <p class="note-line" style="margin-top:-8px">Tell us what to fix or add. Approved ideas are built overnight, and the update is ready the next morning.</p>
+      <div id="ideas-body"></div>`;
+    $('idea-new').onclick = () => openIdeaEditor(null, $('idea-new'));
+    renderIdeasBody();
+    loadIdeas();
   };
 
   // ---------- calendar ----------
