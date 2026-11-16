@@ -79,7 +79,11 @@
     { id: 'calendar', title: 'Calendar' },
     { id: 'inbox', title: 'Chats' },
     { id: 'ideas', title: 'App ideas' },
+    { id: 'finance', title: 'Finance' },
   ];
+  // Finance is limited to these people (the script enforces it too).
+  const FINANCE_PEOPLE = ['bijo', 'kashi', 'adriel'];
+  const canFinance = () => !!state.session && FINANCE_PEOPLE.includes(String(state.session.name || '').trim().toLowerCase());
 
   // ---------- state ----------
 
@@ -512,6 +516,7 @@
     clearInterval(chatTimer);
     clearInterval(todoTimer);
     state.todo = { loaded: false, loading: false, error: '', me: '', members: [], groups: [], tasks: [], scope: 'mine', view: 'priority', group: '', prio: '', q: '', showDone: false };
+    state.fin = { data: null, loading: false, error: '', view: 'overview', q: '' };
     saveSession(null);
     showLogin(message);
   };
@@ -530,7 +535,7 @@
   };
 
   const renderTabs = () => {
-    $('tabs').innerHTML = SECTIONS.map((s) => {
+    $('tabs').innerHTML = SECTIONS.filter((s) => s.id !== 'finance' || canFinance()).map((s) => {
       const t = state.tabs[s.id];
       const open = t && t.rows ? t.rows.filter((r) => !CLOSED.includes(str(r, TABS[s.id].status))).length : null;
       const unread = s.id === 'inbox' ? totalUnread() : s.id === 'todo' ? todoAttention() : 0;
@@ -561,6 +566,7 @@
     else if (section === 'todo') renderTodo();
     else if (section === 'calendar') renderCalendar();
     else if (section === 'ideas') renderAppIdeas();
+    else if (section === 'finance') renderFinance();
     else if (section === 'inbox') { state.openFresh = !!state.openChat; renderChats(); restartPolling(); }
     else renderTab(section);
     window.scrollTo(0, 0);
@@ -3244,6 +3250,268 @@
     $('idea-new').onclick = () => openIdeaEditor(null, $('idea-new'));
     renderIdeasBody();
     loadIdeas();
+  };
+
+
+  // ---------- finance ----------
+  // Money in and out, client balances, and client add/edit/delete. Same backend as the app's Finance screen.
+  // Receipts, proposals, invoices and PDFs stay in the app for now.
+
+  const FIN_TYPES = ['Advance', 'Payment', 'Other income', 'Capital in', 'Expense', 'Refund', 'Owner withdrawal'];
+  const FIN_IN = ['Advance', 'Payment', 'Other income', 'Capital in'];
+  const FIN_CLIENT_TYPES = ['Advance', 'Payment', 'Refund'];
+  const FIN_METHODS = ['UPI', 'Cash', 'Bank transfer', 'Card', 'Cheque', 'Other'];
+  const FIN_CATEGORIES = ['Software & tools', 'Hosting & domains', 'Ads & marketing', 'Freelancers', 'Travel', 'Office & equipment', 'Salary & stipends', 'Taxes & fees', 'Other'];
+  const FIN_PROJECT_STATUSES = ['Onboarding', 'In progress', 'Review', 'Delivered', 'Paused'];
+  state.fin = { data: null, loading: false, error: '', view: 'overview', q: '' };
+
+  const paise = (n) => Math.round((Number(n) || 0) * 100);
+  const rup = (p) => (p < 0 ? '−' : '') + '₹' + (Math.abs(p) / 100).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: Math.abs(p) % 100 ? 2 : 0 });
+  const finLive = (e) => !e.voided && e.status === 'Paid';
+  const finSigned = (e) => (FIN_IN.includes(e.type) ? paise(e.amount) : -paise(e.amount));
+  const finKey = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  const finNumbers = () => {
+    const d = state.fin.data;
+    const from = d.settings.openingDate || '0000-01-01';
+    const month = todayIso().slice(0, 7);
+    let cash = paise(d.settings.openingBalance);
+    let inM = 0, outM = 0;
+    d.entries.forEach((e) => {
+      if (!finLive(e) || e.date < from) return;
+      cash += finSigned(e);
+      if (e.date.slice(0, 7) === month) { if (finSigned(e) >= 0) inM += finSigned(e); else outM += -finSigned(e); }
+    });
+    return { cash, inM, outM, books: finBooks() };
+  };
+
+  const finBooks = () => {
+    const d = state.fin.data;
+    const map = new Map();
+    const make = (name, client) => ({ name, client, deal: client ? paise(client.dealValue) : 0, received: 0, last: '' });
+    d.clients.forEach((c) => map.set(finKey(c.name), make(c.name, c)));
+    d.entries.forEach((e) => {
+      if (!e.client || !FIN_CLIENT_TYPES.includes(e.type)) return;
+      const k = finKey(e.client);
+      if (!map.has(k)) map.set(k, make(e.client, null));
+      const b = map.get(k);
+      b.count = (b.count || 0) + 1;
+      if (!finLive(e)) return;
+      b.received += e.type === 'Refund' ? -paise(e.amount) : paise(e.amount);
+      if (e.type !== 'Refund' && e.date > b.last) b.last = e.date;
+    });
+    const books = [...map.values()];
+    books.forEach((b) => { b.balance = b.deal > 0 ? Math.max(0, b.deal - b.received) : 0; });
+    return books.sort((a, b) => b.balance - a.balance || b.received - a.received || a.name.localeCompare(b.name));
+  };
+
+  const loadFinance = async (silent) => {
+    const f = state.fin;
+    if (f.loading) return;
+    f.loading = true;
+    if (!silent) { f.error = ''; if (state.section === 'finance') renderFinanceBody(); }
+    try {
+      f.data = await api('financeList');
+      f.error = '';
+    } catch (e) {
+      if (e instanceof SessionExpired) { handleError(e); return; }
+      f.error = e.message;
+    } finally {
+      f.loading = false;
+      if (state.section === 'finance') renderFinanceBody();
+    }
+  };
+
+  const renderFinance = () => {
+    $('view').innerHTML = `<div class="view-head"><div><p class="eyebrow">Saffron Labs</p><h2>Finance</h2></div>
+        <div class="quick"><button class="btn btn-outline" type="button" id="fin-client-new">Add client</button>
+        <button class="btn btn-accent" type="button" id="fin-entry-new">Add money entry</button></div></div>
+      <div class="chips" role="tablist" id="fin-tabs">${[['overview', 'Overview'], ['money', 'Money'], ['clients', 'Clients']].map(([id, label]) => `<button class="chip" type="button" data-fin="${id}" ${state.fin.view === id ? 'aria-pressed="true"' : ''}>${label}</button>`).join('')}</div>
+      <div id="fin-body"></div>`;
+    $('fin-entry-new').onclick = () => openFinEntry(null, $('fin-entry-new'));
+    $('fin-client-new').onclick = () => openFinClient(null, $('fin-client-new'));
+    $('fin-tabs').onclick = (e) => {
+      const b = e.target.closest('[data-fin]');
+      if (!b) return;
+      state.fin.view = b.dataset.fin;
+      $('fin-tabs').querySelectorAll('[data-fin]').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+      renderFinanceBody();
+    };
+    renderFinanceBody();
+    loadFinance(!!state.fin.data);
+  };
+
+  const renderFinanceBody = () => {
+    const body = $('fin-body');
+    if (!body || state.section !== 'finance') return;
+    const f = state.fin;
+    if (!canFinance()) { body.innerHTML = emptyState('Finance is private', 'Money details are limited to Bijo, Kashi and Adriel.'); return; }
+    if (f.error && !f.data) { body.innerHTML = emptyState("Couldn't load Finance", f.error, '<p><button class="btn btn-outline" type="button" id="fin-retry">Try again</button></p>'); $('fin-retry').onclick = () => loadFinance(); return; }
+    if (!f.data) { body.innerHTML = skeletons(4); return; }
+    const n = finNumbers();
+    if (f.view === 'overview') {
+      const owing = n.books.filter((b) => b.balance > 0).slice(0, 8);
+      const recent = f.data.entries.filter((e) => !e.voided).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6);
+      body.innerHTML = `<div class="stats">
+          <div class="stat hot"><b>${rup(n.cash)}</b><span>Cash balance</span></div>
+          <div class="stat"><b>${rup(n.inM)}</b><span>In this month</span></div>
+          <div class="stat"><b>${rup(n.outM)}</b><span>Out this month</span></div>
+          <div class="stat"><b>${rup(n.books.reduce((s, b) => s + b.balance, 0))}</b><span>Still to collect</span></div></div>
+        <h3 class="fin-h">Clients who owe</h3>
+        ${owing.length ? `<div class="fin-list">${owing.map((b) => `<div class="fin-row"><b>${esc(b.name)}</b><span>Paid ${rup(b.received)} of ${rup(b.deal)}</span><strong class="fin-out">Due ${rup(b.balance)}</strong></div>`).join('')}</div>` : '<p class="note-line">Nobody owes anything right now.</p>'}
+        <h3 class="fin-h">Latest money</h3>
+        ${recent.length ? finEntryList(recent) : '<p class="note-line">No entries yet. Add the first one above.</p>'}`;
+    } else if (f.view === 'money') {
+      const rows = f.data.entries.filter((e) => !f.q || [e.client, e.description, e.category, e.type, e.reference].join(' ').toLowerCase().includes(f.q.toLowerCase())).sort((a, b) => (a.date === b.date ? b.created - a.created : a.date < b.date ? 1 : -1));
+      body.innerHTML = `<div class="toolbar"><input type="search" id="fin-q" class="t-search" aria-label="Search money entries" placeholder="Search entries" value="${esc(f.q)}"></div>${rows.length ? finEntryList(rows) : emptyState('No entries', 'Nothing matches yet.')}`;
+      $('fin-q').oninput = (e) => { f.q = e.target.value; const pos = e.target.selectionStart; renderFinanceBody(); const q = $('fin-q'); q.focus(); q.setSelectionRange(pos, pos); };
+    } else {
+      const rows = n.books.filter((b) => !f.q || b.name.toLowerCase().includes(f.q.toLowerCase()));
+      body.innerHTML = `<div class="toolbar"><input type="search" id="fin-q" class="t-search" aria-label="Search clients" placeholder="Search clients" value="${esc(f.q)}"></div>
+        ${rows.length ? `<div class="fin-list">${rows.map((b) => `<div class="fin-row fin-click" data-client="${esc(b.name)}" tabindex="0" role="button">
+          <b>${esc(b.name)}</b><span>${b.deal ? `Paid ${rup(b.received)} of ${rup(b.deal)}` : `Paid ${rup(b.received)} · no deal value`}${b.client && b.client.projectStatus ? ' · ' + esc(b.client.projectStatus) : ''}</span>
+          <strong class="${b.balance > 0 ? 'fin-out' : 'fin-in'}">${b.deal ? (b.balance > 0 ? 'Due ' + rup(b.balance) : 'Paid up') : ''}</strong></div>`).join('')}</div>` : emptyState('No clients', 'Add a client to start their account.')}`;
+      $('fin-q').oninput = (e) => { f.q = e.target.value; const pos = e.target.selectionStart; renderFinanceBody(); const q = $('fin-q'); q.focus(); q.setSelectionRange(pos, pos); };
+      body.onclick = (e) => { const r = e.target.closest('[data-client]'); if (r) openFinClient(r.dataset.client, r); };
+      return;
+    }
+    body.onclick = (e) => {
+      const v = e.target.closest('[data-void]');
+      if (v) return finVoid(v.dataset.void);
+      const r = e.target.closest('[data-entry]');
+      if (r) openFinEntry(f.data.entries.find((x) => x.id === r.dataset.entry), r);
+    };
+  };
+
+  const finEntryList = (rows) => `<div class="fin-list">${rows.map((e) => {
+    const inflow = FIN_IN.includes(e.type);
+    return `<div class="fin-row ${e.voided ? 'fin-void' : ''}">
+      <b>${esc(e.type)}${e.status === 'Pending' ? ' · pending' : ''}${e.voided ? ' · voided' : ''}</b>
+      <span>${esc(shortDate(e.date))} · ${esc([e.client, e.description || e.category, e.method].filter(Boolean).join(' · '))}</span>
+      <strong class="${inflow ? 'fin-in' : 'fin-out'}">${inflow ? '+' : '−'}${rup(paise(e.amount))}</strong>
+      ${e.voided ? '' : `<button class="btn btn-outline fin-small" type="button" data-void="${esc(e.id)}">Void</button>`}</div>`;
+  }).join('')}</div>`;
+
+  const finVoid = async (id) => {
+    const reason = (window.prompt('Why are you voiding this entry? (a few words)') || '').trim();
+    if (!reason) return;
+    try {
+      await api('financeVoid', { id, reason });
+      toast('Entry voided');
+      await loadFinance(true);
+    } catch (e) {
+      if (e instanceof SessionExpired) { handleError(e); return; }
+      toast(e.message, true);
+    }
+  };
+
+  const openFinEntry = (entry, opener) => {
+    const d = entry || { type: 'Payment', amount: '', date: todayIso(), method: 'UPI', client: '', category: '', description: '', reference: '', status: 'Paid' };
+    if (entry && entry.voided) { toast('A voided entry cannot be edited', true); return; }
+    const opts = (list, value) => list.map((o) => `<option ${o === value ? 'selected' : ''}>${esc(o)}</option>`).join('');
+    const clients = state.fin.data ? state.fin.data.clients.map((c) => `<option value="${esc(c.name)}"></option>`).join('') : '';
+    openDrawer(`
+      <div class="drawer-head"><div class="grow"><h2 id="drawer-title">${entry ? 'Edit entry' : 'Add money entry'}</h2></div>
+        <button class="btn btn-outline icon-btn" type="button" data-close aria-label="Close">✕</button></div>
+      <form id="fe-form" class="drawer-body" autocomplete="off">
+        <div class="field"><label for="fe-type">Type</label><select id="fe-type">${opts(FIN_TYPES, d.type)}</select></div>
+        <div class="field"><label for="fe-amount">Amount (₹)</label><input id="fe-amount" inputmode="decimal" required value="${esc(d.amount)}" placeholder="0"></div>
+        <div class="field"><label for="fe-date">Date</label><input id="fe-date" type="date" value="${esc(d.date)}"></div>
+        <div class="field"><label for="fe-method">Method</label><select id="fe-method">${opts(FIN_METHODS, d.method)}</select></div>
+        <div class="field full" id="fe-client-wrap"><label for="fe-client">Client</label><input id="fe-client" list="fe-clients" value="${esc(d.client)}" placeholder="Pick or type a client name"><datalist id="fe-clients">${clients}</datalist></div>
+        <div class="field full" id="fe-cat-wrap"><label for="fe-cat">Category</label><select id="fe-cat">${opts(FIN_CATEGORIES, d.category || 'Other')}</select></div>
+        <div class="field full"><label for="fe-desc">Description</label><input id="fe-desc" maxlength="200" value="${esc(d.description)}"></div>
+        <div class="field"><label for="fe-ref">Reference / UTR</label><input id="fe-ref" maxlength="100" value="${esc(d.reference)}"></div>
+        <div class="field"><label for="fe-status">Status</label><select id="fe-status">${opts(['Paid', 'Pending'], d.status)}</select></div>
+        <p class="form-error" id="fe-error" role="alert" style="color:var(--danger)"></p>
+        <button class="btn btn-primary" type="submit" id="fe-save">${entry ? 'Save changes' : 'Add entry'}</button>
+      </form>`, opener);
+    $('drawer').querySelector('[data-close]').onclick = () => closeDrawer();
+    const sync = () => {
+      const t = $('fe-type').value;
+      $('fe-client-wrap').hidden = !FIN_CLIENT_TYPES.includes(t);
+      $('fe-cat-wrap').hidden = t !== 'Expense';
+    };
+    $('fe-type').onchange = sync;
+    sync();
+    $('fe-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const t = $('fe-type').value;
+      const payload = {
+        id: entry ? entry.id : undefined, type: t, amount: $('fe-amount').value.trim().replace(/[,₹\s]/g, ''), date: $('fe-date').value || todayIso(),
+        method: $('fe-method').value, client: FIN_CLIENT_TYPES.includes(t) ? $('fe-client').value.trim() : '',
+        category: t === 'Expense' ? $('fe-cat').value : '', description: $('fe-desc').value.trim(), reference: $('fe-ref').value.trim(), status: $('fe-status').value,
+      };
+      $('fe-save').disabled = true;
+      try {
+        await api('financeSave', { entry: payload });
+        closeDrawer(true);
+        toast(entry ? 'Entry updated' : 'Entry added');
+        await loadFinance(true);
+      } catch (error) {
+        if (error instanceof SessionExpired) { handleError(error); return; }
+        $('fe-error').textContent = error.message;
+        $('fe-save').disabled = false;
+      }
+    };
+  };
+
+  const openFinClient = (name, opener) => {
+    const book = name ? finBooks().find((b) => b.name === name) : null;
+    const c = (book && book.client) || { name: name || '', dealValue: 0, contact: '', phone: '', email: '', services: '', projectStatus: '', deadline: '' };
+    const existing = !!(book && book.client);
+    const hist = book ? (book.count || 0) + state.fin.data.docs.filter((x) => finKey(x.client) === finKey(book.name)).length : 0;
+    openDrawer(`
+      <div class="drawer-head"><div class="grow"><h2 id="drawer-title">${existing ? 'Edit client' : 'Add client'}</h2></div>
+        <button class="btn btn-outline icon-btn" type="button" data-close aria-label="Close">✕</button></div>
+      <form id="fc-form" class="drawer-body" autocomplete="off">
+        <div class="field full"><label for="fc-name">Client name</label><input id="fc-name" maxlength="120" required value="${esc(c.name)}" placeholder="e.g. Sopanam Drapes"></div>
+        ${existing && hist ? `<p class="note-line full">Renaming also updates this client's ${hist} money entries and documents.</p>` : ''}
+        <div class="field"><label for="fc-deal">Agreed deal value (₹)</label><input id="fc-deal" inputmode="decimal" value="${c.dealValue ? esc(c.dealValue) : ''}" placeholder="optional"></div>
+        <div class="field"><label for="fc-status">Project status</label><select id="fc-status"><option value="">—</option>${FIN_PROJECT_STATUSES.map((o) => `<option ${o === c.projectStatus ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
+        <div class="field"><label for="fc-contact">Contact person</label><input id="fc-contact" value="${esc(c.contact)}"></div>
+        <div class="field"><label for="fc-phone">Phone or WhatsApp</label><input id="fc-phone" inputmode="tel" value="${esc(c.phone)}"></div>
+        <div class="field"><label for="fc-email">Email</label><input id="fc-email" type="email" value="${esc(c.email)}"></div>
+        <div class="field"><label for="fc-deadline">Deadline</label><input id="fc-deadline" type="date" value="${esc(c.deadline)}"></div>
+        <div class="field full"><label for="fc-services">Services</label><input id="fc-services" value="${esc(c.services)}" placeholder="e.g. Website, logo"></div>
+        <p class="form-error" id="fc-error" role="alert" style="color:var(--danger)"></p>
+        <button class="btn btn-primary" type="submit" id="fc-save">${existing ? 'Save changes' : 'Add client'}</button>
+        ${existing ? (hist ? '<p class="note-line">This client has money entries or documents, so it cannot be deleted.</p>' : '<button class="btn btn-outline" type="button" id="fc-delete">Delete client</button>') : ''}
+      </form>`, opener);
+    $('drawer').querySelector('[data-close]').onclick = () => closeDrawer();
+    $('fc-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const client = {
+        originalName: existing ? c.name : '', name: $('fc-name').value.trim(), dealValue: $('fc-deal').value.trim(), projectStatus: $('fc-status').value,
+        contact: $('fc-contact').value.trim(), phone: $('fc-phone').value.trim(), email: $('fc-email').value.trim(), deadline: $('fc-deadline').value, services: $('fc-services').value.trim(),
+      };
+      $('fc-save').disabled = true;
+      try {
+        await api('financeClientSave', { client });
+        closeDrawer(true);
+        toast(existing ? 'Client updated' : 'Client added');
+        await loadFinance(true);
+      } catch (error) {
+        if (error instanceof SessionExpired) { handleError(error); return; }
+        $('fc-error').textContent = error.message;
+        $('fc-save').disabled = false;
+      }
+    };
+    const del = $('fc-delete');
+    if (del) del.onclick = async () => {
+      if (!window.confirm(`Delete ${c.name}? This cannot be undone (a copy of the row is kept in the Finance Log sheet).`)) return;
+      del.disabled = true;
+      try {
+        await api('financeClientDelete', { clientName: c.name });
+        closeDrawer(true);
+        toast('Client deleted');
+        await loadFinance(true);
+      } catch (error) {
+        if (error instanceof SessionExpired) { handleError(error); return; }
+        $('fc-error').textContent = error.message;
+        del.disabled = false;
+      }
+    };
   };
 
   // ---------- calendar ----------
