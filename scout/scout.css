@@ -555,6 +555,17 @@ body.chat-full{overflow:hidden}
 .fin-row{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
 .fin-row b{grid-column:1}.fin-row span{grid-column:1;font-size:13px;color:var(--muted)}
 .fin-row strong{grid-column:2;grid-row:1 / span 2;font-variant-numeric:tabular-nums;text-align:right}
-.fin-row .fin-small{grid-column:2;grid-row:3;justify-self:end;padding:4px 10px;font-size:12px}
+.fin-actions{grid-column:2;grid-row:3;justify-self:end;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.fin-actions:empty{display:none}
+.fin-small{padding:4px 10px;font-size:12px;min-height:30px}
 .fin-click{cursor:pointer}.fin-click:hover{border-color:var(--clay)}
 .fin-in{color:var(--ok)}.fin-out{color:var(--danger)}.fin-void{opacity:.5}.fin-void b{text-decoration:line-through}
+
+/* finance documents */
+.fin-st{display:block;font:600 12px "DM Sans";margin-top:2px}
+.fin-st-ok{color:var(--ok)}.fin-st-bad{color:var(--danger)}.fin-st-warm{color:var(--clay)}.fin-st-mute{color:var(--muted)}
+.de-line{border:1px solid var(--line);border-radius:var(--radius);background:var(--card);padding:12px 14px;margin:10px 0}
+.de-line-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.de-total{display:flex;flex-direction:column;align-items:flex-end;gap:2px;margin:0;font-size:13px;color:var(--muted)}
+.de-total strong{font-size:22px;color:var(--wine);font-variant-numeric:tabular-nums}
+#de-services{margin:8px 0}
+#fd-error:empty,#de-error:empty,#fe-error:empty,#fc-error:empty{display:none}

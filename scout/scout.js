@@ -3254,8 +3254,9 @@
 
 
   // ---------- finance ----------
-  // Money in and out, client balances, and client add/edit/delete. Same backend as the app's Finance screen.
-  // Receipts, proposals, invoices and PDFs stay in the app for now.
+  // Money in and out, client balances, client add/edit/delete, and documents (receipts, proposals, invoices,
+  // client statements). Same backend as the app's Finance screen; the PDFs come from finance-docs.js and are
+  // printed from the browser ("Save as PDF").
 
   const FIN_TYPES = ['Advance', 'Payment', 'Other income', 'Capital in', 'Expense', 'Refund', 'Owner withdrawal'];
   const FIN_IN = ['Advance', 'Payment', 'Other income', 'Capital in'];
@@ -3326,7 +3327,7 @@
     $('view').innerHTML = `<div class="view-head"><div><p class="eyebrow">Saffron Labs</p><h2>Finance</h2></div>
         <div class="quick"><button class="btn btn-outline" type="button" id="fin-client-new">Add client</button>
         <button class="btn btn-accent" type="button" id="fin-entry-new">Add money entry</button></div></div>
-      <div class="chips" role="tablist" id="fin-tabs">${[['overview', 'Overview'], ['money', 'Money'], ['clients', 'Clients']].map(([id, label]) => `<button class="chip" type="button" data-fin="${id}" ${state.fin.view === id ? 'aria-pressed="true"' : ''}>${label}</button>`).join('')}</div>
+      <div class="chips" role="tablist" id="fin-tabs">${[['overview', 'Overview'], ['money', 'Money'], ['clients', 'Clients'], ['docs', 'Documents']].map(([id, label]) => `<button class="chip" type="button" data-fin="${id}" ${state.fin.view === id ? 'aria-pressed="true"' : ''}>${label}</button>`).join('')}</div>
       <div id="fin-body"></div>`;
     $('fin-entry-new').onclick = () => openFinEntry(null, $('fin-entry-new'));
     $('fin-client-new').onclick = () => openFinClient(null, $('fin-client-new'));
@@ -3365,6 +3366,9 @@
       const rows = f.data.entries.filter((e) => !f.q || [e.client, e.description, e.category, e.type, e.reference].join(' ').toLowerCase().includes(f.q.toLowerCase())).sort((a, b) => (a.date === b.date ? b.created - a.created : a.date < b.date ? 1 : -1));
       body.innerHTML = `<div class="toolbar"><input type="search" id="fin-q" class="t-search" aria-label="Search money entries" placeholder="Search entries" value="${esc(f.q)}"></div>${rows.length ? finEntryList(rows) : emptyState('No entries', 'Nothing matches yet.')}`;
       $('fin-q').oninput = (e) => { f.q = e.target.value; const pos = e.target.selectionStart; renderFinanceBody(); const q = $('fin-q'); q.focus(); q.setSelectionRange(pos, pos); };
+    } else if (f.view === 'docs') {
+      renderFinDocs(body);
+      return;
     } else {
       const rows = n.books.filter((b) => !f.q || b.name.toLowerCase().includes(f.q.toLowerCase()));
       body.innerHTML = `<div class="toolbar"><input type="search" id="fin-q" class="t-search" aria-label="Search clients" placeholder="Search clients" value="${esc(f.q)}"></div>
@@ -3378,6 +3382,10 @@
     body.onclick = (e) => {
       const v = e.target.closest('[data-void]');
       if (v) return finVoid(v.dataset.void);
+      const rc = e.target.closest('[data-receipt]');
+      if (rc) return finReceiptFor(rc.dataset.receipt, rc);
+      const rd = e.target.closest('[data-docno]');
+      if (rd) return openFinDocByNumber(rd.dataset.docno, rd);
       const r = e.target.closest('[data-entry]');
       if (r) openFinEntry(f.data.entries.find((x) => x.id === r.dataset.entry), r);
     };
@@ -3389,8 +3397,10 @@
       <b>${esc(e.type)}${e.status === 'Pending' ? ' · pending' : ''}${e.voided ? ' · voided' : ''}</b>
       <span>${esc(shortDate(e.date))} · ${esc([e.client, e.description || e.category, e.method].filter(Boolean).join(' · '))}</span>
       <strong class="${inflow ? 'fin-in' : 'fin-out'}">${inflow ? '+' : '−'}${rup(paise(e.amount))}</strong>
-      ${e.voided ? '' : `<button class="btn btn-outline fin-small" type="button" data-void="${esc(e.id)}">Void</button>`}</div>`;
+      <div class="fin-actions">${e.voided ? '' : `${e.docNo ? `<button class="btn btn-outline fin-small" type="button" data-docno="${esc(e.docNo)}">Receipt ${esc(e.docNo)}</button>` : finCanReceipt(e) ? `<button class="btn btn-outline fin-small" type="button" data-receipt="${esc(e.id)}">Make receipt</button>` : ''}<button class="btn btn-outline fin-small" type="button" data-void="${esc(e.id)}">Void</button>`}</div></div>`;
   }).join('')}</div>`;
+
+  const finCanReceipt = (e) => !e.voided && !e.docNo && FIN_IN.includes(e.type) && e.status === 'Paid' && !!e.client;
 
   const finVoid = async (id) => {
     const reason = (window.prompt('Why are you voiding this entry? (a few words)') || '').trim();
@@ -3405,8 +3415,8 @@
     }
   };
 
-  const openFinEntry = (entry, opener) => {
-    const d = entry || { type: 'Payment', amount: '', date: todayIso(), method: 'UPI', client: '', category: '', description: '', reference: '', status: 'Paid' };
+  const openFinEntry = (entry, opener, extra) => {
+    const d = entry || Object.assign({ type: 'Payment', amount: '', date: todayIso(), method: 'UPI', client: '', category: '', description: '', reference: '', status: 'Paid' }, (extra && extra.preset) || {});
     if (entry && entry.voided) { toast('A voided entry cannot be edited', true); return; }
     const opts = (list, value) => list.map((o) => `<option ${o === value ? 'selected' : ''}>${esc(o)}</option>`).join('');
     const clients = state.fin.data ? state.fin.data.clients.map((c) => `<option value="${esc(c.name)}"></option>`).join('') : '';
@@ -3425,17 +3435,22 @@
         <div class="field"><label for="fe-status">Status</label><select id="fe-status">${opts(['Paid', 'Pending'], d.status)}</select></div>
         <p class="form-error" id="fe-error" role="alert" style="color:var(--danger)"></p>
         <button class="btn btn-primary" type="submit" id="fe-save">${entry ? 'Save changes' : 'Add entry'}</button>
+        <button class="btn btn-outline" type="button" id="fe-save-receipt" hidden>Save and make receipt</button>
       </form>`, opener);
     $('drawer').querySelector('[data-close]').onclick = () => closeDrawer();
     const sync = () => {
       const t = $('fe-type').value;
       $('fe-client-wrap').hidden = !FIN_CLIENT_TYPES.includes(t);
       $('fe-cat-wrap').hidden = t !== 'Expense';
+      $('fe-save-receipt').hidden = !(FIN_IN.includes(t) && FIN_CLIENT_TYPES.includes(t) && $('fe-status').value === 'Paid' && $('fe-client').value.trim() && !(entry && entry.docNo));
     };
     $('fe-type').onchange = sync;
+    $('fe-status').onchange = sync;
+    $('fe-client').oninput = sync;
     sync();
-    $('fe-form').onsubmit = async (e) => {
-      e.preventDefault();
+    $('fe-save-receipt').onclick = () => submit(true);
+    $('fe-form').onsubmit = (e) => { e.preventDefault(); submit(false); };
+    const submit = async (andReceipt) => {
       const t = $('fe-type').value;
       const payload = {
         id: entry ? entry.id : undefined, type: t, amount: $('fe-amount').value.trim().replace(/[,₹\s]/g, ''), date: $('fe-date').value || todayIso(),
@@ -3443,15 +3458,27 @@
         category: t === 'Expense' ? $('fe-cat').value : '', description: $('fe-desc').value.trim(), reference: $('fe-ref').value.trim(), status: $('fe-status').value,
       };
       $('fe-save').disabled = true;
+      $('fe-save-receipt').disabled = true;
       try {
-        await api('financeSave', { entry: payload });
+        const res = await api('financeSave', { entry: payload });
+        const saved = res.entry || {};
+        if (extra && extra.afterSave) { try { await extra.afterSave(saved); } catch (e2) { /* the entry itself is saved */ } }
+        if (andReceipt && saved.id) {
+          const doc = await finMakeReceipt(saved);
+          closeDrawer(true);
+          toast('Entry saved and receipt ' + doc.number + ' made');
+          await finRefresh();
+          openFinDoc(doc.id);
+          return;
+        }
         closeDrawer(true);
         toast(entry ? 'Entry updated' : 'Entry added');
-        await loadFinance(true);
+        await finRefresh();
       } catch (error) {
         if (error instanceof SessionExpired) { handleError(error); return; }
         $('fe-error').textContent = error.message;
         $('fe-save').disabled = false;
+        $('fe-save-receipt').disabled = false;
       }
     };
   };
@@ -3474,11 +3501,20 @@
         <div class="field"><label for="fc-email">Email</label><input id="fc-email" type="email" value="${esc(c.email)}"></div>
         <div class="field"><label for="fc-deadline">Deadline</label><input id="fc-deadline" type="date" value="${esc(c.deadline)}"></div>
         <div class="field full"><label for="fc-services">Services</label><input id="fc-services" value="${esc(c.services)}" placeholder="e.g. Website, logo"></div>
+        ${existing ? `<div class="field full"><label>Documents</label><div class="quick">
+          <button class="btn btn-outline" type="button" id="fc-statement">Statement PDF</button>
+          <button class="btn btn-outline" type="button" id="fc-proposal">New proposal</button>
+          <button class="btn btn-outline" type="button" id="fc-invoice">New invoice</button></div></div>` : ''}
         <p class="form-error" id="fc-error" role="alert" style="color:var(--danger)"></p>
         <button class="btn btn-primary" type="submit" id="fc-save">${existing ? 'Save changes' : 'Add client'}</button>
         ${existing ? (hist ? '<p class="note-line">This client has money entries or documents, so it cannot be deleted.</p>' : '<button class="btn btn-outline" type="button" id="fc-delete">Delete client</button>') : ''}
       </form>`, opener);
     $('drawer').querySelector('[data-close]').onclick = () => closeDrawer();
+    if (existing) {
+      $('fc-statement').onclick = () => openFinStatement(c.name, opener);
+      $('fc-proposal').onclick = () => openFinDocEditor(null, 'Proposal', c.name, opener);
+      $('fc-invoice').onclick = () => openFinDocEditor(null, 'Invoice', c.name, opener);
+    }
     $('fc-form').onsubmit = async (e) => {
       e.preventDefault();
       const client = {
@@ -3513,6 +3549,371 @@
       }
     };
   };
+
+  // ---------- finance: documents ----------
+
+  const FIN_SERVICES = ['Website design & development', 'AI automation', 'Creatives & ads', 'Software / app development', 'Hosting & domain setup', 'Monthly maintenance'];
+  const FIN_GST_RATES = ['0', '5', '12', '18', '28'];
+  const FIN_DOC_STATUS_CLASS = { Paid: 'ok', Accepted: 'ok', Rejected: 'bad', Cancelled: 'bad', Sent: 'warm', Draft: 'mute' };
+
+  const finRefresh = async () => {
+    try {
+      state.fin.data = await api('financeList');
+      state.fin.error = '';
+    } catch (e) {
+      if (e instanceof SessionExpired) handleError(e);
+    }
+    if (state.section === 'finance') renderFinanceBody();
+  };
+
+  const finDocApi = async (doc) => (await api('financeDocSave', { doc })).doc;
+
+  // A receipt for a payment that is already saved, with the client's running account on it.
+  const finMakeReceipt = async (entry) => {
+    await finRefresh();
+    const d = state.fin.data;
+    const key = finKey(entry.client);
+    const book = finBooks().find((b) => finKey(b.name) === key);
+    const row = d.clients.find((c) => finKey(c.name) === key);
+    const deal = book ? book.deal : 0;
+    const got = book ? book.received : 0;
+    return finDocApi({
+      type: 'Receipt', ledgerId: entry.id, client: entry.client, date: entry.date, title: entry.description || '',
+      meta: {
+        method: entry.method, reference: entry.reference || '', against: entry.description || `${entry.type} for ${entry.client}`,
+        clientPhone: row ? row.phone : undefined, clientEmail: row ? row.email : undefined,
+        dealValue: deal > 0 ? deal / 100 : undefined, receivedTotal: got / 100, balanceAfter: deal > 0 ? Math.max(0, deal - got) / 100 : undefined,
+      },
+    });
+  };
+
+  const finReceiptFor = async (id, btn) => {
+    const entry = state.fin.data.entries.find((x) => x.id === id);
+    if (!entry) return;
+    if (btn) btn.disabled = true;
+    try {
+      const doc = await finMakeReceipt(entry);
+      toast('Receipt ' + doc.number + ' made');
+      await finRefresh();
+      openFinDoc(doc.id);
+    } catch (e) {
+      if (e instanceof SessionExpired) { handleError(e); return; }
+      toast(e.message, true);
+      if (btn) btn.disabled = false;
+    }
+  };
+
+  const openFinDocByNumber = (number, opener) => {
+    const doc = state.fin.data.docs.find((x) => x.number === number);
+    if (!doc) { toast('That document is not in the list yet. Refresh and try again.', true); return; }
+    openFinDoc(doc.id, opener);
+  };
+
+  const renderFinDocs = (body) => {
+    const f = state.fin;
+    const filter = f.docFilter || 'All';
+    const rows = f.data.docs
+      .filter((d) => filter === 'All' || d.type === filter)
+      .sort((a, b) => (a.date === b.date ? b.created - a.created : a.date < b.date ? 1 : -1));
+    body.innerHTML = `<div class="quick"><button class="btn btn-accent" type="button" id="fin-new-proposal">New proposal</button>
+        <button class="btn btn-outline" type="button" id="fin-new-invoice">New invoice</button></div>
+      <p class="note-line">Receipts come from payments: add a payment under Money and choose “Save and make receipt”, or press “Make receipt” on a payment you already added.</p>
+      <div class="chips" id="fin-docchips">${['All', 'Proposal', 'Invoice', 'Receipt'].map((t) => `<button class="chip" type="button" data-doctype="${t}" ${filter === t ? 'aria-pressed="true"' : ''}>${t === 'All' ? 'All' : t + 's'}</button>`).join('')}</div>
+      ${rows.length ? `<div class="fin-list">${rows.map((d) => `<div class="fin-row fin-click" data-doc="${esc(d.id)}" tabindex="0" role="button" aria-label="${esc(d.type + ' ' + d.number + ' for ' + d.client)}">
+          <b>${esc(d.client)}</b><span>${esc(d.type)} ${esc(d.number)} · ${esc(shortDate(d.date))}${d.title ? ' · ' + esc(d.title) : ''}</span>
+          <strong>${rup(paise(d.total))}<small class="fin-st fin-st-${FIN_DOC_STATUS_CLASS[d.status] || 'mute'}">${esc(d.status)}</small></strong></div>`).join('')}</div>`
+        : emptyState('No documents yet', 'Proposals, invoices and receipts you make appear here with their numbers.')}`;
+    $('fin-new-proposal').onclick = () => openFinDocEditor(null, 'Proposal', '', $('fin-new-proposal'));
+    $('fin-new-invoice').onclick = () => openFinDocEditor(null, 'Invoice', '', $('fin-new-invoice'));
+    body.onclick = (e) => {
+      const chip = e.target.closest('[data-doctype]');
+      if (chip) { f.docFilter = chip.dataset.doctype; renderFinanceBody(); return; }
+      const r = e.target.closest('[data-doc]');
+      if (r) openFinDoc(r.dataset.doc, r);
+    };
+    body.onkeydown = (e) => {
+      const r = e.target.closest && e.target.closest('[data-doc]');
+      if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openFinDoc(r.dataset.doc, r); }
+    };
+  };
+
+  // The page shown in a frame (scaled to fit) with a "Save as PDF" button that opens the print dialog.
+  const mountFinFrame = (html) => {
+    const drawer = $('drawer');
+    const frame = drawer.querySelector('[data-frame]');
+    const pagePx = 794;
+    frame.style.width = pagePx + 'px';
+    frame.srcdoc = html;
+    frame.onload = () => {
+      const box = frame.parentElement;
+      const scale = Math.min(1, box.clientWidth / pagePx);
+      const h = frame.contentDocument ? frame.contentDocument.documentElement.scrollHeight : 1123;
+      frame.style.height = h + 'px';
+      frame.style.transform = `scale(${scale})`;
+      box.style.height = Math.ceil(h * scale) + 'px';
+    };
+    const pdf = drawer.querySelector('[data-pdf]');
+    if (pdf) pdf.onclick = () => {
+      const win = window.open('', '_blank');
+      if (!win) { toast('Allow pop-ups for this site to save the PDF.', true); return; }
+      win.document.open();
+      win.document.write(html.replace('</body>', '<script>window.onload=function(){setTimeout(function(){window.print()},600)}<\/script></body>'));
+      win.document.close();
+    };
+  };
+
+  const finStatusChips = (options, current) => `<div class="field"><label>Where is it?</label><div class="chips" data-status-chips>${options.map((s) => `<button class="chip" type="button" data-status="${s}" ${s === current ? 'aria-pressed="true"' : ''}>${s}</button>`).join('')}</div></div>`;
+
+  const openFinDoc = (id, opener) => {
+    const d = state.fin.data;
+    const doc = d && d.docs.find((x) => x.id === id);
+    if (!doc) { toast('Document not found', true); return; }
+    let html;
+    try { html = window.ScoutDocs.docHtml(doc, d.settings); } catch (e) { toast("Couldn't build the PDF: " + e.message, true); return; }
+    const open = doc.status !== 'Cancelled';
+    const editable = doc.type !== 'Receipt' && open && doc.status !== 'Paid';
+    openDrawer(`
+      <div class="drawer-head"><div class="grow"><h2 id="drawer-title">${esc(doc.type)} ${esc(doc.number)}</h2>
+          <p class="meta">${esc(doc.client)} · ${rup(paise(doc.total))} · ${esc(doc.status)}${doc.createdBy ? ' · made by ' + esc(doc.createdBy) : ''}</p></div>
+        <button class="btn btn-outline icon-btn" type="button" data-close aria-label="Close">✕</button></div>
+      <div class="drawer-body">
+        <div class="quick">
+          <button class="btn btn-primary" type="button" data-pdf>Save as PDF</button>
+          ${editable ? '<button class="btn btn-outline" type="button" data-edit>Edit</button>' : ''}
+          ${doc.type === 'Proposal' && doc.status === 'Accepted' ? '<button class="btn btn-accent" type="button" data-convert>Turn into an invoice</button>' : ''}
+          ${doc.type === 'Invoice' && open && doc.status !== 'Paid' ? '<button class="btn btn-accent" type="button" data-paid>Record the payment received</button>' : ''}
+          ${doc.type === 'Receipt' && open ? '<button class="btn btn-outline" type="button" data-cancel>Cancel this receipt</button>' : ''}
+        </div>
+        ${doc.type === 'Proposal' && open ? finStatusChips(['Draft', 'Sent', 'Accepted', 'Rejected'], doc.status) : ''}
+        ${doc.type === 'Invoice' && open && doc.status !== 'Paid' ? finStatusChips(['Draft', 'Sent'], doc.status) : ''}
+        ${doc.type === 'Invoice' && open && doc.status !== 'Paid' ? '<p class="note-line">“Record the payment received” adds the money to the ledger and marks the invoice paid.</p>' : ''}
+        ${doc.status === 'Cancelled' ? `<p class="note-line">This ${esc(doc.type.toLowerCase())} is cancelled. Its number stays used so numbering never has gaps or repeats.</p>` : ''}
+        <p class="form-error" id="fd-error" role="alert" style="color:var(--danger)"></p>
+        <div class="pitch-frame"><iframe title="${esc(doc.type)} preview" sandbox="allow-same-origin" data-frame></iframe></div>
+      </div>`, opener);
+    $('drawer').classList.add('drawer-wide');
+    $('drawer').querySelector('[data-close]').onclick = () => closeDrawer();
+    mountFinFrame(html);
+
+    const fail = (error) => {
+      if (error instanceof SessionExpired) { handleError(error); return; }
+      $('fd-error').textContent = error.message;
+    };
+    const run = async (task) => {
+      try { await task(); } catch (error) { fail(error); }
+    };
+    const setStatus = (status) => run(async () => {
+      await finDocApi({ id: doc.id, status });
+      await finRefresh();
+      openFinDoc(doc.id, opener);
+    });
+    const chips = $('drawer').querySelector('[data-status-chips]');
+    if (chips) chips.onclick = (e) => { const b = e.target.closest('[data-status]'); if (b && b.dataset.status !== doc.status) setStatus(b.dataset.status); };
+    const edit = $('drawer').querySelector('[data-edit]');
+    if (edit) edit.onclick = () => openFinDocEditor(doc, doc.type, '', opener);
+    const convert = $('drawer').querySelector('[data-convert]');
+    if (convert) convert.onclick = () => run(async () => {
+      convert.disabled = true;
+      const invoice = await finDocApi({
+        type: 'Invoice', client: doc.client, title: doc.title, date: todayIso(), validUntil: isoPlusDays(7),
+        items: doc.items.map((i) => ({ description: i.description, detail: i.detail, qty: i.qty, rate: i.rate })),
+        discount: doc.discount, taxPercent: doc.taxPercent, terms: doc.terms, notes: doc.notes, meta: Object.assign({}, doc.meta),
+      });
+      toast('Invoice ' + invoice.number + ' made');
+      await finRefresh();
+      openFinDoc(invoice.id, opener);
+    }).finally(() => { convert.disabled = false; });
+    const paid = $('drawer').querySelector('[data-paid]');
+    if (paid) paid.onclick = () => openFinEntry(null, opener, {
+      preset: { type: 'Payment', client: doc.client, amount: doc.total, description: 'Invoice ' + doc.number },
+      afterSave: async (saved) => { if (saved.status === 'Paid') await finDocApi({ id: doc.id, status: 'Paid' }); },
+    });
+    const cancel = $('drawer').querySelector('[data-cancel]');
+    if (cancel) cancel.onclick = () => {
+      if (!window.confirm(`Cancel receipt ${doc.number}? It will be stamped CANCELLED on the PDF. The payment itself stays in the ledger; void it there if it never happened.`)) return;
+      setStatus('Cancelled');
+    };
+  };
+
+  // Proposal or invoice form. `doc` is an existing one to edit, or null for a new one of `type`.
+  const openFinDocEditor = (doc, type, presetClient, opener) => {
+    const d = state.fin.data;
+    const s = d.settings;
+    const kind = doc ? doc.type : type;
+    const isProposal = kind === 'Proposal';
+    const gst = !!s.gstin;
+    const m = (doc && doc.meta) || {};
+    const lines = doc && doc.items.length
+      ? doc.items.map((i) => ({ description: i.description, detail: i.detail, qty: String(i.qty), rate: String(i.rate) }))
+      : [{ description: '', detail: '', qty: '1', rate: '' }];
+    const names = [...new Set([...d.clients.map((c) => c.name), ...finBooks().map((b) => b.name)])];
+    const taxNow = doc ? String(doc.taxPercent || 0) : '0';
+
+    openDrawer(`
+      <div class="drawer-head"><div class="grow"><h2 id="drawer-title">${doc ? 'Edit' : 'New'} ${kind.toLowerCase()}${doc ? ' ' + esc(doc.number) : ''}</h2></div>
+        <button class="btn btn-outline icon-btn" type="button" data-close aria-label="Close">✕</button></div>
+      <form id="de-form" class="drawer-body" autocomplete="off" novalidate>
+        <div class="form">
+          <div class="field full"><label for="de-client">Client</label><input id="de-client" list="de-clients" required value="${esc(doc ? doc.client : presetClient || '')}" placeholder="Pick one of your clients, or type a new name"><datalist id="de-clients">${names.map((n) => `<option value="${esc(n)}"></option>`).join('')}</datalist></div>
+          <div class="field full"><label for="de-title">${isProposal ? 'Project title' : 'Invoice for'}</label><input id="de-title" maxlength="160" value="${esc(doc ? doc.title : '')}" placeholder="e.g. Website for Sopanam Drapes"></div>
+          <div class="field"><label for="de-date">Date</label><input id="de-date" type="date" value="${esc(doc ? doc.date : todayIso())}"></div>
+          <div class="field"><label for="de-until">${isProposal ? 'Valid until' : 'Payment due by'}</label><input id="de-until" type="date" value="${esc(doc ? doc.validUntil : isoPlusDays(isProposal ? 15 : 7))}"></div>
+          ${isProposal ? `<div class="field full"><label for="de-scope">Scope of work</label><textarea id="de-scope" placeholder="What you will deliver, in plain words">${esc(m.scope || '')}</textarea></div>` : ''}
+        </div>
+        <div>
+          <p class="block-title">Line items</p>
+          <div class="chips" id="de-services">${FIN_SERVICES.map((x) => `<button class="chip" type="button" data-svc="${esc(x)}">+ ${esc(x)}</button>`).join('')}</div>
+          <div id="de-lines"></div>
+          <p><button class="btn btn-outline" type="button" id="de-addline">Add another line</button></p>
+        </div>
+        <div class="form">
+          <div class="field"><label for="de-discount">Discount (₹, optional)</label><input id="de-discount" inputmode="decimal" value="${doc && doc.discount ? esc(doc.discount) : ''}"></div>
+          ${gst ? `<div class="field"><label for="de-gst">GST %</label><select id="de-gst">${FIN_GST_RATES.map((r) => `<option ${r === taxNow ? 'selected' : ''}>${r}</option>`).join('')}</select></div>` : '<p class="note-line full" style="grid-column:1/-1">No GST is added because no GSTIN is saved in the company details. Add one there once Saffron Labs is registered.</p>'}
+        </div>
+        <p class="de-total" id="de-total" aria-live="polite"></p>
+        <div class="form">
+          ${isProposal ? `<div class="field full"><label for="de-timeline">Timeline</label><input id="de-timeline" value="${esc(m.timeline || '')}" placeholder="e.g. 3 weeks from advance"></div>
+          <div class="field full"><label for="de-plan">Payment schedule</label><textarea id="de-plan" placeholder="e.g. 50% advance, 50% on delivery">${esc(m.paymentPlan || '')}</textarea>
+            <span><button class="btn btn-outline fin-small" type="button" id="de-5050">Fill 50% advance / 50% on delivery</button></span></div>` : ''}
+          <div class="field full"><label for="de-address">Client address (optional)</label><textarea id="de-address" style="min-height:64px">${esc(m.clientAddress || '')}</textarea></div>
+          ${gst ? `<div class="field full"><label for="de-cgstin">Client GSTIN (optional)</label><input id="de-cgstin" value="${esc(m.clientGstin || '')}" style="text-transform:uppercase"></div>` : ''}
+          <div class="field full"><label for="de-terms">Terms</label><textarea id="de-terms">${esc(doc ? doc.terms : s.terms || '')}</textarea></div>
+          <div class="field full"><label for="de-notes">Notes (optional)</label><textarea id="de-notes" style="min-height:64px">${esc(doc ? doc.notes : '')}</textarea></div>
+        </div>
+        <p class="form-error" id="de-error" role="alert" style="color:var(--danger)"></p>
+        <button class="btn btn-primary" type="submit" id="de-save">${doc ? 'Save changes' : 'Save ' + kind.toLowerCase()}</button>
+      </form>`, opener);
+    $('drawer').classList.add('drawer-wide');
+    $('drawer').querySelector('[data-close]').onclick = () => closeDrawer();
+
+    const num = (text) => {
+      const clean = String(text || '').replace(/[₹,\s]/g, '');
+      return /^\d+(\.\d{1,2})?$/.test(clean) ? Number(clean) : null;
+    };
+    const totals = () => {
+      let sub = 0;
+      lines.forEach((l) => { const q = Number(l.qty); const r = num(l.rate); if (q > 0 && r !== null) sub += Math.round(q * paise(r)); });
+      const disc = Math.min(sub, paise(num($('de-discount').value) || 0));
+      const pct = gst ? Number($('de-gst').value) || 0 : 0;
+      const tax = Math.round(((sub - disc) * pct) / 100);
+      return { sub, disc, pct, tax, total: sub - disc + tax };
+    };
+    const paintTotal = () => {
+      const t = totals();
+      $('de-total').innerHTML = `${t.disc || t.pct ? `<span>Subtotal ${rup(t.sub)}${t.disc ? ' · Discount −' + rup(t.disc) : ''}${t.pct ? ' · GST ' + t.pct + '% ' + rup(t.tax) : ''}</span>` : ''}<strong>Total ${rup(t.total)}</strong>`;
+    };
+    const paintLines = () => {
+      $('de-lines').innerHTML = lines.map((l, i) => `<div class="de-line" data-i="${i}">
+          <div class="de-line-head"><b>Line ${i + 1}</b>${lines.length > 1 ? `<button class="btn btn-outline fin-small" type="button" data-remove="${i}" aria-label="Remove line ${i + 1}">Remove</button>` : ''}</div>
+          <div class="form">
+            <div class="field full"><label for="de-d${i}">Description</label><input id="de-d${i}" data-k="description" maxlength="200" value="${esc(l.description)}"></div>
+            <div class="field full"><label for="de-x${i}">Details (optional)</label><input id="de-x${i}" data-k="detail" maxlength="400" value="${esc(l.detail)}"></div>
+            <div class="field"><label for="de-q${i}">Qty</label><input id="de-q${i}" data-k="qty" inputmode="decimal" value="${esc(l.qty)}"></div>
+            <div class="field"><label for="de-r${i}">Rate (₹)</label><input id="de-r${i}" data-k="rate" inputmode="decimal" value="${esc(l.rate)}"></div>
+          </div></div>`).join('');
+    };
+    paintLines();
+    paintTotal();
+    $('de-lines').oninput = (e) => {
+      const row = e.target.closest('[data-i]');
+      if (!row || !e.target.dataset.k) return;
+      lines[Number(row.dataset.i)][e.target.dataset.k] = e.target.value;
+      paintTotal();
+    };
+    $('de-lines').onclick = (e) => {
+      const b = e.target.closest('[data-remove]');
+      if (!b) return;
+      lines.splice(Number(b.dataset.remove), 1);
+      paintLines();
+      paintTotal();
+    };
+    $('de-addline').onclick = () => { lines.push({ description: '', detail: '', qty: '1', rate: '' }); paintLines(); paintTotal(); const last = $('de-lines').querySelector(`#de-d${lines.length - 1}`); if (last) last.focus(); };
+    $('de-services').onclick = (e) => {
+      const b = e.target.closest('[data-svc]');
+      if (!b) return;
+      const first = lines.length === 1 && !lines[0].description && !lines[0].rate;
+      if (first) lines[0].description = b.dataset.svc; else lines.push({ description: b.dataset.svc, detail: '', qty: '1', rate: '' });
+      paintLines();
+      paintTotal();
+    };
+    $('de-discount').oninput = paintTotal;
+    if (gst) $('de-gst').onchange = paintTotal;
+    const fill = $('de-5050');
+    if (fill) fill.onclick = () => {
+      const t = totals().total;
+      if (t <= 0) return;
+      const half = Math.round(t / 2);
+      $('de-plan').value = `50% advance (${window.ScoutDocs.inr(half)}) before work starts\n50% balance (${window.ScoutDocs.inr(t - half)}) on delivery`;
+    };
+
+    $('de-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const err = (text) => { $('de-error').textContent = text; };
+      err('');
+      const client = $('de-client').value.trim();
+      const title = $('de-title').value.trim();
+      if (!client) return err('Choose the client first.');
+      if (!title) return err('Give it a title, like “Website for Sopanam Drapes”.');
+      const items = [];
+      for (let i = 0; i < lines.length; i += 1) {
+        const l = lines[i];
+        if (!l.description.trim() && !String(l.rate).trim()) continue; // ignore untouched blank lines
+        const rate = num(l.rate);
+        const qty = Number(l.qty);
+        if (!l.description.trim()) return err(`Line ${i + 1} needs a description.`);
+        if (rate === null) return err(`Line ${i + 1}: enter the rate in rupees.`);
+        if (!(qty > 0)) return err(`Line ${i + 1}: quantity must be more than 0.`);
+        items.push({ description: l.description.trim(), detail: l.detail.trim(), qty, rate });
+      }
+      if (!items.length) return err('Add at least one line with a description and rate.');
+      const row = d.clients.find((c) => finKey(c.name) === finKey(client));
+      const meta = Object.assign({}, m, {
+        clientAddress: $('de-address').value.trim(),
+        clientPhone: row ? row.phone : m.clientPhone, clientEmail: row ? row.email : m.clientEmail,
+      });
+      if (isProposal) { meta.scope = $('de-scope').value.trim(); meta.timeline = $('de-timeline').value.trim(); meta.paymentPlan = $('de-plan').value.trim(); }
+      if (gst) meta.clientGstin = $('de-cgstin').value.trim();
+      $('de-save').disabled = true;
+      try {
+        const saved = await finDocApi({
+          id: doc ? doc.id : undefined, type: kind, client, title, date: $('de-date').value || todayIso(), validUntil: $('de-until').value,
+          items, discount: num($('de-discount').value) || 0, taxPercent: gst ? Number($('de-gst').value) || 0 : 0,
+          notes: $('de-notes').value.trim(), terms: $('de-terms').value.trim(), meta,
+        });
+        closeDrawer(true);
+        toast(doc ? 'Saved' : kind + ' ' + saved.number + ' made');
+        await finRefresh();
+        openFinDoc(saved.id);
+      } catch (error) {
+        if (error instanceof SessionExpired) { handleError(error); return; }
+        err(error.message);
+        $('de-save').disabled = false;
+      }
+    };
+  };
+
+  // Statement of account for one client, built from the ledger the page already has.
+  const openFinStatement = (name, opener) => {
+    const d = state.fin.data;
+    const key = finKey(name);
+    const book = finBooks().find((b) => finKey(b.name) === key);
+    if (!book) return;
+    const entries = d.entries.filter((e) => finKey(e.client) === key && !e.voided);
+    const advance = entries.filter((e) => e.type === 'Advance' && e.status === 'Paid').reduce((sum, e) => sum + paise(e.amount), 0);
+    let html;
+    try { html = window.ScoutDocs.statementHtml({ name: book.name, deal: book.deal, advance, received: book.received, balance: book.balance, entries }, d.settings, todayIso()); } catch (e) { toast("Couldn't build the statement: " + e.message, true); return; }
+    openDrawer(`
+      <div class="drawer-head"><div class="grow"><h2 id="drawer-title">Statement</h2><p class="meta">${esc(book.name)}</p></div>
+        <button class="btn btn-outline icon-btn" type="button" data-close aria-label="Close">✕</button></div>
+      <div class="drawer-body">
+        <div class="quick"><button class="btn btn-primary" type="button" data-pdf>Save as PDF</button></div>
+        <div class="pitch-frame"><iframe title="Statement preview" sandbox="allow-same-origin" data-frame></iframe></div>
+      </div>`, opener);
+    $('drawer').classList.add('drawer-wide');
+    $('drawer').querySelector('[data-close]').onclick = () => closeDrawer();
+    mountFinFrame(html);
+  };
+
 
   // ---------- calendar ----------
   // Meetings, tasks, follow-ups and client dates from the sheets, on one month view (same rules as the app).
